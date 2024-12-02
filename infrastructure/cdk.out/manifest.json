@@ -1,0 +1,149 @@
+{
+  "version": "38.0.1",
+  "artifacts": {
+    "PhaceStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "PhaceStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "PhaceStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://024848470631/us-west-2",
+      "properties": {
+        "templateFile": "PhaceStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::024848470631:role/cdk-hnb659fds-deploy-role-024848470631-us-west-2",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::024848470631:role/cdk-hnb659fds-cfn-exec-role-024848470631-us-west-2",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-024848470631-us-west-2/7af066b4d1cf6c0470728e920d7ef92d10fc4585476bf7ec8fcaf699309eb372.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "PhaceStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::024848470631:role/cdk-hnb659fds-lookup-role-024848470631-us-west-2",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "PhaceStack.assets"
+      ],
+      "metadata": {
+        "/PhaceStack/ProductImagesBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProductImagesBucket03BDA4C8"
+          }
+        ],
+        "/PhaceStack/ProductImagesBucket/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProductImagesBucketPolicyA2B0CBED"
+          }
+        ],
+        "/PhaceStack/ProductImagesBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProductImagesBucketName"
+          }
+        ],
+        "/PhaceStack/ProductsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ProductsTable241ADBFF"
+            }
+          }
+        ],
+        "/PhaceStack/ProductsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProductsTable241ADBFF"
+          }
+        ],
+        "/PhaceStack/OrdersTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "OrdersTable315BB997"
+            }
+          }
+        ],
+        "/PhaceStack/OrdersTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OrdersTable315BB997"
+          }
+        ],
+        "/PhaceStack/AdminUsersTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "AdminUsersTable35B520A8"
+            }
+          }
+        ],
+        "/PhaceStack/AdminUsersTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AdminUsersTable35B520A8"
+          }
+        ],
+        "/PhaceStack/PhaceUserPool/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PhaceUserPoolB6519439"
+          }
+        ],
+        "/PhaceStack/PhaceUserPoolClient/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PhaceUserPoolClient9AE6CDE1"
+          }
+        ],
+        "/PhaceStack/UserPoolId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolId"
+          }
+        ],
+        "/PhaceStack/UserPoolClientId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolClientId"
+          }
+        ],
+        "/PhaceStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/PhaceStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/PhaceStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "PhaceStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}
