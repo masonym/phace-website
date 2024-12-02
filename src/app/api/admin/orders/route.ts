@@ -19,7 +19,7 @@ export async function PUT(request: Request) {
     try {
         const { orderId, status, trackingNumber, carrier } = await request.json();
 
-        const order = await OrderService.updateOrderStatus(orderId, status);
+        const order = await OrderService.adminUpdateOrderStatus(orderId, status);
 
         if (trackingNumber && carrier) {
             await OrderService.addTrackingInfo(orderId, trackingNumber, carrier);

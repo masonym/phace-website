@@ -9,7 +9,6 @@
     "lint": "next lint",
     "convert-images": "node scripts/convert-to-webp.js",
     "create-admin": "ts-node scripts/create-admin.ts",
-    "create-admin-table": "ts-node scripts/create-admin-table.ts",
     "create-products-table": "ts-node scripts/create-products-table.ts",
     "create-sample-products": "ts-node scripts/create-sample-products.ts"
   },

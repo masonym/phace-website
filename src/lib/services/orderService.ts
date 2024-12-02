@@ -1,4 +1,4 @@
-import { PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, QueryCommand, UpdateCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { dynamoDb, TABLES } from "../aws-config";
 import { Product } from "@/types/product";
 
@@ -25,6 +25,10 @@ interface Order {
     };
     createdAt: string;
     updatedAt: string;
+    tracking?: {
+        trackingNumber: string;
+        carrier: string;
+    };
 }
 
 export class OrderService {
@@ -50,15 +54,14 @@ export class OrderService {
     static async getUserOrders(userId: string) {
         const command = new QueryCommand({
             TableName: TABLES.ORDERS,
-            KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+            KeyConditionExpression: 'pk = :pk',
             ExpressionAttributeValues: {
                 ':pk': `USER#${userId}`,
-                ':sk': 'ORDER#',
             },
         });
 
-        const response = await dynamoDb.send(command);
-        return response.Items as Order[];
+        const result = await dynamoDb.send(command);
+        return result.Items as Order[];
     }
 
     static async updateOrderStatus(orderId: string, userId: string, status: Order['status']) {
@@ -73,5 +76,65 @@ export class OrderService {
         });
 
         return await dynamoDb.send(command);
+    }
+
+    static async adminUpdateOrderStatus(orderId: string, status: Order['status']) {
+        // First, get the existing order to preserve all fields
+        const getCommand = new QueryCommand({
+            TableName: TABLES.ORDERS,
+            IndexName: 'OrderIdIndex', // You'll need to create this GSI
+            KeyConditionExpression: 'sk = :sk',
+            ExpressionAttributeValues: {
+                ':sk': `ORDER#${orderId}`,
+            },
+        });
+
+        const response = await dynamoDb.send(getCommand);
+        const existingOrder = response.Items?.[0];
+
+        if (!existingOrder) {
+            throw new Error('Order not found');
+        }
+
+        // Update the order with new status while preserving other fields
+        const updateCommand = new PutCommand({
+            TableName: TABLES.ORDERS,
+            Item: {
+                ...existingOrder,
+                status,
+                updatedAt: new Date().toISOString(),
+            },
+        });
+
+        return await dynamoDb.send(updateCommand);
+    }
+
+    static async addTrackingInfo(orderId: string, trackingNumber: string, carrier: string) {
+        const command = new UpdateCommand({
+            TableName: TABLES.ORDERS,
+            Key: {
+                pk: `ORDER#${orderId}`,
+                sk: `ORDER#${orderId}`,
+            },
+            UpdateExpression: 'SET tracking = :tracking, updatedAt = :updatedAt',
+            ExpressionAttributeValues: {
+                ':tracking': { trackingNumber, carrier },
+                ':updatedAt': new Date().toISOString(),
+            },
+        });
+
+        return await dynamoDb.send(command);
+    }
+
+    static async getAllOrders() {
+        const command = new ScanCommand({
+            TableName: TABLES.ORDERS,
+            // Since we want ALL orders, we'll use a scan operation
+            // Note: For large datasets, you might want to implement pagination
+            ScanIndexForward: false, // Sort in descending order by default
+        });
+
+        const result = await dynamoDb.send(command);
+        return result.Items as Order[];
     }
 }
