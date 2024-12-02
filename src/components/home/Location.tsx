@@ -17,7 +17,7 @@ export function Location() {
     <section className="py-20 bg-secondary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-7xl mb-4">Visit Us</h2>
+          <h2 className="text-6xl">Visit Us</h2>
           <p className="text-lg mb-2">
             Join us at our beautiful location in the historic river-valley town of Yarrow, in Chilliwack, BC.
           </p>
@@ -44,15 +44,16 @@ export function Location() {
         </div>
 
         <div className="rounded-lg overflow-hidden shadow-lg">
-          <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={center}
-              zoom={15}
-            >
-              <Marker position={center} />
-            </GoogleMap>
-          </LoadScript>
+          <iframe
+            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=place_id:ChIJwQQwelhHhFQRnUFtj2tusQ4`}
+            width="100%"
+            height="400"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            className="w-full"
+          />
         </div>
       </div>
     </section>
