@@ -13,7 +13,7 @@ export function Navigation() {
         <div className="flex justify-between items-center h-20">
           <Link href="/" className="flex-shrink-0 text-2xl font-bold">
             <Image
-              src="/images/logo.png"
+              src="/images/logo.webp"
               alt="Logo"
               width={128}
               height={128}
