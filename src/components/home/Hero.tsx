@@ -11,7 +11,7 @@ export function Hero() {
             src="/images/hero-image.webp"
             alt="Natural Beauty Enhancement"
             fill
-            className="object-cover"
+            className="object-cover object-[75%_25%] md:object-center"
             priority
           />
           {/* Overlay for better text readability */}
