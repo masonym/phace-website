@@ -30,10 +30,10 @@ export function OurClinic() {
                 className="object-cover"
               />
             </div>
-            <div className="absolute top-4 right-4 flex gap-4">
+            <div className="text-center absolute top-4 right-4 flex gap-4">
               <Link
                 href="/book"
-                className="bg-[#FFF3E3] text-black px-6 py-3 rounded-full hover:bg-[#FFE9CC] transition-colors"
+                className="bg-[#FFF3E3] text-black px-8 py-8 rounded-full hover:bg-[#FFE9CC] transition-colors"
               >
                 Book a Treatment
               </Link>
@@ -41,7 +41,7 @@ export function OurClinic() {
                 href="https://www.beautifi.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-[#4A5568] text-white px-6 py-3 rounded-full hover:bg-[#2D3748] transition-colors"
+                className="bg-[#4A5568] text-white px-8 py-8 rounded-full hover:bg-[#2D3748] transition-colors"
               >
                 Finance with Beautifi
               </Link>

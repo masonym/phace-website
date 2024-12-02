@@ -51,7 +51,7 @@ export function Hero() {
             src="/images/woman-portrait.webp"
             alt="Beautiful woman with grey hair smiling"
             fill
-            className="object-cover"
+            className="object-cover object-[35%_25%] md:object-center"
           />
         </div>
 

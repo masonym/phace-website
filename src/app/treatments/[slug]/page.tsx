@@ -40,7 +40,7 @@ export default function TreatmentPage({ params }: Props) {
         </div>
         <div className="relative h-full flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32">
-            <h1 className="text-8xl font-light text-white mb-8">
+            <h1 className="text-center text-4xl md:text-8xl font-light text-white mb-8">
               {treatmentNameUpper}
             </h1>
             <div className="absolute bottom-12 right-12">
@@ -69,7 +69,7 @@ export default function TreatmentPage({ params }: Props) {
       {/* What Is Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-6xl font-light text-[#E4B4A6] text-center mb-16">
+          <h2 className="text-3xl md:text-6xl font-light text-[#E4B4A6] text-center mb-16">
             WHAT IS<br />{treatmentNameUpper}?
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
@@ -93,10 +93,10 @@ export default function TreatmentPage({ params }: Props) {
       {/* How It Works Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-6xl font-light text-[#E4B4A6] mb-16">
+          <h2 className="text-3xl md:text-6xl font-light text-[#E4B4A6] mb-16">
             HOW {treatmentNameUpper} WORKS
           </h2>
-          <div className="grid grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div>
               {treatment.longDescription?.split("\n\n").map((paragraph, index) => (
                 <p key={index} className="text-[#4A5568] mb-6">
@@ -104,7 +104,7 @@ export default function TreatmentPage({ params }: Props) {
                 </p>
               ))}
             </div>
-            <div className="relative aspect-w-4 aspect-h-3">
+            <div className="relative h-[300px] md:h-[400px]">
               <Image
                 src={treatment.imageSub}
                 alt={`How ${treatment.name} works`}
