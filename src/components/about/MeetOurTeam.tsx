@@ -5,7 +5,7 @@ const team = [
   {
     name: 'Dawn Reynolds',
     title: 'Founder & Medical Aesthetician',
-    image: '/images/team/dawn.jpg',
+    image: '/images/team/dawn.webp',
     instagram: '@phace.ca',
     bio: [
       'Dawn Reynolds stands as the founder and sole proprietor of Phace Medical Aesthetics & Skincare, boasting nearly two decades of experience in the medical, health, and wellness sectors.',
@@ -17,7 +17,7 @@ const team = [
   {
     name: 'Dr. Janine MacKenzie',
     title: 'Naturopathic Doctor',
-    image: '/images/team/janine.png',
+    image: '/images/team/janine.webp',
     bio: [
       'Dr. Janine MacKenzie is a dedicated Naturopathic Doctor with a passion for blending art and science in medical aesthetics.',
       'With a background in Biology, Psychology, and Neuroscience, she found her calling in Naturopathic Medicine. Dr. MacKenzie specializes in helping women enhance their natural beauty through subtle changes and preventive care.',
@@ -27,7 +27,7 @@ const team = [
   {
     name: 'Paz Sasyniuk',
     title: 'Certified Nail Technician',
-    image: '/images/team/paz.png',
+    image: '/images/team/paz.webp',
     instagram: '@yarrownaillounge',
     bio: [
       'Paz, 7 years as Certified Nail Technician, finds joy in building personal connections through her profession. Her passion lies in uplifting women by offering pampering services and providing support and encouragement to empower others.'
@@ -36,7 +36,7 @@ const team = [
   {
     name: 'Anna Van Steenis',
     title: 'Medical Aesthetician',
-    image: '/images/team/anna.jpg',
+    image: '/images/team/anna.webp',
     instagram: '@anna.skinrefined',
     bio: [
       'Anna is a Certified Medical Aesthetician, Laser Technician, and Paramedical Tattoo Artist. With over a decade of experience, she has a deep knowledge of how the skin functions.',
