@@ -1,0 +1,21 @@
+This directory will contain the following images:
+
+/images
+  /hero-image.jpg
+  /facials.jpg
+  /brows-lashes.jpg
+  /injectables.jpg
+  /scar-revision.jpg
+  /client1.jpg
+  /client2.jpg
+  /client3.jpg
+  /awards
+    /canadian-choice.png
+    /chilliwack-best.png
+    /community-votes.png
+  /partners
+    /dmk.png
+    /elle-hall.png
+    /mifa.png
+    /is-clinical.png
+    /alumier.png

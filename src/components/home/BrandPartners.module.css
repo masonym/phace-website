@@ -1,0 +1,30 @@
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.scrollContainer {
+  position: relative;
+  overflow: hidden;
+}
+
+.scrollContent {
+  display: flex;
+  gap: 3rem;
+  animation: scroll 20s linear infinite;
+}
+
+.scrollContent:hover {
+  animation-play-state: paused;
+}
+
+.partnerImage {
+  flex-shrink: 0;
+  width: 10rem;
+  height: 5rem;
+  position: relative;
+}

@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Spinnaker';
+  src: url('/fonts/Spinnaker-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  --primary: #DEC3C5;
+  --secondary: #EBE5D5;
+  --accent: #B09182;
+  --text: #59637E;
+  --background: #FFFBF0;
+}
+
+body {
+  font-family: 'Spinnaker', sans-serif;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+.hero-text {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.section-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  color: var(--primary);
+  margin-bottom: 2rem;
+}
+
+.service-card {
+  background-color: var(--secondary);
+  border-radius: 1rem;
+  padding: 2rem;
+  transition: transform 0.2s;
+}
+
+.service-card:hover {
+  transform: translateY(-5px);
+}
+
+.oval-image {
+  border-radius: 50% / 60%;
+  overflow: hidden;
+}
+
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background-color: var(--accent);
+  color: white;
+  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.back-to-top:hover {
+  opacity: 1;
+}
