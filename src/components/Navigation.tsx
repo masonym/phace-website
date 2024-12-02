@@ -2,16 +2,23 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
-    <nav className="fixed w-full bg-background/80 backdrop-blur-sm z-50">
+    <nav className="fixed w-full bg-[#FFFBF0]/80 backdrop-blur-sm z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Link href="/" className="flex-shrink-0 text-2xl font-bold">
-            Phace
+            <Image
+              src="/images/logo.png"
+              alt="Logo"
+              width={128}
+              height={128}
+              className="object-cover"
+            />
           </Link>
           
           {/* Desktop Menu */}
@@ -61,12 +68,12 @@ export function Navigation() {
             <Link href="/login" className="text-text hover:text-accent transition-colors">
               Log In
             </Link>
-            <Link
+            {/* <Link
               href="/book"
               className="bg-accent text-white px-4 py-2 rounded-full hover:bg-accent/90 transition-colors"
             >
               Book Now
-            </Link>
+            </Link> */}
           </div>
         </div>
 

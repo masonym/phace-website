@@ -31,7 +31,7 @@ const partners = [
 export function BrandPartners() {
   return (
     <section className="py-20 bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         <h2 className="section-title text-center mb-12">Brand Partners</h2>
         
         <div className={styles.scrollContainer}>

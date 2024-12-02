@@ -11,30 +11,33 @@ export function InnovativeSolutions() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {treatments.map((treatment) => (
-            <div key={treatment.id} className="bg-white rounded-3xl overflow-hidden shadow-lg">
-              <div className="aspect-w-16 aspect-h-9 relative">
+            <Link 
+              key={treatment.id} 
+              href={`/treatments/${treatment.slug}`}
+              className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+            >
+              <div className="h-[300px] relative">
                 <Image
                   src={treatment.imageCard}
                   alt={treatment.name}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
               <div className="p-8">
-                <h3 className="text-2xl font-light text-[#4A5568] mb-4">
+                <h3 className="text-2xl font-light text-[#4A5568] mb-4 group-hover:text-[#E4B4A6] transition-colors">
                   {treatment.name}
                 </h3>
                 <p className="text-gray-600 mb-6">
                   {treatment.description}
                 </p>
-                <Link
-                  href={`/treatments/${treatment.slug}`}
-                  className="text-[#4A5568] hover:text-[#2D3748] transition-colors underline"
+                <span
+                  className="inline-block text-[#4A5568] group-hover:text-[#E4B4A6] transition-colors"
                 >
-                  Read More
-                </Link>
+                  Learn More →
+                </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

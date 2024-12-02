@@ -30,7 +30,7 @@ body {
 }
 
 .section-title {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(5rem, 4vw, 3rem);
   color: var(--primary);
   margin-bottom: 2rem;
 }

@@ -21,7 +21,7 @@ export const treatments: Treatment[] = [
     id: 1,
     name: "Sharplight Technology",
     slug: "sharplight",
-    description: "Sharplight is a singular technology aesthetic device powered by their flagship DPC technology which lets us treat a variety of indications such as skin rejuvenation, pigmented and vascular lesions, hair removal and acne.",
+    description: "SharpLight designs and manufactures non-invasive aesthetic medical solutions for a broad range of treatments such as hair removal, body and facial contouring, acne improvement, pigmented and vascular lesion reduction, and tattoo removal.",
     longDescription: `
     Step into the future of hair removal with SharpLight's cutting-edge technologies. Say goodbye to the traditional methods of plucking, waxing, and shaving, and welcome a new era of long-term hair reduction. The innovative Dynamic Pulse Control (DPC) and DPC Flow technologies are designed to deliver permanent results, catering to all skin types, including dark skin, throughout the year. Enjoy a swift, comfortable treatment experience that's virtually painless.
 
@@ -61,7 +61,7 @@ export const treatments: Treatment[] = [
     id: 2,
     name: "Dermapen DP4",
     slug: "dermapen-dp4",
-    description: "The Dermapen 4 is the world's most advanced microneedling technology, designed to improve skin texture, reduce scarring, and promote natural collagen production.",
+    description: "Advance your skincare with the fastest microneedling device in history. The Dp4 is a small hand-held device that can create thousands of micro-punctures per second to stimulate your skin's natural ability to heal itself, signaling for collagen and elastin production.",
     longDescription: `
     Unveil the secret to youthful, radiant skin with the Dp4 by Dermapen, the pinnacle of microneedling technology. This FDA-cleared device revolutionizes skin rejuvenation by creating millions of fine, vertical micro-channels at unparalleled speeds, significantly faster than comparable devices.
 
@@ -105,7 +105,7 @@ export const treatments: Treatment[] = [
     id: 3,
     name: "Tixel Skin Resurfacing",
     slug: "tixel",
-    description: "Tixel is a revolutionary thermal fractional skin rejuvenation technology that uses heat to create micro-channels in the skin, promoting collagen production and skin renewal.",
+    description: "Tixel skin resurfacing is a \"thermo-mechanical ablative treatment\" which uses heat on your skin to create controlled damage that stimulates your body to produce collagen and rejuvenate the skin.",
     longDescription: `
 Compared to some of the sophisticated sorts of technology on the market, which work off radiofrequency energy, or use focused ultrasound, or miniature lightning bolts of ‘plasma’ energy, Tixel is very straightforward.
 
@@ -145,7 +145,7 @@ Compared to some of the sophisticated sorts of technology on the market, which w
     id: 4,
     name: "Bela MD+",
     slug: "bela-md",
-    description: "Bela MD+ is an advanced skin health platform that combines diamond microdermabrasion, electroporation, and LED therapy for comprehensive skin rejuvenation.",
+    description: "BELA MD+ Facials are the perfect solution to easy and accessible exfoliation. BELA MD+ combines medical-grade dermabrasion, serum infusion, microcurrent technology, and hydrogen water delivery, to create a perfectly tailored serum infusion to best suit your skin.",
     longDescription: `
     The Bela MD+ Advanced medical-grade facial is simple, fast, comfortable and effective. It’s made up of 6 distinct steps: a diamond-tip microdermabrasion, a hydrogen water infusion & antioxidant boost, an ultrasonic extraction, face and neck toning, a targeted serum infusion, and finally electroporation.
 
@@ -184,96 +184,4 @@ Compared to some of the sophisticated sorts of technology on the market, which w
       }
     ]
   },
-  {
-    id: 8,
-    name: "Brow Lamination",
-    slug: "brow-lamination",
-    description: "A revolutionary beauty treatment designed to give your eyebrows a fuller, more defined look without the need for daily maintenance.",
-    longDescription: `Brow lamination is a revolutionary beauty treatment designed to give your eyebrows a fuller, more defined look without the need for daily maintenance.
-
-    During the procedure, your brow hairs are carefully brushed and set in place using a specialized chemical solution. This solution helps to relax the hair follicles, allowing the technician to reshape and style your brows to perfection.
-    
-    The result? Brows that appear thicker, fluffier, and beautifully groomed, with a sleek and uniform appearance that lasts for weeks.
-    
-    Whether you have sparse brows that need a boost or unruly hairs that need taming, brow lamination is the answer for achieving effortlessly flawless brows with minimal effort.`,
-    imageMain: "/images/treatments/brow-lamination-main.jpg",
-    imageSub: "/images/treatments/brow-lamination-sub.jpg",
-    imageCard: "/images/treatments/brow-lamination-card.jpg"
-  },
-  {
-    id: 9,
-    name: "Brow Waxing",
-    slug: "brow-waxing",
-    description: "A popular grooming technique that involves the removal of unwanted hair from the eyebrow area using a gentle wax formula.",
-    longDescription: `Brow waxing is a popular grooming technique that involves the removal of unwanted hair from the eyebrow area using a gentle wax formula.
-
-    During the process, a thin layer of warm wax is applied to the desired areas of the brows, following the natural shape and contours. Once applied, a cloth or paper strip is pressed onto the wax and quickly pulled away, removing the hair from the root. This method ensures a clean and precise result, leaving behind smooth and well-defined brows.
-    
-    Brow waxing is an effective way to shape and sculpt the eyebrows, creating a polished and symmetrical appearance. With minimal discomfort and long-lasting results, brow waxing is the go-to solution for achieving perfectly groomed brows that frame the face beautifully.`,
-    imageMain: "/images/treatments/brow-waxing-main.jpg",
-    imageSub: "/images/treatments/brow-waxing-sub.jpg",
-    imageCard: "/images/treatments/brow-waxing-card.jpg"
-  },
-  {
-    id: 10,
-    name: "Lash Lift",
-    slug: "lash-lift",
-    description: "A revolutionary cosmetic procedure designed to enhance the natural beauty of your lashes.",
-    longDescription: `A lash lift is a revolutionary cosmetic procedure designed to enhance the natural beauty of your lashes.
-
-    Using a specially formulated solution, our skilled technicians carefully lift and curl your lashes from the root, creating a stunning, wide-eyed effect that lasts for weeks.
-    
-    Unlike traditional lash extensions, a lash lift works with your existing lashes, providing a more natural yet equally dramatic result. With no need for mascara or curlers, you'll wake up each morning with perfectly curled lashes.
-    
-    The process is quick, painless, and safe, making it the perfect solution for those seeking low-maintenance, high-impact beauty.`,
-    imageMain: "/images/treatments/lash-lift-main.jpg",
-    imageSub: "/images/treatments/lash-lift-sub.jpg",
-    imageCard: "/images/treatments/lash-lift-card.jpg"
-  },
-  {
-    id: 11,
-    name: "Lash Tint",
-    slug: "lash-tint",
-    description: "A cosmetic procedure designed to enhance the appearance of your eyelashes by darkening them.",
-    longDescription: `A lash tint is a cosmetic procedure designed to enhance the appearance of your eyelashes by darkening them.
-
-    During the treatment, a specially formulated dye is carefully applied to your lashes, giving them a darker, more defined look. This can be particularly beneficial for individuals with fair or light-colored lashes who desire a more dramatic and noticeable eyelash appearance without the need for mascara.
-    
-    The process is quick, typically taking about 15-20 minutes, and the results can last for several weeks. It's a perfect solution for those who want to wake up with naturally dark, defined lashes without the need for daily makeup application.`,
-    imageMain: "/images/treatments/lash-tint-main.jpg",
-    imageSub: "/images/treatments/lash-tint-sub.jpg",
-    imageCard: "/images/treatments/lash-tint-card.jpg"
-  },
-  {
-    id: 12,
-    name: "Lash Extension",
-    slug: "lash-extension",
-    description: "A cosmetic enhancement where individual synthetic fibers are applied to your natural eyelashes, creating a fuller, longer, and more defined appearance.",
-    longDescription: `Lash extensions are a cosmetic enhancement where individual synthetic fibers are applied to your natural eyelashes, creating a fuller, longer, and more defined appearance.
-
-    The process involves meticulously bonding each extension to a single natural lash, resulting in a seamless, natural look.
-    
-    Clients can choose from various lengths, thicknesses, and styles to customize their desired outcome, whether it's a subtle boost of volume or a dramatic, eye-catching look.
-    
-    Lash extensions typically last for several weeks with proper care and maintenance, offering a low-maintenance solution for effortlessly beautiful lashes around the clock.`,
-    imageMain: "/images/treatments/lash-extension-main.jpg",
-    imageSub: "/images/treatments/lash-extension-sub.jpg",
-    imageCard: "/images/treatments/lash-extension-card.jpg"
-  },
-  {
-    id: 13,
-    name: "Gel Nails",
-    slug: "gel-nails",
-    description: "A type of artificial nail extension that involves applying a gel polish to the natural nails to create a durable and long-lasting manicure.",
-    longDescription: `Gel nails are a type of artificial nail extension that involves applying a gel polish to the natural nails to create a durable and long-lasting manicure.
-
-    The gel polish is usually applied in layers and then cured under a UV or LED lamp to harden and bond to the nails.
-    
-    Gel nails are known for their glossy finish, flexibility, and resistance to chipping. They can be shaped and styled according to the individual's preference and can last for several weeks without losing their shine.
-    
-    Gel nails are popular for their natural look and ability to strengthen and protect the natural nails underneath.`,
-    imageMain: "/images/treatments/gel-nails-main.jpg",
-    imageSub: "/images/treatments/gel-nails-sub.jpg",
-    imageCard: "/images/treatments/gel-nails-card.jpg"
-  }
-];
+  ];

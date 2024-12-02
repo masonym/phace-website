@@ -23,7 +23,7 @@ export function Awards() {
   return (
     <section className="py-20 bg-secondary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-4xl text-center mb-4">Chilliwack's Favourite Med Spa!</h2>
+        <h2 className="text-6xl text-center mb-4">Chilliwack's Favourite Med Spa!</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mt-12">
           {awards.map((award, index) => (
             <div key={index} className="text-center">

@@ -1,10 +1,13 @@
+import Image from "next/image";
+
 export default function BrowsLashesNailsHero() {
   return (
     <section className="relative h-screen flex items-center justify-center bg-beige-100">
       <div className="absolute inset-0">
-        <img
-          src="/images/brows-lashes-nails/hero.jpg"
+        <Image
+          src="/images/brows-lashes-nails/hero.webp"
           alt="Brows, Lashes, and Nails"
+          fill
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black/30" />

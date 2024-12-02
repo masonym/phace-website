@@ -17,7 +17,7 @@ export function Location() {
     <section className="py-20 bg-secondary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="section-title">Visit Us</h2>
+          <h2 className="text-7xl mb-4">Visit Us</h2>
           <p className="text-lg mb-2">
             Join us at our beautiful location in the historic river-valley town of Yarrow, in Chilliwack, BC.
           </p>

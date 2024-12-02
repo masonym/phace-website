@@ -14,7 +14,7 @@
 
 .scrollContent {
   display: flex;
-  gap: 3rem;
+  gap: 1rem;
   animation: scroll 20s linear infinite;
 }
 
@@ -24,7 +24,7 @@
 
 .partnerImage {
   flex-shrink: 0;
-  width: 10rem;
-  height: 5rem;
+  width: 15rem;
+  height: 10rem;
   position: relative;
 }

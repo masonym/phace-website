@@ -2,6 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 import { Navigation } from '@/components/Navigation'
 import { Footer } from '@/components/Footer'
+import FloatingButtons from '@/components/shared/FloatingButtons'
 
 export const metadata: Metadata = {
   title: 'Phace - Medical Spa in Chilliwack',
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col">
         <Navigation />
         <main className="flex-grow">{children}</main>
+        {/* <FloatingButtons /> */}
         <Footer />
       </body>
     </html>

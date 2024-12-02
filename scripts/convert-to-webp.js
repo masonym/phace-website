@@ -24,7 +24,15 @@ async function convertToWebP(filePath) {
       .webp({ quality: 80 })
       .toFile(webpPath);
 
-    console.log(`Converted ${filePath} to WebP`);
+    // Verify the WebP file was created successfully
+    try {
+      await fs.access(webpPath);
+      // Delete the original file
+      await fs.unlink(filePath);
+      console.log(`Converted ${filePath} to WebP and deleted original file`);
+    } catch (err) {
+      console.error(`Error verifying WebP file ${webpPath}:`, err);
+    }
   } catch (error) {
     console.error(`Error converting ${filePath}:`, error);
   }
@@ -49,7 +57,7 @@ async function processDirectory(directory) {
 }
 
 // Start the conversion process
-const publicDir = path.join(__dirname, '..', 'public');
-processDirectory(publicDir)
-  .then(() => console.log('Conversion complete!'))
-  .catch(console.error);
+const imagesDir = path.join(__dirname, '../public/images');
+processDirectory(imagesDir)
+  .then(() => console.log('Conversion process completed'))
+  .catch(error => console.error('Error:', error));

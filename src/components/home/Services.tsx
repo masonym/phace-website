@@ -10,7 +10,7 @@ const services = [
 
     // Our treatments incorporate cutting-edge technology and medical-grade products to deliver visible results. Whether you're looking to address specific skin concerns or simply maintain healthy, glowing skin, we have the perfect treatment for you.`,
     image: '/images/facials.webp',
-    link: '/treatments/facials'
+    // link: '/treatments/facials'
   },
   {
     title: 'Brows, Lashes, and Nails',
@@ -19,7 +19,7 @@ const services = [
 
     // Each service is performed with precision and care, using premium products to ensure long-lasting results. From subtle enhancements to dramatic transformations, we'll help you achieve your desired look.`,
     image: '/images/brows-lashes-nails.webp',
-    link: '/brows-lashes-nails'
+    link: '/treatments/brows-lashes-nails'
   },
   {
     title: 'Injectables',
@@ -36,7 +36,7 @@ const services = [
     // longDescription: `Experience the transformative power of our advanced laser services at Phace, designed for exceptional results in hair removal, facial rejuvenation, acne, and rosacea treatments. Our experienced team customizes treatment plans to address your unique concerns, ensuring optimal results and a radiant, youthful complexion.`,
 
     image: '/images/laser-treatments.webp',
-    link: '/treatments/laser',
+    // link: '/treatments/laser',
   },
   {
     title: 'Paramedical Scar Revision & Tattooing',
@@ -45,7 +45,7 @@ const services = [
 
     // Our specialized treatments can address surgical scars, stretch marks, and other skin irregularities, helping you regain confidence in your appearance.`,
     image: '/images/scar-revision.webp',
-    link: '/treatments/scar-revision'
+    // link: '/treatments/scar-revision'
   }
 ]
 
@@ -86,12 +86,12 @@ export function Services() {
                   
                   {/* Action Buttons */}
                   <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                    <Link 
+                    {service.link && <Link 
                       href={service.link}
                       className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-md transition duration-150 ease-in-out"
                     >
                       Learn More →
-                    </Link>
+                    </Link>}
                     <Link 
                       href="/book"
                       className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-slate-800 bg-transparent border-2 border-slate-800 hover:bg-slate-50 rounded-md transition duration-150 ease-in-out"
