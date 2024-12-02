@@ -129,9 +129,7 @@ export class OrderService {
     static async getAllOrders() {
         const command = new ScanCommand({
             TableName: TABLES.ORDERS,
-            // Since we want ALL orders, we'll use a scan operation
-            // Note: For large datasets, you might want to implement pagination
-            ScanIndexForward: false, // Sort in descending order by default
+            // Removed ScanIndexForward as it's not a valid property for ScanCommand
         });
 
         const result = await dynamoDb.send(command);
