@@ -7,6 +7,11 @@ const nextConfig = {
         hostname: 'res.cloudinary.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'phace-product-images.s3.us-west-2.amazonaws.com',
+        pathname: '/**',
+      }
     ],
   },
 }

@@ -20,19 +20,23 @@ export class S3Service {
             Bucket: BUCKET_NAME,
             Key: key,
             ContentType: contentType,
-            ACL: 'public-read', // Make the uploaded file publicly readable
             CacheControl: 'max-age=31536000'
         });
 
         try {
             const url = await getSignedUrl(s3Client, command, { 
                 expiresIn: 3600,
+                signableHeaders: new Set(['host', 'content-type'])
             });
             return url;
         } catch (error) {
             console.error('Error generating presigned URL:', error);
             throw new Error('Failed to generate upload URL');
         }
+    }
+
+    static getImageUrl(key: string) {
+        return `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-west-2'}.amazonaws.com/${key}`;
     }
 
     static async deleteImage(key: string) {
@@ -42,22 +46,14 @@ export class S3Service {
 
         const command = new DeleteObjectCommand({
             Bucket: BUCKET_NAME,
-            Key: key,
+            Key: key
         });
 
         try {
-            return await s3Client.send(command);
+            await s3Client.send(command);
         } catch (error) {
             console.error('Error deleting image:', error);
             throw new Error('Failed to delete image');
         }
-    }
-
-    static getImageUrl(key: string) {
-        if (!key) {
-            throw new Error('Image key is required');
-        }
-        // Use the same region as the S3 client
-        return `https://${BUCKET_NAME}.s3.${s3Client.config.region}.amazonaws.com/${key}`;
     }
 }

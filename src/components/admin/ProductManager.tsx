@@ -54,7 +54,8 @@ export default function ProductManager() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to get upload URL');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to get upload URL');
             }
 
             const { uploadUrl } = await response.json();
@@ -63,11 +64,15 @@ export default function ProductManager() {
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'PUT',
                 body: file,
-                headers: { 'Content-Type': contentType },
+                headers: {
+                    'Content-Type': contentType
+                },
             });
 
             if (!uploadResponse.ok) {
-                throw new Error('Failed to upload image');
+                const errorText = await uploadResponse.text();
+                console.error('S3 upload error:', errorText);
+                throw new Error(`Failed to upload image: ${errorText}`);
             }
 
             // Get the public URL
@@ -154,8 +159,8 @@ export default function ProductManager() {
             </button>
 
             {editingProduct && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <h2 className="text-xl font-bold mb-4">
                             {editingProduct.id ? 'Edit Product' : 'New Product'}
                         </h2>
@@ -230,7 +235,7 @@ export default function ProductManager() {
                             </div>
                             <div>
                                 <label className="block mb-1">Images</label>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 relative">
                                     {editingProduct.images?.map((image, index) => (
                                         <div
                                             key={index}
@@ -238,9 +243,10 @@ export default function ProductManager() {
                                         >
                                             <Image
                                                 src={image}
-                                                alt={`Product image ${index + 1}`}
+                                                alt={`Product ${index + 1}`}
                                                 fill
                                                 className="object-cover rounded"
+                                                sizes="96px"
                                             />
                                             <button
                                                 type="button"
@@ -254,7 +260,7 @@ export default function ProductManager() {
                                                         images: newImages,
                                                     });
                                                 }}
-                                                className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                                                className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center z-10"
                                             >
                                                 ×
                                             </button>

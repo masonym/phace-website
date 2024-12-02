@@ -52,16 +52,30 @@ export class ProductService {
     }
 
     static async updateProduct(productId: string, updates: Partial<Product>) {
+        // First, get the existing product
+        const existingProduct = await this.getProduct(productId);
+        if (!existingProduct) {
+            throw new Error('Product not found');
+        }
+
+        // Merge existing product with updates
+        const updatedProduct = {
+            ...existingProduct,
+            ...updates,
+            id: productId, // Ensure ID doesn't change
+        };
+
         const command = new PutCommand({
             TableName: TABLES.PRODUCTS,
             Item: {
-                ...updates,
+                ...updatedProduct,
                 pk: `PRODUCT#${productId}`,
                 sk: `PRODUCT#${productId}`,
             },
         });
 
-        return await dynamoDb.send(command);
+        await dynamoDb.send(command);
+        return updatedProduct;
     }
 
     static async deleteProduct(productId: string) {
