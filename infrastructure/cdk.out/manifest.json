@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::024848470631:role/cdk-hnb659fds-deploy-role-024848470631-us-west-2",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::024848470631:role/cdk-hnb659fds-cfn-exec-role-024848470631-us-west-2",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-024848470631-us-west-2/7af066b4d1cf6c0470728e920d7ef92d10fc4585476bf7ec8fcaf699309eb372.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-024848470631-us-west-2/5a6a67e5de4265419bda760d0f3f04ec480b13b0de56c7845179a464c119b3b6.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -92,6 +92,126 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "AdminUsersTable35B520A8"
+          }
+        ],
+        "/PhaceStack/ServicesTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ServicesTableF56E8DC5"
+            }
+          }
+        ],
+        "/PhaceStack/ServicesTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServicesTableF56E8DC5"
+          }
+        ],
+        "/PhaceStack/AppointmentsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "AppointmentsTable8553CB1E"
+            }
+          }
+        ],
+        "/PhaceStack/AppointmentsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AppointmentsTable8553CB1E"
+          }
+        ],
+        "/PhaceStack/StaffTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "StaffTable11B9C6C0"
+            }
+          }
+        ],
+        "/PhaceStack/StaffTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "StaffTable11B9C6C0"
+          }
+        ],
+        "/PhaceStack/ClientsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ClientsTableC30D35A3"
+            }
+          }
+        ],
+        "/PhaceStack/ClientsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ClientsTableC30D35A3"
+          }
+        ],
+        "/PhaceStack/WaitlistTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "WaitlistTable9B05A3AC"
+            }
+          }
+        ],
+        "/PhaceStack/WaitlistTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WaitlistTable9B05A3AC"
+          }
+        ],
+        "/PhaceStack/FormsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "FormsTable9C91E1CF"
+            }
+          }
+        ],
+        "/PhaceStack/FormsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FormsTable9C91E1CF"
+          }
+        ],
+        "/PhaceStack/ServicesTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ServicesTableName"
+          }
+        ],
+        "/PhaceStack/AppointmentsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AppointmentsTableName"
+          }
+        ],
+        "/PhaceStack/StaffTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "StaffTableName"
+          }
+        ],
+        "/PhaceStack/ClientsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ClientsTableName"
+          }
+        ],
+        "/PhaceStack/WaitlistTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WaitlistTableName"
+          }
+        ],
+        "/PhaceStack/FormsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "FormsTableName"
           }
         ],
         "/PhaceStack/PhaceUserPool/Resource": [

@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { CognitoJwtVerifier } from "aws-jwt-verify";
+
+// Create a verifier that expects valid ID tokens
+const verifier = CognitoJwtVerifier.create({
+    userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
+    tokenUse: "id",
+    clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
+});
 
 export async function middleware(request: NextRequest) {
     // Only protect admin routes (except login)
@@ -16,25 +24,8 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
-        // Clone the request headers
-        const headers = new Headers(request.headers);
-        headers.set('Authorization', `Bearer ${token}`);
-        
-        // Verify token with the auth endpoint
-        const res = await fetch(`${request.nextUrl.origin}/api/admin/auth`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            cache: 'no-store'
-        })
-
-        if (!res.ok) {
-            // Clear the invalid token
-            const response = NextResponse.redirect(new URL('/admin/login', request.url));
-            response.cookies.delete('adminToken');
-            return response;
-        }
+        // Verify the token
+        await verifier.verify(token);
 
         // Add the verified token to subsequent requests
         const requestHeaders = new Headers(request.headers);
@@ -46,6 +37,7 @@ export async function middleware(request: NextRequest) {
             },
         });
     } catch (error) {
+        console.error('Token verification failed:', error);
         // If token is invalid, clear it and redirect to login
         const response = NextResponse.redirect(new URL('/admin/login', request.url));
         response.cookies.delete('adminToken');

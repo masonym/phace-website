@@ -4,6 +4,7 @@ import { Navigation } from '@/components/Navigation'
 import { Footer } from '@/components/Footer'
 import FloatingButtons from '@/components/shared/FloatingButtons'
 import { CartProvider } from '@/hooks/useCart'
+import { AuthProvider } from '@/hooks/useAuth'
 
 export const metadata: Metadata = {
   title: 'Phace - Medical Spa in Chilliwack',
@@ -18,12 +19,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col">
-        <CartProvider>
-          <Navigation />
-          <main className="flex-grow">{children}</main>
-          {/* <FloatingButtons /> */}
-          <Footer />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Navigation />
+            <main className="flex-grow">{children}</main>
+            {/* <FloatingButtons /> */}
+            <Footer />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   )

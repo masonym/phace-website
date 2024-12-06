@@ -3,6 +3,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
+import { createBookingTables } from './booking-tables';
 
 export class PhaceStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
@@ -31,7 +32,8 @@ export class PhaceStack extends Stack {
                     allowedOrigins: [
                         'http://localhost:3001',
                         'https://phace.ca',
-                        'https://www.phace.ca'
+                        'https://www.phace.ca',
+                        'https://phace-website.vercel.app',
                     ],
                     exposedHeaders: ['ETag'],
                 },
@@ -82,6 +84,40 @@ export class PhaceStack extends Stack {
             indexName: 'RoleIndex',
             partitionKey: { name: 'role', type: dynamodb.AttributeType.STRING },
             sortKey: { name: 'email', type: dynamodb.AttributeType.STRING },
+        });
+
+        // Create Booking System Tables
+        const bookingTables = createBookingTables(this);
+
+        // Output the table names
+        new CfnOutput(this, 'ServicesTableName', {
+            value: bookingTables.servicesTable.tableName,
+            description: 'Name of the DynamoDB table for services',
+        });
+
+        new CfnOutput(this, 'AppointmentsTableName', {
+            value: bookingTables.appointmentsTable.tableName,
+            description: 'Name of the DynamoDB table for appointments',
+        });
+
+        new CfnOutput(this, 'StaffTableName', {
+            value: bookingTables.staffTable.tableName,
+            description: 'Name of the DynamoDB table for staff',
+        });
+
+        new CfnOutput(this, 'ClientsTableName', {
+            value: bookingTables.clientsTable.tableName,
+            description: 'Name of the DynamoDB table for clients',
+        });
+
+        new CfnOutput(this, 'WaitlistTableName', {
+            value: bookingTables.waitlistTable.tableName,
+            description: 'Name of the DynamoDB table for waitlist',
+        });
+
+        new CfnOutput(this, 'FormsTableName', {
+            value: bookingTables.formsTable.tableName,
+            description: 'Name of the DynamoDB table for forms',
         });
 
         // Create Cognito User Pool

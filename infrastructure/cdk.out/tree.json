@@ -35,7 +35,8 @@
                           "allowedOrigins": [
                             "http://localhost:3001",
                             "https://phace.ca",
-                            "https://www.phace.ca"
+                            "https://www.phace.ca",
+                            "https://phace-website.vercel.app"
                           ],
                           "exposedHeaders": [
                             "ETag"
@@ -326,6 +327,474 @@
             },
             "constructInfo": {
               "fqn": "aws-cdk-lib.aws_dynamodb.Table",
+              "version": "2.171.1"
+            }
+          },
+          "ServicesTable": {
+            "id": "ServicesTable",
+            "path": "PhaceStack/ServicesTable",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "PhaceStack/ServicesTable/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::DynamoDB::Table",
+                  "aws:cdk:cloudformation:props": {
+                    "attributeDefinitions": [
+                      {
+                        "attributeName": "pk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "GSI1PK",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "GSI1SK",
+                        "attributeType": "S"
+                      }
+                    ],
+                    "billingMode": "PAY_PER_REQUEST",
+                    "globalSecondaryIndexes": [
+                      {
+                        "indexName": "GSI1",
+                        "keySchema": [
+                          {
+                            "attributeName": "GSI1PK",
+                            "keyType": "HASH"
+                          },
+                          {
+                            "attributeName": "GSI1SK",
+                            "keyType": "RANGE"
+                          }
+                        ],
+                        "projection": {
+                          "projectionType": "ALL"
+                        }
+                      }
+                    ],
+                    "keySchema": [
+                      {
+                        "attributeName": "pk",
+                        "keyType": "HASH"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "keyType": "RANGE"
+                      }
+                    ],
+                    "tableName": "phace-services"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_dynamodb.CfnTable",
+                  "version": "2.171.1"
+                }
+              },
+              "ScalingRole": {
+                "id": "ScalingRole",
+                "path": "PhaceStack/ServicesTable/ScalingRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.171.1"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_dynamodb.Table",
+              "version": "2.171.1"
+            }
+          },
+          "AppointmentsTable": {
+            "id": "AppointmentsTable",
+            "path": "PhaceStack/AppointmentsTable",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "PhaceStack/AppointmentsTable/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::DynamoDB::Table",
+                  "aws:cdk:cloudformation:props": {
+                    "attributeDefinitions": [
+                      {
+                        "attributeName": "pk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "GSI1PK",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "GSI1SK",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "GSI2PK",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "GSI2SK",
+                        "attributeType": "S"
+                      }
+                    ],
+                    "billingMode": "PAY_PER_REQUEST",
+                    "globalSecondaryIndexes": [
+                      {
+                        "indexName": "GSI1",
+                        "keySchema": [
+                          {
+                            "attributeName": "GSI1PK",
+                            "keyType": "HASH"
+                          },
+                          {
+                            "attributeName": "GSI1SK",
+                            "keyType": "RANGE"
+                          }
+                        ],
+                        "projection": {
+                          "projectionType": "ALL"
+                        }
+                      },
+                      {
+                        "indexName": "GSI2",
+                        "keySchema": [
+                          {
+                            "attributeName": "GSI2PK",
+                            "keyType": "HASH"
+                          },
+                          {
+                            "attributeName": "GSI2SK",
+                            "keyType": "RANGE"
+                          }
+                        ],
+                        "projection": {
+                          "projectionType": "ALL"
+                        }
+                      }
+                    ],
+                    "keySchema": [
+                      {
+                        "attributeName": "pk",
+                        "keyType": "HASH"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "keyType": "RANGE"
+                      }
+                    ],
+                    "tableName": "phace-appointments"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_dynamodb.CfnTable",
+                  "version": "2.171.1"
+                }
+              },
+              "ScalingRole": {
+                "id": "ScalingRole",
+                "path": "PhaceStack/AppointmentsTable/ScalingRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.171.1"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_dynamodb.Table",
+              "version": "2.171.1"
+            }
+          },
+          "StaffTable": {
+            "id": "StaffTable",
+            "path": "PhaceStack/StaffTable",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "PhaceStack/StaffTable/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::DynamoDB::Table",
+                  "aws:cdk:cloudformation:props": {
+                    "attributeDefinitions": [
+                      {
+                        "attributeName": "pk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "attributeType": "S"
+                      }
+                    ],
+                    "billingMode": "PAY_PER_REQUEST",
+                    "keySchema": [
+                      {
+                        "attributeName": "pk",
+                        "keyType": "HASH"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "keyType": "RANGE"
+                      }
+                    ],
+                    "tableName": "phace-staff"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_dynamodb.CfnTable",
+                  "version": "2.171.1"
+                }
+              },
+              "ScalingRole": {
+                "id": "ScalingRole",
+                "path": "PhaceStack/StaffTable/ScalingRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.171.1"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_dynamodb.Table",
+              "version": "2.171.1"
+            }
+          },
+          "ClientsTable": {
+            "id": "ClientsTable",
+            "path": "PhaceStack/ClientsTable",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "PhaceStack/ClientsTable/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::DynamoDB::Table",
+                  "aws:cdk:cloudformation:props": {
+                    "attributeDefinitions": [
+                      {
+                        "attributeName": "pk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "GSI1PK",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "GSI1SK",
+                        "attributeType": "S"
+                      }
+                    ],
+                    "billingMode": "PAY_PER_REQUEST",
+                    "globalSecondaryIndexes": [
+                      {
+                        "indexName": "GSI1",
+                        "keySchema": [
+                          {
+                            "attributeName": "GSI1PK",
+                            "keyType": "HASH"
+                          },
+                          {
+                            "attributeName": "GSI1SK",
+                            "keyType": "RANGE"
+                          }
+                        ],
+                        "projection": {
+                          "projectionType": "ALL"
+                        }
+                      }
+                    ],
+                    "keySchema": [
+                      {
+                        "attributeName": "pk",
+                        "keyType": "HASH"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "keyType": "RANGE"
+                      }
+                    ],
+                    "tableName": "phace-clients"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_dynamodb.CfnTable",
+                  "version": "2.171.1"
+                }
+              },
+              "ScalingRole": {
+                "id": "ScalingRole",
+                "path": "PhaceStack/ClientsTable/ScalingRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.171.1"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_dynamodb.Table",
+              "version": "2.171.1"
+            }
+          },
+          "WaitlistTable": {
+            "id": "WaitlistTable",
+            "path": "PhaceStack/WaitlistTable",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "PhaceStack/WaitlistTable/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::DynamoDB::Table",
+                  "aws:cdk:cloudformation:props": {
+                    "attributeDefinitions": [
+                      {
+                        "attributeName": "pk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "attributeType": "S"
+                      }
+                    ],
+                    "billingMode": "PAY_PER_REQUEST",
+                    "keySchema": [
+                      {
+                        "attributeName": "pk",
+                        "keyType": "HASH"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "keyType": "RANGE"
+                      }
+                    ],
+                    "tableName": "phace-waitlist"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_dynamodb.CfnTable",
+                  "version": "2.171.1"
+                }
+              },
+              "ScalingRole": {
+                "id": "ScalingRole",
+                "path": "PhaceStack/WaitlistTable/ScalingRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.171.1"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_dynamodb.Table",
+              "version": "2.171.1"
+            }
+          },
+          "FormsTable": {
+            "id": "FormsTable",
+            "path": "PhaceStack/FormsTable",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "PhaceStack/FormsTable/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::DynamoDB::Table",
+                  "aws:cdk:cloudformation:props": {
+                    "attributeDefinitions": [
+                      {
+                        "attributeName": "pk",
+                        "attributeType": "S"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "attributeType": "S"
+                      }
+                    ],
+                    "billingMode": "PAY_PER_REQUEST",
+                    "keySchema": [
+                      {
+                        "attributeName": "pk",
+                        "keyType": "HASH"
+                      },
+                      {
+                        "attributeName": "sk",
+                        "keyType": "RANGE"
+                      }
+                    ],
+                    "tableName": "phace-forms"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_dynamodb.CfnTable",
+                  "version": "2.171.1"
+                }
+              },
+              "ScalingRole": {
+                "id": "ScalingRole",
+                "path": "PhaceStack/FormsTable/ScalingRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.171.1"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_dynamodb.Table",
+              "version": "2.171.1"
+            }
+          },
+          "ServicesTableName": {
+            "id": "ServicesTableName",
+            "path": "PhaceStack/ServicesTableName",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.171.1"
+            }
+          },
+          "AppointmentsTableName": {
+            "id": "AppointmentsTableName",
+            "path": "PhaceStack/AppointmentsTableName",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.171.1"
+            }
+          },
+          "StaffTableName": {
+            "id": "StaffTableName",
+            "path": "PhaceStack/StaffTableName",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.171.1"
+            }
+          },
+          "ClientsTableName": {
+            "id": "ClientsTableName",
+            "path": "PhaceStack/ClientsTableName",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.171.1"
+            }
+          },
+          "WaitlistTableName": {
+            "id": "WaitlistTableName",
+            "path": "PhaceStack/WaitlistTableName",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.171.1"
+            }
+          },
+          "FormsTableName": {
+            "id": "FormsTableName",
+            "path": "PhaceStack/FormsTableName",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
               "version": "2.171.1"
             }
           },

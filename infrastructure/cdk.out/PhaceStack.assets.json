@@ -1,7 +1,7 @@
 {
   "version": "38.0.1",
   "files": {
-    "7af066b4d1cf6c0470728e920d7ef92d10fc4585476bf7ec8fcaf699309eb372": {
+    "5a6a67e5de4265419bda760d0f3f04ec480b13b0de56c7845179a464c119b3b6": {
       "source": {
         "path": "PhaceStack.template.json",
         "packaging": "file"
@@ -9,7 +9,7 @@
       "destinations": {
         "024848470631-us-west-2": {
           "bucketName": "cdk-hnb659fds-assets-024848470631-us-west-2",
-          "objectKey": "7af066b4d1cf6c0470728e920d7ef92d10fc4585476bf7ec8fcaf699309eb372.json",
+          "objectKey": "5a6a67e5de4265419bda760d0f3f04ec480b13b0de56c7845179a464c119b3b6.json",
           "region": "us-west-2",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::024848470631:role/cdk-hnb659fds-file-publishing-role-024848470631-us-west-2"
         }
