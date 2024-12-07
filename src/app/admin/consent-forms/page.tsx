@@ -55,7 +55,53 @@ export default function ConsentFormsPage() {
                 const formsResponse = await fetch('/api/booking/consent-forms');
                 if (!formsResponse.ok) throw new Error('Failed to fetch consent forms');
                 const formsData = await formsResponse.json();
-                setConsentForms(formsData);
+                
+                // Transform the data to match the ConsentForm type
+                const transformedForms = formsData.map((form: any) => ({
+                    id: form.id,
+                    title: form.title,
+                    serviceIds: form.serviceIds || [],
+                    isActive: form.isActive ?? true,
+                    version: form.version || 1,
+                    sections: (form.sections || []).map((section: any) => ({
+                        id: section.id,
+                        title: section.title,
+                        questions: section.questions.map((question: any) => {
+                            const baseQuestion = {
+                                id: question.id,
+                                type: question.type,
+                                required: question.required,
+                                label: question.label,
+                            };
+
+                            switch (question.type) {
+                                case 'text':
+                                    return {
+                                        ...baseQuestion,
+                                        type: 'text' as const,
+                                        placeholder: question.content,
+                                    };
+                                case 'checkbox':
+                                case 'radio':
+                                    return {
+                                        ...baseQuestion,
+                                        type: question.type as 'checkbox' | 'radio',
+                                        options: question.options || [],
+                                    };
+                                case 'markdown':
+                                    return {
+                                        ...baseQuestion,
+                                        type: 'markdown' as const,
+                                        content: question.content || '',
+                                    };
+                                default:
+                                    throw new Error(`Unknown question type: ${question.type}`);
+                            }
+                        }),
+                    })),
+                }));
+                
+                setConsentForms(transformedForms);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setMessage({ type: 'error', text: 'Failed to fetch data' });
@@ -75,13 +121,21 @@ export default function ConsentFormsPage() {
                 return;
             }
 
+            // Ensure the form data has the required structure
+            const newFormData = {
+                ...formData,
+                sections: formData.sections || [],
+                version: formData.version || 1,
+                isActive: formData.isActive ?? true,
+            };
+
             const response = await fetch('/api/booking/consent-forms', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(newFormData),
             });
 
             if (!response.ok) {
@@ -89,7 +143,48 @@ export default function ConsentFormsPage() {
                 throw new Error(errorData?.error || 'Failed to create consent form');
             }
 
-            const createdForm = await response.json();
+            const createdFormData = await response.json();
+            // Transform the created form data to match the ConsentForm type
+            const createdForm: ConsentForm = {
+                ...createdFormData,
+                sections: (createdFormData.sections || []).map((section: any) => ({
+                    id: section.id,
+                    title: section.title,
+                    questions: section.questions.map((question: any) => {
+                        const baseQuestion = {
+                            id: question.id,
+                            type: question.type,
+                            required: question.required,
+                            label: question.label,
+                        };
+
+                        switch (question.type) {
+                            case 'text':
+                                return {
+                                    ...baseQuestion,
+                                    type: 'text' as const,
+                                    placeholder: question.content,
+                                };
+                            case 'checkbox':
+                            case 'radio':
+                                return {
+                                    ...baseQuestion,
+                                    type: question.type as 'checkbox' | 'radio',
+                                    options: question.options || [],
+                                };
+                            case 'markdown':
+                                return {
+                                    ...baseQuestion,
+                                    type: 'markdown' as const,
+                                    content: question.content || '',
+                                };
+                            default:
+                                throw new Error(`Unknown question type: ${question.type}`);
+                        }
+                    }),
+                })),
+            };
+
             setConsentForms(prev => [...prev, createdForm]);
             setShowForm(false);
             setMessage({ type: 'success', text: 'Consent form created successfully' });
