@@ -13,10 +13,17 @@ export async function POST(request: Request) {
             clientEmail,
             clientPhone,
             addons = [],
-            consentFormResponses,
+            consentFormResponses = [],
             notes,
             userId,
         } = data;
+
+        console.log('Raw request data:', data);
+        console.log('Extracted consent form responses:', consentFormResponses);
+        console.log('Received appointment data:', {
+            ...data,
+            consentFormResponses: JSON.stringify(consentFormResponses, null, 2)
+        });
 
         // Validate required fields
         if (!serviceId || !staffId || !startTime || !clientName || !clientEmail || !clientPhone) {
@@ -37,20 +44,34 @@ export async function POST(request: Request) {
 
         // Calculate total duration including addons
         let totalDuration = service.duration;
-        let totalPrice = service.price;
+        let totalPrice = parseInt(service.price, 10);
 
         if (addons.length > 0) {
             const addonDetails = await BookingService.getAddonsByIds(addons);
             const validAddons = addonDetails.filter(addon => addon != null);
             for (const addon of validAddons) {
                 totalDuration += addon.duration;
-                totalPrice += addon.price;
+                totalPrice += parseInt(addon.price);
             }
         }
 
-        // Calculate end time
+        // Calculate end time and round up to nearest 15 minutes
         const startDate = parseISO(startTime);
-        const endTime = addMinutes(startDate, totalDuration);
+        const rawEndTime = addMinutes(startDate, totalDuration);
+        
+        // Round up to nearest 15 minutes
+        const minutes = rawEndTime.getMinutes();
+        const roundUpTo = Math.ceil(minutes / 15) * 15;
+        const endTime = addMinutes(
+            new Date(
+                rawEndTime.getFullYear(),
+                rawEndTime.getMonth(),
+                rawEndTime.getDate(),
+                rawEndTime.getHours(),
+                roundUpTo
+            ),
+            roundUpTo === 60 ? 0 : 0 // If we rounded to 60, the hour will auto-increment
+        );
 
         // Check if the time slot is still available
         const isAvailable = await BookingService.checkTimeSlotAvailability(
@@ -81,6 +102,11 @@ export async function POST(request: Request) {
             consentFormResponses,
             notes,
             userId,
+        });
+
+        console.log('Created appointment with responses:', {
+            appointmentId: appointment.id,
+            consentFormResponses: JSON.stringify(appointment.consentFormResponses, null, 2)
         });
 
         // Send confirmation email

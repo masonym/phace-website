@@ -60,16 +60,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   Add-ons
                 </Link>
                 <Link
+                  href="/admin/consent-forms"
+                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Consent Forms
+                </Link>
+                <Link
                   href="/admin/staff"
                   className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
                 >
                   Staff
                 </Link>
                 <Link
-                  href="/admin/appointments"
+                  href="/admin/calendar"
                   className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
                 >
-                  Appointments
+                  Calendar
                 </Link>
               </div>
             </div>
@@ -128,6 +134,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
             >
               Add-ons
+            </Link>
+            <Link
+              href="/admin/consent-forms"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
+            >
+              Consent Forms
             </Link>
             <Link
               href="/admin/staff"

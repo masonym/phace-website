@@ -30,6 +30,7 @@ interface BookingData {
   clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
+  notes?: string;
   consentForms?: Record<string, any>;
 }
 
@@ -140,7 +141,12 @@ export default function BookingPage() {
             {currentStep === 'client' && (
               <ClientForm
                 onSubmit={(clientData) => {
-                  updateBookingData(clientData);
+                  updateBookingData({
+                    clientName: clientData.name,
+                    clientEmail: clientData.email,
+                    clientPhone: clientData.phone,
+                    notes: clientData.notes,
+                  });
                   goToNextStep();
                 }}
                 onBack={goToPreviousStep}
@@ -151,7 +157,16 @@ export default function BookingPage() {
               <ConsentForms
                 serviceId={bookingData.serviceId!}
                 onSubmit={(consentData) => {
-                  updateBookingData({ consentForms: consentData });
+                  console.log('Received consent data in booking page:', consentData);
+                  // Using setBookingData directly to ensure state update
+                  setBookingData(prevData => {
+                    const newData = {
+                      ...prevData,
+                      consentForms: consentData
+                    };
+                    console.log('New booking data:', newData);
+                    return newData;
+                  });
                   goToNextStep();
                 }}
                 onBack={goToPreviousStep}
@@ -162,7 +177,42 @@ export default function BookingPage() {
               <BookingSummary
                 bookingData={bookingData}
                 onConfirm={async () => {
-                  // Handle booking confirmation
+                  try {
+                    console.log('Current booking data before submit:', bookingData);
+                    const requestBody = {
+                      serviceId: bookingData.serviceId,
+                      serviceName: bookingData.serviceName,
+                      staffId: bookingData.staffId,
+                      staffName: bookingData.staffName,
+                      startTime: bookingData.dateTime,
+                      clientName: bookingData.clientName,
+                      clientEmail: bookingData.clientEmail,
+                      clientPhone: bookingData.clientPhone,
+                      notes: bookingData.notes,
+                      addons: bookingData.addons || [],
+                      consentFormResponses: bookingData.consentForms?.consentFormResponses || [],
+                    };
+                    console.log('Sending appointment request:', requestBody);
+
+                    const response = await fetch('/api/booking/appointments', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(requestBody),
+                    });
+
+                    if (!response.ok) {
+                      const errorData = await response.json();
+                      throw new Error(errorData.error || 'Failed to create booking');
+                    }
+
+                    const data = await response.json();
+                    // Redirect to confirmation page
+                    window.location.href = `/booking-confirmed?id=${data.id}`;
+                  } catch (error: any) {
+                    throw new Error(error.message || 'Failed to create booking');
+                  }
                 }}
                 onBack={goToPreviousStep}
               />

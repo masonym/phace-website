@@ -1,47 +1,54 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-
-interface Question {
-  id: string;
-  text: string;
-  type: 'text' | 'checkbox' | 'radio' | 'select';
-  required: boolean;
-  options?: string[];
-}
+import ConsentFormRenderer from './ConsentFormRenderer';
 
 interface ConsentForm {
   id: string;
-  name: string;
-  type: 'general' | 'service-specific' | 'photo' | 'terms';
-  questions: Question[];
+  title: string;
+  content?: string;
+  serviceIds: string[];
+  isActive: boolean;
+  sections?: Array<{
+    id: string;
+    title: string;
+    questions: Array<{
+      id: string;
+      type: 'text' | 'checkbox' | 'radio' | 'markdown';
+      required: boolean;
+      label: string;
+      content?: string;
+      options?: Array<{
+        id: string;
+        label: string;
+      }>;
+    }>;
+  }>;
 }
 
-interface Props {
+interface ConsentFormsProps {
   serviceId: string;
   onSubmit: (data: Record<string, any>) => void;
   onBack: () => void;
 }
 
-export default function ConsentForms({ serviceId, onSubmit, onBack }: Props) {
+export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFormsProps) {
   const [forms, setForms] = useState<ConsentForm[]>([]);
-  const [currentFormIndex, setCurrentFormIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
-
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchForms = async () => {
       try {
-        const response = await fetch(`/api/booking/forms?serviceId=${serviceId}`);
-        if (!response.ok) throw new Error('Failed to fetch consent forms');
+        const response = await fetch(`/api/booking/consent-forms?serviceId=${serviceId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch consent forms');
+        }
         const data = await response.json();
         setForms(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch consent forms');
       } finally {
         setLoading(false);
       }
@@ -50,158 +57,183 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: Props) {
     fetchForms();
   }, [serviceId]);
 
-  const currentForm = forms[currentFormIndex];
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Raw form responses:', formResponses);
 
-  const onFormSubmit = (data: Record<string, any>) => {
-    const updatedResponses = {
-      ...formResponses,
-      [currentForm.id]: data,
-    };
-    setFormResponses(updatedResponses);
+    // Check if all forms have been agreed to
+    const allFormsAgreed = forms.every(form => {
+      if (form.content) {
+        return formResponses[form.id]?.agreed?.value === true;
+      }
+      // For structured forms, check if all required questions are answered
+      return form.sections?.every(section =>
+        section.questions?.every(question =>
+          !question.required || formResponses[form.id]?.[question.id]?.value
+        )
+      ) ?? true;
+    });
 
-    if (currentFormIndex < forms.length - 1) {
-      setCurrentFormIndex(prev => prev + 1);
-    } else {
-      onSubmit(updatedResponses);
+    if (!allFormsAgreed) {
+      setError('Please complete all required fields in the consent forms');
+      return;
+    }
+
+    // Format the responses to include form and question context
+    const formattedResponses = forms.map(form => {
+      const formId = form.id;
+      const formTitle = form.title;
+      
+      if (form.content) {
+        const response = {
+          formId,
+          formTitle,
+          responses: [{
+            questionId: 'agreed',
+            question: 'I agree to the terms above',
+            answer: formResponses[formId]?.agreed?.value === true ? 'Yes' : 'No',
+            timestamp: formResponses[formId]?.agreed?.timestamp || new Date().toISOString()
+          }]
+        };
+        console.log('Formatted legacy form response:', response);
+        return response;
+      }
+
+      // Handle structured forms
+      const responses = form.sections?.flatMap(section =>
+        section.questions.map(question => {
+          let formattedAnswer = '';
+          const value = formResponses[formId]?.[question.id]?.value;
+
+          switch (question.type) {
+            case 'checkbox':
+              if (Array.isArray(value)) {
+                formattedAnswer = value
+                  .map(optionId => 
+                    question.options?.find(opt => opt.id === optionId)?.label || optionId
+                  )
+                  .filter(Boolean)
+                  .join(', ');
+              }
+              break;
+
+            case 'radio':
+              formattedAnswer = question.options?.find(opt => opt.id === value)?.label || String(value);
+              break;
+
+            default:
+              formattedAnswer = String(value || '');
+          }
+
+          const response = {
+            questionId: question.id,
+            question: question.label,
+            answer: formattedAnswer,
+            timestamp: formResponses[formId]?.[question.id]?.timestamp || new Date().toISOString()
+          };
+          console.log('Formatted question response:', {
+            formId,
+            questionId: question.id,
+            response
+          });
+          return response;
+        })
+      ) || [];
+
+      const formattedForm = {
+        formId,
+        formTitle,
+        responses
+      };
+      console.log('Formatted structured form:', formattedForm);
+      return formattedForm;
+    });
+
+    console.log('Final formatted responses:', formattedResponses);
+    const data = { consentFormResponses: formattedResponses };
+    console.log('Data being passed to onSubmit:', data);
+    onSubmit(data);
+  };
+
+  const formatAnswer = (type: string, value: any, options?: Array<{ id: string, label: string }>) => {
+    if (!value) return '';
+    
+    switch (type) {
+      case 'checkbox':
+        if (options && Array.isArray(value)) {
+          return value
+            .map(optionId => options.find(opt => opt.id === optionId)?.label)
+            .filter(Boolean)
+            .join(', ');
+        }
+        return value ? 'Yes' : 'No';
+      
+      case 'radio':
+        if (options) {
+          const selectedOption = options.find(opt => opt.id === value);
+          return selectedOption?.label || value;
+        }
+        return value;
+      
+      default:
+        return value;
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">Loading consent forms...</div>
-      </div>
-    );
+    return <div>Loading consent forms...</div>;
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-red-600">Error: {error}</div>
-      </div>
-    );
-  }
-
-  if (!currentForm) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">No consent forms required</div>
-      </div>
-    );
+    return <div className="text-red-500">{error}</div>;
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-light text-center mb-2">Consent Forms</h1>
-        <p className="text-center text-gray-600 mb-8">
-          Form {currentFormIndex + 1} of {forms.length}: {currentForm.name}
-        </p>
-      </div>
-
-      {/* Back Button */}
-      <button
-        onClick={onBack}
-        className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
-      >
-        <svg
-          className="w-5 h-5 mr-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        Back to Client Information
-      </button>
-
-      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          {currentForm.questions.map((question) => (
-            <div key={question.id} className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {question.text}
-                {question.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-
-              {question.type === 'text' && (
-                <input
-                  type="text"
-                  {...register(`${question.id}`, { required: question.required })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-accent focus:border-accent"
-                />
-              )}
-
-              {question.type === 'checkbox' && (
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      {...register(`${question.id}`, { required: question.required })}
-                      className="rounded border-gray-300 text-accent focus:ring-accent"
-                    />
-                    <span className="text-sm text-gray-700">I agree</span>
-                  </label>
-                </div>
-              )}
-
-              {question.type === 'radio' && question.options && (
-                <div className="space-y-2">
-                  {question.options.map((option) => (
-                    <label key={option} className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        value={option}
-                        {...register(`${question.id}`, { required: question.required })}
-                        className="border-gray-300 text-accent focus:ring-accent"
-                      />
-                      <span className="text-sm text-gray-700">{option}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {question.type === 'select' && question.options && (
-                <select
-                  {...register(`${question.id}`, { required: question.required })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-accent focus:border-accent"
-                >
-                  <option value="">Select an option</option>
-                  {question.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {errors[question.id] && (
-                <p className="mt-1 text-sm text-red-600">This field is required</p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between">
+    <div className="space-y-6">
+      <h2 className="text-2xl font-semibold">Consent Forms</h2>
+      <form onSubmit={handleFormSubmit} className="space-y-6">
+        {forms.map((form) => (
+          <div key={form.id} className="border rounded-lg p-6 space-y-4">
+            <h3 className="text-xl font-semibold">{form.title}</h3>
+            <ConsentFormRenderer
+              form={form}
+              onChange={(responses) => {
+                setFormResponses(prev => ({
+                  ...prev,
+                  [form.id]: responses,
+                }));
+              }}
+              responses={formResponses[form.id]}
+            />
+          </div>
+        ))}
+        
+        <div className="flex justify-between items-center pt-4">
           <button
             type="button"
-            onClick={() => setCurrentFormIndex(prev => Math.max(0, prev - 1))}
-            className="text-accent hover:text-accent/80 transition-colors"
-            disabled={currentFormIndex === 0}
+            onClick={onBack}
+            className="text-accent hover:text-accent/80 transition-colors flex items-center"
           >
-            Previous Form
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            Back
           </button>
           <button
             type="submit"
-            className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
+            className="bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
           >
-            {currentFormIndex === forms.length - 1 ? 'Review Booking' : 'Next Form'}
+            Continue
           </button>
         </div>
       </form>

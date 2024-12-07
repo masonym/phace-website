@@ -73,10 +73,10 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
   };
 
   return (
-    <div style={{ margin: '20px' }}>
+    <div className="space-y-8">
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: '300', textAlign: 'center', marginBottom: '10px' }}>Review Your Booking</h1>
-        <p style={{ textAlign: 'center', color: '#666', marginBottom: '20px' }}>
+        <h1 className="text-4xl font-light text-center mb-2">Review Your Booking</h1>
+        <p className="text-center text-gray-600 mb-8">
           Please review your appointment details
         </p>
       </div>
@@ -84,19 +84,10 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
       {/* Back Button */}
       <button
         onClick={onBack}
-        style={{
-          marginBottom: '20px',
-          color: '#3498db',
-          cursor: 'pointer',
-          textDecoration: 'none',
-          padding: '10px 20px',
-          border: 'none',
-          borderRadius: '5px',
-          backgroundColor: '#f1f1f1'
-        }}
+        className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
       >
         <svg
-          style={{ width: '20px', height: '20px', marginRight: '10px' }}
+          className="w-5 h-5 mr-2"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -111,22 +102,22 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
         Back to Consent Forms
       </button>
 
-      <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '10px', boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)' }}>
+      <div className="bg-white rounded-xl p-6 shadow-sm space-y-8">
         {/* Service Details */}
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: '500', marginBottom: '10px' }}>Service Details</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <h2 className="text-2xl font-light mb-4">Service Details</h2>
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <p style={{ fontSize: '14px', color: '#666' }}>Service</p>
-              <p style={{ fontSize: '16px', fontWeight: '500' }}>{bookingData.serviceName}</p>
+              <p className="text-sm text-gray-600">Service</p>
+              <p className="text-base font-medium">{bookingData.serviceName}</p>
             </div>
             <div>
-              <p style={{ fontSize: '14px', color: '#666' }}>Provider</p>
-              <p style={{ fontSize: '16px', fontWeight: '500' }}>{bookingData.staffName}</p>
+              <p className="text-sm text-gray-600">Provider</p>
+              <p className="text-base font-medium">{bookingData.staffName}</p>
             </div>
             <div>
-              <p style={{ fontSize: '14px', color: '#666' }}>Date & Time</p>
-              <p style={{ fontSize: '16px', fontWeight: '500' }}>
+              <p className="text-sm text-gray-600">Date & Time</p>
+              <p className="text-base font-medium">
                 {bookingData.dateTime && format(new Date(bookingData.dateTime), 'PPpp')}
               </p>
             </div>
@@ -136,28 +127,28 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
         {/* Add-ons */}
         {addons.length > 0 && (
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: '500', marginBottom: '10px' }}>Additional Services</h2>
-            <div style={{ marginBottom: '20px' }}>
+            <h2 className="text-2xl font-light mb-4">Additional Services</h2>
+            <div className="space-y-4">
               {addons.map((addon) => (
-                <div key={addon.id} style={{ backgroundColor: '#f7f7f7', padding: '20px', borderRadius: '10px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div key={addon.id} className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-start">
                     <div>
-                      <p style={{ fontSize: '16px', fontWeight: '500' }}>{addon.name}</p>
-                      <p style={{ fontSize: '14px', color: '#666' }}>{addon.description}</p>
-                      <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>{addon.duration} minutes</p>
+                      <p className="text-base font-medium">{addon.name}</p>
+                      <p className="text-sm text-gray-600">{addon.description}</p>
+                      <p className="text-sm text-gray-600 mt-2">{addon.duration} minutes</p>
                     </div>
-                    <p style={{ fontSize: '16px', fontWeight: '500' }}>${addon.price}</p>
+                    <p className="text-base font-medium">${addon.price}</p>
                   </div>
                 </div>
               ))}
-              <div style={{ borderTop: '1px solid #ddd', paddingTop: '20px', marginTop: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontSize: '16px', fontWeight: '500' }}>Additional Time</p>
-                  <p style={{ fontSize: '16px', fontWeight: '500' }}>{calculateTotalDuration()} minutes</p>
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-base font-medium">Additional Time</p>
+                  <p className="text-base font-medium">{calculateTotalDuration()} minutes</p>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                  <p style={{ fontSize: '16px', fontWeight: '500' }}>Additional Cost</p>
-                  <p style={{ fontSize: '16px', fontWeight: '500' }}>${calculateTotalPrice()}</p>
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-base font-medium">Additional Cost</p>
+                  <p className="text-base font-medium">${calculateTotalPrice()}</p>
                 </div>
               </div>
             </div>
@@ -166,27 +157,27 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
 
         {/* Client Details */}
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: '500', marginBottom: '10px' }}>Client Details</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <h2 className="text-2xl font-light mb-4">Client Details</h2>
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <p style={{ fontSize: '14px', color: '#666' }}>Name</p>
-              <p style={{ fontSize: '16px', fontWeight: '500' }}>{bookingData.clientName}</p>
+              <p className="text-sm text-gray-600">Name</p>
+              <p className="text-base font-medium">{bookingData.clientName || 'Not provided'}</p>
             </div>
             <div>
-              <p style={{ fontSize: '14px', color: '#666' }}>Email</p>
-              <p style={{ fontSize: '16px', fontWeight: '500' }}>{bookingData.clientEmail}</p>
+              <p className="text-sm text-gray-600">Email</p>
+              <p className="text-base font-medium">{bookingData.clientEmail || 'Not provided'}</p>
             </div>
             <div>
-              <p style={{ fontSize: '14px', color: '#666' }}>Phone</p>
-              <p style={{ fontSize: '16px', fontWeight: '500' }}>{bookingData.clientPhone}</p>
+              <p className="text-sm text-gray-600">Phone</p>
+              <p className="text-base font-medium">{bookingData.clientPhone || 'Not provided'}</p>
             </div>
           </div>
         </div>
 
         {/* Cancellation Policy */}
-        <div style={{ backgroundColor: '#f8e7e1', padding: '20px', borderRadius: '10px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '10px' }}>Cancellation Policy</h3>
-          <div style={{ fontSize: '14px', color: '#666' }}>
+        <div className="bg-[#F8E7E1] p-4 rounded-lg">
+          <h3 className="text-lg font-medium mb-3">Cancellation Policy</h3>
+          <div className="text-sm text-gray-700 space-y-2">
             <p>
               • We have a 15-minute grace period but cannot guarantee completion of your full service
               in the remaining time. No refunds will be offered for missed time or shortened service.
@@ -206,26 +197,20 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
         </div>
 
         {error && (
-          <div style={{ backgroundColor: '#ffe6e6', color: '#ff3737', padding: '20px', borderRadius: '10px' }}>
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg">
             {error}
           </div>
         )}
       </div>
 
       {/* Confirm Button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div className="flex justify-end">
         <button
           onClick={handleConfirm}
           disabled={loading}
-          style={{
-            backgroundColor: '#3498db',
-            color: '#fff',
-            padding: '10px 20px',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            ...loading ? { opacity: 0.5, cursor: 'not-allowed' } : { hover: { backgroundColor: '#2e6da4' } }
-          }}
+          className={`bg-accent text-white px-6 py-2 rounded-lg transition-colors ${
+            loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent/90'
+          }`}
         >
           {loading ? 'Confirming...' : 'Confirm Booking'}
         </button>

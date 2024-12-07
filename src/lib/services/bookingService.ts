@@ -170,6 +170,23 @@ export class BookingService {
         return item;
     }
 
+    static async getAllStaffMembers() {
+        const result = await dynamoDb.send(new QueryCommand({
+            TableName: STAFF_TABLE,
+            KeyConditionExpression: 'begins_with(pk, :pk)',
+            ExpressionAttributeValues: {
+                ':pk': 'STAFF#',
+            },
+        }));
+
+        return result.Items?.map(item => ({
+            id: item.id,
+            name: item.name,
+            email: item.email,
+            services: item.services,
+        })) || [];
+    }
+
     static async getStaffByService(serviceId: string) {
         const result = await dynamoDb.send(new QueryCommand({
             TableName: STAFF_TABLE,
@@ -315,19 +332,23 @@ export class BookingService {
     }
 
     static async getAddonsByIds(addonIds: string[]) {
+        if (!addonIds.length) return [];
+        
         const addons = await Promise.all(
             addonIds.map((id) =>
                 dynamoDb.send(new GetCommand({
                     TableName: SERVICES_TABLE,
                     Key: {
-                        pk: `ADDON#${id}`,
+                        pk: 'ADDONS',
                         sk: `ADDON#${id}`,
                     },
                 }))
             )
         );
 
-        return addons.map((result) => result.Item).filter(Boolean);
+        return addons
+            .map((result) => result.Item)
+            .filter((item): item is any => item !== null && item !== undefined);
     }
 
     static async updateServiceAddon(addonId: string, addon: {
@@ -454,15 +475,45 @@ export class BookingService {
         endTime: string;
         totalPrice: number;
         totalDuration: number;
-        consentFormResponses: {
+        consentFormResponses: Array<{
             formId: string;
-            responses: Record<string, any>;
-        }[];
+            formTitle: string;
+            responses: Array<{
+                questionId: string;
+                question: string;
+                answer: string;
+                timestamp?: string;
+            }>;
+        }>;
         notes?: string;
         userId?: string;
     }) {
+        // Get service, staff, and addon details
+        const [service, staff, addonDetails] = await Promise.all([
+            this.getServiceById(appointment.serviceId),
+            this.getStaffById(appointment.staffId),
+            this.getAddonsByIds(appointment.addons)
+        ]);
+
+        if (!service || !staff) {
+            throw new Error('Service or staff not found');
+        }
+
         const id = nanoid();
-        const startDate = new Date(appointment.startTime);
+        const now = new Date().toISOString();
+
+        // Ensure consentFormResponses is properly structured
+        const consentFormResponses = appointment.consentFormResponses?.map(form => ({
+            formId: form.formId,
+            formTitle: form.formTitle,
+            responses: form.responses.map(response => ({
+                questionId: response.questionId,
+                question: response.question,
+                answer: response.answer,
+                timestamp: response.timestamp || now
+            }))
+        })) || [];
+
         const item = {
             pk: `APPOINTMENT#${id}`,
             sk: `APPOINTMENT#${id}`,
@@ -472,10 +523,31 @@ export class BookingService {
             GSI2SK: `DATE#${appointment.startTime}`,
             id,
             type: 'appointment',
-            status: 'pending',
-            ...appointment,
-            createdAt: new Date().toISOString(),
+            clientEmail: appointment.clientEmail,
+            clientName: appointment.clientName,
+            clientPhone: appointment.clientPhone,
+            staffId: appointment.staffId,
+            staffName: staff.name,
+            serviceId: appointment.serviceId,
+            serviceName: service.name,
+            addons: addonDetails.map(addon => ({
+                id: addon.id,
+                name: addon.name,
+                price: addon.price
+            })),
+            startTime: appointment.startTime,
+            endTime: appointment.endTime,
+            totalPrice: appointment.totalPrice,
+            totalDuration: appointment.totalDuration,
+            consentFormResponses,
+            notes: appointment.notes,
+            userId: appointment.userId,
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
         };
+
+        console.log('Saving appointment with responses:', JSON.stringify(item.consentFormResponses, null, 2));
 
         await dynamoDb.send(new PutCommand({
             TableName: APPOINTMENTS_TABLE,
@@ -513,6 +585,31 @@ export class BookingService {
         return result.Items || [];
     }
 
+    static async getAppointmentById(id: string) {
+        const result = await dynamoDb.send(new GetCommand({
+            TableName: APPOINTMENTS_TABLE,
+            Key: {
+                pk: `APPOINTMENT#${id}`,
+                sk: `APPOINTMENT#${id}`,
+            },
+        }));
+
+        if (!result.Item) {
+            return null;
+        }
+
+        return {
+            id: id,
+            clientName: result.Item.clientName,
+            serviceName: result.Item.serviceName,
+            staffName: result.Item.staffName,
+            startTime: result.Item.startTime,
+            endTime: result.Item.endTime,
+            totalPrice: Number(result.Item.totalPrice),
+            status: result.Item.status,
+        };
+    }
+
     static async checkTimeSlotAvailability(
         staffId: string,
         startTime: string,
@@ -522,11 +619,14 @@ export class BookingService {
             TableName: APPOINTMENTS_TABLE,
             IndexName: 'GSI1',
             KeyConditionExpression: 'GSI1PK = :staffId AND GSI1SK BETWEEN :start AND :end',
-            FilterExpression: 'status <> :cancelled',
+            FilterExpression: '#appointmentStatus <> :cancelled',
+            ExpressionAttributeNames: {
+                '#appointmentStatus': 'status'
+            },
             ExpressionAttributeValues: {
                 ':staffId': `STAFF#${staffId}`,
-                ':start': startTime,
-                ':end': endTime,
+                ':start': `DATE#${startTime}`,
+                ':end': `DATE#${endTime}`,
                 ':cancelled': 'cancelled',
             },
         }));
