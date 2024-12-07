@@ -228,33 +228,19 @@ export class BookingService {
     }
 
     // Addon Methods
-    static async getServiceAddons(serviceId: string) {
-        const result = await dynamoDb.send(new QueryCommand({
-            TableName: SERVICES_TABLE,
-            IndexName: 'GSI1',
-            KeyConditionExpression: 'GSI1PK = :serviceId AND begins_with(GSI1SK, :prefix)',
-            ExpressionAttributeValues: {
-                ':serviceId': `SERVICE#${serviceId}`,
-                ':prefix': 'ADDON#',
-            },
-        }));
-
-        return result.Items || [];
-    }
-
     static async createServiceAddon(addon: {
-        serviceId: string;
         name: string;
         description: string;
         duration: number;
         price: number;
+        serviceIds: string[];
     }) {
         const id = nanoid();
         const item = {
-            pk: `ADDON#${id}`,
+            pk: 'ADDONS',
             sk: `ADDON#${id}`,
-            GSI1PK: `SERVICE#${addon.serviceId}`,
-            GSI1SK: `ADDON#${id}`,
+            GSI1PK: 'ADDON',
+            GSI1SK: addon.name,
             id,
             type: 'addon',
             ...addon,
@@ -266,7 +252,66 @@ export class BookingService {
             Item: item,
         }));
 
+        // Create entries for each service-addon relationship
+        await Promise.all(addon.serviceIds.map(serviceId => 
+            dynamoDb.send(new PutCommand({
+                TableName: SERVICES_TABLE,
+                Item: {
+                    pk: `SERVICE#${serviceId}`,
+                    sk: `ADDON#${id}`,
+                    GSI1PK: 'SERVICE_ADDON',
+                    GSI1SK: addon.name,
+                    addonId: id,
+                    serviceId,
+                    type: 'service_addon',
+                    createdAt: new Date().toISOString(),
+                }
+            }))
+        ));
+
         return item;
+    }
+
+    static async getAllAddons() {
+        const result = await dynamoDb.send(new QueryCommand({
+            TableName: SERVICES_TABLE,
+            KeyConditionExpression: 'pk = :pk',
+            ExpressionAttributeValues: {
+                ':pk': 'ADDONS',
+            },
+        }));
+
+        return result.Items || [];
+    }
+
+    static async getServiceAddons(serviceId: string) {
+        // Get all addon IDs associated with this service
+        const serviceAddons = await dynamoDb.send(new QueryCommand({
+            TableName: SERVICES_TABLE,
+            KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+            ExpressionAttributeValues: {
+                ':pk': `SERVICE#${serviceId}`,
+                ':sk': 'ADDON#',
+            },
+        }));
+
+        // Get the actual addon details for each ID
+        const addonIds = serviceAddons.Items?.map(item => item.addonId) || [];
+        if (addonIds.length === 0) return [];
+
+        const addons = await Promise.all(addonIds.map(addonId =>
+            dynamoDb.send(new GetCommand({
+                TableName: SERVICES_TABLE,
+                Key: {
+                    pk: 'ADDONS',
+                    sk: `ADDON#${addonId}`,
+                },
+            }))
+        ));
+
+        return addons
+            .map(result => result.Item)
+            .filter(item => item !== undefined);
     }
 
     static async getAddonsByIds(addonIds: string[]) {
@@ -283,6 +328,118 @@ export class BookingService {
         );
 
         return addons.map((result) => result.Item).filter(Boolean);
+    }
+
+    static async updateServiceAddon(addonId: string, addon: {
+        name: string;
+        description: string;
+        duration: number;
+        price: number;
+        serviceIds: string[];
+    }) {
+        // First, get the existing addon to get its current service associations
+        const existingAddon = await dynamoDb.send(new GetCommand({
+            TableName: SERVICES_TABLE,
+            Key: {
+                pk: 'ADDONS',
+                sk: `ADDON#${addonId}`,
+            },
+        }));
+
+        if (!existingAddon.Item) {
+            throw new Error('Addon not found');
+        }
+
+        const oldServiceIds = existingAddon.Item.serviceIds || [];
+        const newServiceIds = addon.serviceIds;
+
+        // Update the main addon record
+        const item = {
+            pk: 'ADDONS',
+            sk: `ADDON#${addonId}`,
+            GSI1PK: 'ADDON',
+            GSI1SK: addon.name,
+            id: addonId,
+            type: 'addon',
+            ...addon,
+            updatedAt: new Date().toISOString(),
+        };
+
+        await dynamoDb.send(new PutCommand({
+            TableName: SERVICES_TABLE,
+            Item: item,
+        }));
+
+        // Remove service associations that are no longer needed
+        const removedServiceIds = oldServiceIds.filter(id => !newServiceIds.includes(id));
+        await Promise.all(removedServiceIds.map(serviceId =>
+            dynamoDb.send(new DeleteCommand({
+                TableName: SERVICES_TABLE,
+                Key: {
+                    pk: `SERVICE#${serviceId}`,
+                    sk: `ADDON#${addonId}`,
+                },
+            }))
+        ));
+
+        // Add new service associations
+        const addedServiceIds = newServiceIds.filter(id => !oldServiceIds.includes(id));
+        await Promise.all(addedServiceIds.map(serviceId =>
+            dynamoDb.send(new PutCommand({
+                TableName: SERVICES_TABLE,
+                Item: {
+                    pk: `SERVICE#${serviceId}`,
+                    sk: `ADDON#${addonId}`,
+                    GSI1PK: 'SERVICE_ADDON',
+                    GSI1SK: addon.name,
+                    addonId,
+                    serviceId,
+                    type: 'service_addon',
+                    createdAt: new Date().toISOString(),
+                },
+            }))
+        ));
+
+        return item;
+    }
+
+    static async deleteServiceAddon(addonId: string) {
+        // First, get the addon to get its service associations
+        const existingAddon = await dynamoDb.send(new GetCommand({
+            TableName: SERVICES_TABLE,
+            Key: {
+                pk: 'ADDONS',
+                sk: `ADDON#${addonId}`,
+            },
+        }));
+
+        if (!existingAddon.Item) {
+            throw new Error('Addon not found');
+        }
+
+        const serviceIds = existingAddon.Item.serviceIds || [];
+
+        // Delete the main addon record
+        await dynamoDb.send(new DeleteCommand({
+            TableName: SERVICES_TABLE,
+            Key: {
+                pk: 'ADDONS',
+                sk: `ADDON#${addonId}`,
+            },
+        }));
+
+        // Delete all service associations
+        await Promise.all(serviceIds.map(serviceId =>
+            dynamoDb.send(new DeleteCommand({
+                TableName: SERVICES_TABLE,
+                Key: {
+                    pk: `SERVICE#${serviceId}`,
+                    sk: `ADDON#${addonId}`,
+                },
+            }))
+        ));
+
+        return true;
     }
 
     // Appointment Methods

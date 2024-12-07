@@ -1,12 +1,11 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { compare, hash } from 'bcryptjs';
-import { sign, verify } from 'jsonwebtoken';
+import { CognitoJwtVerifier } from "aws-jwt-verify";
 
 const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 const ADMIN_TABLE = 'phace-admin-users';
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret';
 
 interface AdminUser {
     email: string;
@@ -57,19 +56,7 @@ export class AdminService {
             throw new Error('Invalid password');
         }
 
-        // Generate JWT token
-        const token = sign(
-            {
-                email: admin.email,
-                name: admin.name,
-                role: admin.role,
-            },
-            JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-
         return {
-            token,
             admin: {
                 email: admin.email,
                 name: admin.name,
@@ -80,13 +67,18 @@ export class AdminService {
 
     static async verifyToken(token: string) {
         try {
-            const decoded = verify(token, JWT_SECRET) as {
-                email: string;
-                name: string;
-                role: AdminUser['role'];
-            };
-            return decoded;
+            // Create a verifier that expects valid access tokens:
+            const verifier = CognitoJwtVerifier.create({
+                userPoolId: process.env.COGNITO_USER_POOL_ID || '',
+                tokenUse: "id",
+                clientId: process.env.COGNITO_CLIENT_ID || '',
+            });
+
+            // Verify the token
+            const payload = await verifier.verify(token);
+            return payload;
         } catch (error) {
+            console.error('Token verification failed:', error);
             throw new Error('Invalid token');
         }
     }
@@ -105,7 +97,7 @@ export class AdminService {
             email: item.email,
             name: item.name,
             role: item.role,
-        }));
+        })) || [];
     }
 
     static async updateAdminRole(email: string, role: AdminUser['role']) {
@@ -115,7 +107,9 @@ export class AdminService {
                 pk: `ADMIN#${email}`,
                 sk: `ADMIN#${email}`,
                 role,
+                updatedAt: new Date().toISOString(),
             },
+            ConditionExpression: 'attribute_exists(pk)', // Ensure admin exists
         });
 
         await dynamoDb.send(command);

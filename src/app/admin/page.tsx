@@ -57,6 +57,16 @@ export default function AdminDashboard() {
                         View and manage customer orders
                     </p>
                 </Link>
+
+                <Link
+                    href="/admin/addons"
+                    className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                >
+                    <h2 className="text-xl font-semibold mb-2">Addon Management</h2>
+                    <p className="text-gray-600">
+                        Manage prices and availability of your addons for booking services.
+                    </p>
+                </Link>
             </div>
         </div>
     );

@@ -64,15 +64,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getSession = async () => {
-    return Cookies.get('adminToken');
+    try {
+      const token = Cookies.get('adminToken');
+      if (!token) {
+        console.log('No token found in cookies');
+        return null;
+      }
+      return token;
+    } catch (error) {
+      console.error('Error getting session:', error);
+      return null;
+    }
   };
 
   const getIdToken = async () => {
-    return Cookies.get('adminToken');
+    try {
+      const token = Cookies.get('adminToken');
+      if (!token) {
+        console.log('No ID token found in cookies');
+        return null;
+      }
+      return token;
+    } catch (error) {
+      console.error('Error getting ID token:', error);
+      return null;
+    }
   };
 
   const getAccessToken = async () => {
-    return Cookies.get('adminToken');
+    try {
+      const token = Cookies.get('adminToken');
+      if (!token) {
+        console.log('No access token found in cookies');
+        return null;
+      }
+      return token;
+    } catch (error) {
+      console.error('Error getting access token:', error);
+      return null;
+    }
   };
 
   const signIn = async (email: string, password: string, newPassword?: string) => {

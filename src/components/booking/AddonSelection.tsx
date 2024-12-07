@@ -99,57 +99,46 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
         Back to Date & Time
       </button>
 
-      {/* Addons Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {addons.map((addon) => {
-          const isSelected = selectedAddons.includes(addon.id);
-          return (
-            <button
+      {/* Add-ons Grid */}
+      <div className="grid gap-4">
+        {addons.length === 0 ? (
+          <p className="text-center text-gray-600">No additional services available for this treatment.</p>
+        ) : (
+          addons.map((addon) => (
+            <div
               key={addon.id}
-              onClick={() => toggleAddon(addon.id)}
-              className={`
-                bg-white rounded-xl p-6 shadow-sm text-left transition-all
-                ${isSelected ? 'ring-2 ring-accent' : 'hover:shadow-md'}
-              `}
+              className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-medium text-gray-900">{addon.name}</h3>
-                <div className="flex items-center justify-center w-6 h-6 rounded-full border-2 transition-colors
-                  ${isSelected ? 'bg-accent border-accent' : 'border-gray-300'}">
-                  {isSelected && (
-                    <svg
-                      className="w-4 h-4 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  )}
-                </div>
+              <div className="flex items-start gap-4">
+                <label className="flex items-start gap-4 flex-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedAddons.includes(addon.id)}
+                    onChange={() => toggleAddon(addon.id)}
+                    className="mt-1.5 h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                  />
+                  <div className="flex-1">
+                    <p className="text-lg font-medium">{addon.name}</p>
+                    <p className="text-gray-600 mt-1">{addon.description}</p>
+                    <div className="mt-2 space-x-4">
+                      <span className="text-sm text-gray-600">Duration: {addon.duration} minutes</span>
+                      <span className="text-sm text-gray-600">Price: ${addon.price}</span>
+                    </div>
+                  </div>
+                </label>
               </div>
-              <p className="text-gray-600 mb-4">{addon.description}</p>
-              <div className="flex justify-between items-center text-accent">
-                <span>{addon.duration} mins</span>
-                <span>${addon.price}</span>
-              </div>
-            </button>
-          );
-        })}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Continue Button */}
-      <div className="flex justify-end mt-8">
+      <div className="flex justify-end">
         <button
           onClick={handleContinue}
           className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
         >
-          Continue
+          Continue to Client Information
         </button>
       </div>
     </div>
