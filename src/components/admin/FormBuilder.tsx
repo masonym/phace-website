@@ -43,34 +43,42 @@ export default function FormBuilder({ initialData, onSave }: FormBuilderProps) {
 
       let newQuestion: Question;
       switch (type) {
-        case 'text':
-          newQuestion = {
+        case 'text': {
+          const textQuestion: TextQuestion = {
             ...baseQuestion,
             type: 'text',
             placeholder: 'Enter your answer',
           };
+          newQuestion = textQuestion;
           break;
-        case 'checkbox':
-          newQuestion = {
+        }
+        case 'checkbox': {
+          const checkboxQuestion: CheckboxQuestion = {
             ...baseQuestion,
             type: 'checkbox',
             options: [{ id: uuidv4(), label: 'Option 1' }],
           };
+          newQuestion = checkboxQuestion;
           break;
-        case 'radio':
-          newQuestion = {
+        }
+        case 'radio': {
+          const radioQuestion: RadioQuestion = {
             ...baseQuestion,
             type: 'radio',
             options: [{ id: uuidv4(), label: 'Option 1' }],
           };
+          newQuestion = radioQuestion;
           break;
-        case 'markdown':
-          newQuestion = {
+        }
+        case 'markdown': {
+          const markdownQuestion: MarkdownQuestion = {
             ...baseQuestion,
             type: 'markdown',
             content: '',
           };
+          newQuestion = markdownQuestion;
           break;
+        }
         default:
           return section;
       }
@@ -89,7 +97,142 @@ export default function FormBuilder({ initialData, onSave }: FormBuilderProps) {
         ...section,
         questions: section.questions.map(question => {
           if (question.id !== questionId) return question;
-          return { ...question, ...updates };
+          
+          // Type guard to ensure type safety
+          const updatedQuestion = (() => {
+            switch (question.type) {
+              case 'text': {
+                if (updates.type && updates.type !== 'text') {
+                  // Handle type change
+                  switch (updates.type) {
+                    case 'checkbox':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'checkbox' as const,
+                        options: [{ id: uuidv4(), label: 'Option 1' }],
+                      } as CheckboxQuestion;
+                    case 'radio':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'radio' as const,
+                        options: [{ id: uuidv4(), label: 'Option 1' }],
+                      } as RadioQuestion;
+                    case 'markdown':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'markdown' as const,
+                        content: '',
+                      } as MarkdownQuestion;
+                    default:
+                      return question;
+                  }
+                }
+                // Same type, safe to spread
+                return { ...question, ...updates } as TextQuestion;
+              }
+              case 'checkbox': {
+                if (updates.type && updates.type !== 'checkbox') {
+                  // Handle type change
+                  switch (updates.type) {
+                    case 'text':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'text' as const,
+                        placeholder: 'Enter your answer',
+                      } as TextQuestion;
+                    case 'radio':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'radio' as const,
+                      } as RadioQuestion;
+                    case 'markdown':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'markdown' as const,
+                        content: '',
+                      } as MarkdownQuestion;
+                    default:
+                      return question;
+                  }
+                }
+                // Same type, safe to spread
+                return { ...question, ...updates } as CheckboxQuestion;
+              }
+              case 'radio': {
+                if (updates.type && updates.type !== 'radio') {
+                  // Handle type change
+                  switch (updates.type) {
+                    case 'text':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'text' as const,
+                        placeholder: 'Enter your answer',
+                      } as TextQuestion;
+                    case 'checkbox':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'checkbox' as const,
+                      } as CheckboxQuestion;
+                    case 'markdown':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'markdown' as const,
+                        content: '',
+                      } as MarkdownQuestion;
+                    default:
+                      return question;
+                  }
+                }
+                // Same type, safe to spread
+                return { ...question, ...updates } as RadioQuestion;
+              }
+              case 'markdown': {
+                if (updates.type && updates.type !== 'markdown') {
+                  // Handle type change
+                  switch (updates.type) {
+                    case 'text':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'text' as const,
+                        placeholder: 'Enter your answer',
+                      } as TextQuestion;
+                    case 'checkbox':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'checkbox' as const,
+                        options: [{ id: uuidv4(), label: 'Option 1' }],
+                      } as CheckboxQuestion;
+                    case 'radio':
+                      return {
+                        ...question,
+                        ...updates,
+                        type: 'radio' as const,
+                        options: [{ id: uuidv4(), label: 'Option 1' }],
+                      } as RadioQuestion;
+                    default:
+                      return question;
+                  }
+                }
+                // Same type, safe to spread
+                return { ...question, ...updates } as MarkdownQuestion;
+              }
+              default:
+                return question;
+            }
+          })();
+
+          return updatedQuestion;
         }),
       };
     }));
@@ -227,7 +370,18 @@ export default function FormBuilder({ initialData, onSave }: FormBuilderProps) {
       <div className="flex justify-end sticky bottom-0 pt-4 pb-2 bg-white border-t">
         <button
           type="button"
-          onClick={() => onSave({ ...initialData, sections })}
+          onClick={() => {
+            const form: ConsentForm = {
+              id: initialData?.id ?? uuidv4(),
+              title: initialData?.title ?? 'New Consent Form',
+              serviceIds: initialData?.serviceIds ?? [],
+              isActive: initialData?.isActive ?? false,
+              version: initialData?.version ?? 1,
+              sections,
+              content: initialData?.content,
+            };
+            onSave(form);
+          }}
           className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-dark"
         >
           Save Form

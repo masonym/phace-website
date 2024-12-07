@@ -25,6 +25,7 @@ interface ConsentFormFormProps {
 
 export default function ConsentFormForm({ categories, onSubmit, onCancel, initialData }: ConsentFormFormProps) {
     const [formData, setFormData] = useState<ConsentForm>({
+        id: initialData?.id || '',
         title: '',
         serviceIds: [] as string[],
         isActive: true,
