@@ -7,14 +7,7 @@ import ConsentFormForm from '@/components/admin/ConsentFormForm';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 import ConsentFormRenderer from '@/components/booking/ConsentFormRenderer';
-
-interface ConsentForm {
-    id: string;
-    title: string;
-    content: string;
-    serviceIds: string[];
-    isActive: boolean;
-}
+import { ConsentForm } from '@/types/consentForm';
 
 interface Service {
     id: string;
