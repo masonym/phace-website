@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ServiceCategoryFormProps {
   category?: {
@@ -28,6 +29,8 @@ export default function ServiceCategoryForm({
   onSubmit,
 }: ServiceCategoryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const { getIdToken } = useAuth();
 
   const {
     register,
@@ -44,26 +47,36 @@ export default function ServiceCategoryForm({
 
   const onFormSubmit = async (data: FormData) => {
     setIsSubmitting(true);
+    setError('');
     try {
-      const response = await fetch(
-        '/api/booking/categories' + (category ? `/${category.id}` : ''),
-        {
-          method: category ? 'PUT' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...data,
-            ...(category && { id: category.id }),
-          }),
-        }
-      );
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
 
-      if (!response.ok) throw new Error('Failed to save category');
+      const response = await fetch('/api/booking/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: 'category',
+          ...data,
+          ...(category && { id: category.id }),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save category');
+      }
 
       onSubmit();
-    } catch (error) {
+      onClose();
+    } catch (error: any) {
       console.error('Error saving category:', error);
+      setError(error.message || 'Failed to save category');
     } finally {
       setIsSubmitting(false);
     }
@@ -75,6 +88,12 @@ export default function ServiceCategoryForm({
         <h2 className="text-2xl font-semibold mb-6">
           {category ? 'Edit Category' : 'Add Category'}
         </h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
           <div>
@@ -108,25 +127,19 @@ export default function ServiceCategoryForm({
             </label>
             <input
               type="number"
-              {...register('order', {
-                valueAsNumber: true,
-                min: { value: 0, message: 'Order must be 0 or greater' },
-              })}
+              {...register('order', { valueAsNumber: true })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent"
             />
-            {errors.order && (
-              <p className="mt-1 text-sm text-red-600">{errors.order.message}</p>
-            )}
           </div>
 
-          <div>
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                {...register('isActive')}
-                className="rounded border-gray-300 text-accent focus:ring-accent"
-              />
-              <span className="ml-2">Active</span>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              {...register('isActive')}
+              className="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-700">
+              Active
             </label>
           </div>
 
@@ -134,20 +147,17 @@ export default function ServiceCategoryForm({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-md hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-accent border border-transparent rounded-md shadow-sm hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50"
             >
-              {isSubmitting
-                ? 'Saving...'
-                : category
-                ? 'Save Changes'
-                : 'Add Category'}
+              {isSubmitting ? 'Saving...' : category ? 'Update' : 'Create'}
             </button>
           </div>
         </form>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ServiceCategoryForm from '@/components/admin/ServiceCategoryForm';
 import ServiceForm from '@/components/admin/ServiceForm';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Category {
@@ -36,9 +37,12 @@ export default function ServicesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingService, setDeletingService] = useState<Service | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, getAccessToken } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -49,7 +53,8 @@ export default function ServicesPage() {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const response = await fetch('/api/booking/services');
+        // Include inactive services in admin view
+        const response = await fetch('/api/booking/services?includeInactive=true');
         if (!response.ok) throw new Error('Failed to fetch services');
         const data = await response.json();
         setCategories(data);
@@ -84,6 +89,66 @@ export default function ServicesPage() {
   const handleEditService = (service: Service) => {
     setEditingService(service);
     setShowServiceForm(true);
+  };
+
+  const handleDeleteService = async (service: Service) => {
+    setDeletingService(service);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteCategory = async (category: Category) => {
+    setDeletingCategory(category);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const token = await getAccessToken();
+      if (deletingService) {
+        const response = await fetch(`/api/booking/services?id=${deletingService.id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error('Failed to delete service');
+
+        // Refresh the services list
+        const servicesResponse = await fetch('/api/booking/services?includeInactive=true');
+        const data = await servicesResponse.json();
+        setCategories(data);
+      } else if (deletingCategory) {
+        // First check if category has any services
+        const category = categories.find(c => c.id === deletingCategory.id);
+        if (category && category.services.length > 0) {
+          throw new Error('Cannot delete category that contains services');
+        }
+
+        const response = await fetch(`/api/booking/services/categories?id=${deletingCategory.id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error('Failed to delete category');
+
+        // Refresh the categories list
+        const categoriesResponse = await fetch('/api/booking/services?includeInactive=true');
+        const data = await categoriesResponse.json();
+        setCategories(data);
+        if (selectedCategory === deletingCategory.id) {
+          setSelectedCategory(data.length > 0 ? data[0].id : null);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setShowDeleteDialog(false);
+      setDeletingService(null);
+      setDeletingCategory(null);
+    }
   };
 
   if (isLoading || loading) {
@@ -136,15 +201,26 @@ export default function ServicesPage() {
                 >
                   <div className="flex justify-between items-center">
                     <span>{category.name}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditCategory(category);
-                      }}
-                      className="text-sm hover:underline"
-                    >
-                      Edit
-                    </button>
+                    <div className="space-x-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditCategory(category);
+                        }}
+                        className="text-sm hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCategory(category);
+                        }}
+                        className="text-sm text-red-600 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -191,12 +267,20 @@ export default function ServicesPage() {
                               </span>
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleEditService(service)}
-                            className="text-accent hover:text-accent/80 transition-colors"
-                          >
-                            Edit
-                          </button>
+                          <div className="space-x-4">
+                            <button
+                              onClick={() => handleEditService(service)}
+                              className="text-accent hover:text-accent/80 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteService(service)}
+                              className="text-red-600 hover:text-red-500 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -214,7 +298,7 @@ export default function ServicesPage() {
           onSubmit={async () => {
             setShowCategoryForm(false);
             // Refresh the categories list
-            const response = await fetch('/api/booking/services');
+            const response = await fetch('/api/booking/services?includeInactive=true');
             const data = await response.json();
             setCategories(data);
           }}
@@ -230,10 +314,27 @@ export default function ServicesPage() {
           onSubmit={async () => {
             setShowServiceForm(false);
             // Refresh the services list
-            const response = await fetch('/api/booking/services');
+            const response = await fetch('/api/booking/services?includeInactive=true');
             const data = await response.json();
             setCategories(data);
           }}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <ConfirmDialog
+          isOpen={showDeleteDialog}
+          onClose={() => {
+            setShowDeleteDialog(false);
+            setDeletingService(null);
+            setDeletingCategory(null);
+          }}
+          onConfirm={confirmDelete}
+          title={`Delete ${deletingService ? 'Service' : 'Category'}`}
+          message={`Are you sure you want to delete ${
+            deletingService ? `the service "${deletingService.name}"` : `the category "${deletingCategory?.name}"`
+          }? This action cannot be undone.`}
         />
       )}
     </AdminLayout>

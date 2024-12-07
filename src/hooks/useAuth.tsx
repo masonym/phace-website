@@ -15,6 +15,8 @@ interface AuthContextType {
   signIn: (email: string, password: string, newPassword?: string) => Promise<void>;
   signOut: () => void;
   getSession: () => Promise<any | null>;
+  getIdToken: () => Promise<string | null>;
+  getAccessToken: () => Promise<string | null>;
 }
 
 const cognitoClient = new CognitoIdentityProviderClient({ 
@@ -28,6 +30,8 @@ export const AuthContext = createContext<AuthContextType>({
   signIn: async (email: string, password: string, newPassword?: string) => {},
   signOut: () => {},
   getSession: async () => null,
+  getIdToken: async () => null,
+  getAccessToken: async () => null,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -60,6 +64,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getSession = async () => {
+    return Cookies.get('adminToken');
+  };
+
+  const getIdToken = async () => {
+    return Cookies.get('adminToken');
+  };
+
+  const getAccessToken = async () => {
     return Cookies.get('adminToken');
   };
 
@@ -101,12 +113,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             sameSite: 'strict'
           });
           setIsAuthenticated(true);
-          setUser({ email });
-          setSession(null);
+          setSession(null); // Clear the session as we're done with the challenge
           return;
         }
       }
 
+      // Normal sign-in flow
       const command = new InitiateAuthCommand({
         AuthFlow: "USER_PASSWORD_AUTH",
         ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
@@ -119,11 +131,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Sending auth command...');
       const response = await cognitoClient.send(command);
       console.log('Auth response:', response);
-      
+
+      if (response.ChallengeName === "NEW_PASSWORD_REQUIRED") {
+        setSession(response.Session);
+        throw new Error("NEW_PASSWORD_REQUIRED");
+      }
+
       if (response.AuthenticationResult) {
-        console.log('Authentication successful');
         const { IdToken } = response.AuthenticationResult;
-        // Set the token in a cookie that matches the middleware expectations
+        // Set the token in a cookie
         Cookies.set('adminToken', IdToken, { 
           expires: 7, // 7 days
           path: '/',
@@ -131,41 +147,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           sameSite: 'strict'
         });
         setIsAuthenticated(true);
-        setUser({ email });
-        setSession(null);
-        return Promise.resolve();
-      } else if (response.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
-        console.log('New password required');
-        setSession(response.Session);
-        throw new Error('NEW_PASSWORD_REQUIRED');
-      } else {
-        console.error('No authentication result:', response);
-        throw new Error('Authentication failed');
       }
     } catch (error: any) {
-      console.error('Sign in failed:', {
-        error,
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        details: error.$metadata,
-      });
+      console.error('Sign in error:', error);
       throw error;
     }
   };
 
   const signOut = () => {
-    try {
-      Cookies.remove('adminToken', { path: '/' });
-      setIsAuthenticated(false);
-      setUser(null);
-      setSession(null);
-    } catch (error) {
-      console.error('Sign out failed:', error);
-      // Still clear the state even if signOut fails
-      setIsAuthenticated(false);
-      setUser(null);
-    }
+    Cookies.remove('adminToken', { path: '/' });
+    setIsAuthenticated(false);
+    setUser(null);
   };
 
   return (
@@ -177,6 +169,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signOut,
         getSession,
+        getIdToken,
+        getAccessToken,
       }}
     >
       {children}

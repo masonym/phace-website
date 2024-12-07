@@ -22,17 +22,54 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
+  const [checkingDates, setCheckingDates] = useState(true);
 
   // Calculate the date range for the calendar
   const startDate = startOfMonth(currentMonth);
   const endDate = endOfMonth(addMonths(currentMonth, 1)); // Show two months
   const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
+  // Fetch available dates for the current month range
+  useEffect(() => {
+    const fetchAvailableDates = async () => {
+      setCheckingDates(true);
+      const availableDatesSet = new Set<string>();
+
+      try {
+        // Fetch availability for each day in parallel
+        const promises = dates.map(async (date) => {
+          if (isAfter(date, addDays(new Date(), 1)) && isBefore(date, addMonths(new Date(), 2))) {
+            const response = await fetch(
+              `/api/booking/availability?serviceId=${serviceId}&staffId=${staffId}&date=${format(date, 'yyyy-MM-dd')}`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data.length > 0) {
+                availableDatesSet.add(format(date, 'yyyy-MM-dd'));
+              }
+            }
+          }
+        });
+
+        await Promise.all(promises);
+        setAvailableDates(availableDatesSet);
+      } catch (err) {
+        console.error('Error fetching available dates:', err);
+      } finally {
+        setCheckingDates(false);
+      }
+    };
+
+    fetchAvailableDates();
+  }, [currentMonth, serviceId, staffId]);
+
   // Fetch available time slots when a date is selected
   useEffect(() => {
     if (!selectedDate) return;
 
     const fetchTimeSlots = async () => {
+      setLoading(true);
       try {
         const response = await fetch(
           `/api/booking/availability?serviceId=${serviceId}&staffId=${staffId}&date=${format(selectedDate, 'yyyy-MM-dd')}`
@@ -54,7 +91,9 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
   const twoMonthsFromNow = addMonths(new Date(), 2);
 
   const isDateSelectable = (date: Date) => {
-    return isAfter(date, tomorrow) && isBefore(date, twoMonthsFromNow);
+    const isInRange = isAfter(date, tomorrow) && isBefore(date, twoMonthsFromNow);
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return isInRange && availableDates.has(dateStr);
   };
 
   return (
@@ -117,7 +156,7 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
               </div>
             ))}
             {dates.map((date, i) => {
-              const isSelectable = isDateSelectable(date);
+              const isSelectable = !checkingDates && isDateSelectable(date);
               const isSelected = selectedDate && isSameDay(date, selectedDate);
 
               return (
@@ -129,6 +168,7 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
                     py-2 rounded-full text-sm
                     ${isSelected ? 'bg-accent text-white' : ''}
                     ${isSelectable ? 'hover:bg-accent/10' : 'text-gray-300 cursor-not-allowed'}
+                    ${checkingDates ? 'animate-pulse' : ''}
                   `}
                 >
                   {format(date, 'd')}

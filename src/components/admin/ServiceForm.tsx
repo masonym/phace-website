@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ServiceFormProps {
   service?: {
@@ -37,6 +38,8 @@ export default function ServiceForm({
   onSubmit,
 }: ServiceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const { getIdToken } = useAuth();
 
   const {
     register,
@@ -55,23 +58,36 @@ export default function ServiceForm({
 
   const onFormSubmit = async (data: FormData) => {
     setIsSubmitting(true);
+    setError('');
     try {
-      const response = await fetch('/api/booking/services' + (service ? `/${service.id}` : ''), {
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch('/api/booking/services', {
         method: service ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
+          type: 'service',
           ...data,
-          ...(service && { id: service.id }),
+          id: service?.id,
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save service');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save service');
+      }
 
       onSubmit();
-    } catch (error) {
+      onClose();
+    } catch (error: any) {
       console.error('Error saving service:', error);
+      setError(error.message || 'Failed to save service');
     } finally {
       setIsSubmitting(false);
     }
@@ -83,6 +99,12 @@ export default function ServiceForm({
         <h2 className="text-2xl font-semibold mb-6">
           {service ? 'Edit Service' : 'Add Service'}
         </h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
           <div>
@@ -170,14 +192,14 @@ export default function ServiceForm({
             )}
           </div>
 
-          <div>
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                {...register('isActive')}
-                className="rounded border-gray-300 text-accent focus:ring-accent"
-              />
-              <span className="ml-2">Active</span>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              {...register('isActive')}
+              className="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-700">
+              Active
             </label>
           </div>
 
@@ -185,20 +207,17 @@ export default function ServiceForm({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-md hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-accent border border-transparent rounded-md shadow-sm hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50"
             >
-              {isSubmitting
-                ? 'Saving...'
-                : service
-                ? 'Save Changes'
-                : 'Add Service'}
+              {isSubmitting ? 'Saving...' : service ? 'Update' : 'Create'}
             </button>
           </div>
         </form>

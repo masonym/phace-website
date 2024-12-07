@@ -1,6 +1,10 @@
+'use client';
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Image from 'next/image';
+import { useAuth } from '@/hooks/useAuth';
+import ServiceSelectionList from './ServiceSelectionList';
 
 interface StaffFormProps {
   staff?: {
@@ -40,12 +44,15 @@ export default function StaffForm({ staff, onClose, onSubmit }: StaffFormProps) 
     staff?.image
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const { getIdToken } = useAuth();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     watch,
+    setValue,
   } = useForm<FormData>({
     defaultValues: {
       name: staff?.name || '',
@@ -58,6 +65,7 @@ export default function StaffForm({ staff, onClose, onSubmit }: StaffFormProps) 
         { dayOfWeek: 3, startTime: '09:00', endTime: '17:00' },
         { dayOfWeek: 4, startTime: '09:00', endTime: '17:00' },
         { dayOfWeek: 5, startTime: '09:00', endTime: '17:00' },
+        { dayOfWeek: 6, startTime: '09:00', endTime: '17:00' },
       ],
       isActive: staff?.isActive ?? true,
     },
@@ -76,15 +84,27 @@ export default function StaffForm({ staff, onClose, onSubmit }: StaffFormProps) 
 
   const onFormSubmit = async (data: FormData) => {
     setIsSubmitting(true);
+    setError('');
     try {
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const formData = new FormData();
+      if (staff?.id) {
+        formData.append('id', staff.id);
+      }
       formData.append('name', data.name);
       formData.append('email', data.email);
       formData.append('bio', data.bio);
       formData.append('services', JSON.stringify(data.services));
       formData.append(
         'defaultAvailability',
-        JSON.stringify(data.defaultAvailability)
+        JSON.stringify(data.defaultAvailability.map((avail, index) => ({
+          ...avail,
+          dayOfWeek: index + 1
+        })))
       );
       formData.append('isActive', String(data.isActive));
 
@@ -92,16 +112,25 @@ export default function StaffForm({ staff, onClose, onSubmit }: StaffFormProps) 
         formData.append('image', data.image[0]);
       }
 
-      const response = await fetch('/api/booking/staff' + (staff ? `/${staff.id}` : ''), {
+      const response = await fetch('/api/booking/staff' + (staff ? `?id=${staff.id}` : ''), {
         method: staff ? 'PUT' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Failed to save staff member');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save staff member');
+      }
 
+      const responseData = await response.json();
       onSubmit();
-    } catch (error) {
+      onClose();
+    } catch (error: any) {
       console.error('Error saving staff member:', error);
+      setError(error.message || 'Failed to save staff member');
     } finally {
       setIsSubmitting(false);
     }
@@ -114,135 +143,157 @@ export default function StaffForm({ staff, onClose, onSubmit }: StaffFormProps) 
           {staff ? 'Edit Staff Member' : 'Add Staff Member'}
         </h2>
 
-        <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Name
-              </label>
-              <input
-                type="text"
-                {...register('name', { required: 'Name is required' })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent"
-              />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-              )}
-            </div>
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address',
-                  },
-                })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
+        <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name *
+            </label>
+            <input
+              {...register('name', { required: 'Name is required' })}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-accent focus:border-accent"
+              placeholder="Enter name"
+            />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Bio
-              </label>
-              <textarea
-                {...register('bio')}
-                rows={4}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email *
+            </label>
+            <input
+              {...register('email', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Invalid email address',
+                },
+              })}
+              type="email"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-accent focus:border-accent"
+              placeholder="Enter email"
+            />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Profile Image
-              </label>
-              <div className="mt-1 flex items-center space-x-4">
-                {imagePreview && (
-                  <div className="relative h-20 w-20 rounded-full overflow-hidden">
-                    <Image
-                      src={imagePreview}
-                      alt="Profile preview"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  {...register('image')}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent file:text-white hover:file:bg-accent/90"
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bio
+            </label>
+            <textarea
+              {...register('bio')}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-accent focus:border-accent"
+              rows={4}
+              placeholder="Enter bio"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Services
+            </label>
+            <ServiceSelectionList
+              selectedServices={watch('services')}
+              onChange={(services) => {
+                setValue('services', services, { shouldDirty: true });
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Profile Image
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              {...register('image')}
+              className="w-full"
+            />
+            {imagePreview && (
+              <div className="mt-2 relative w-32 h-32">
+                <Image
+                  src={imagePreview}
+                  alt="Profile preview"
+                  fill
+                  className="object-cover rounded-lg"
                 />
               </div>
-            </div>
+            )}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Status
-              </label>
-              <div className="mt-1">
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    {...register('isActive')}
-                    className="rounded border-gray-300 text-accent focus:ring-accent"
-                  />
-                  <span className="ml-2">Active</span>
-                </label>
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Active Status
+            </label>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                {...register('isActive')}
+                className="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded"
+              />
+              <span className="ml-2 text-sm text-gray-600">
+                Staff member is currently active
+              </span>
             </div>
           </div>
 
-          {/* Default Availability */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Default Availability</h3>
+          {/* Default Availability Schedule */}
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-medium mb-4">Default Weekly Schedule</h3>
             <div className="grid grid-cols-1 gap-4">
-              {[1, 2, 3, 4, 5].map((day, index) => (
+              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => (
                 <div key={day} className="flex items-center space-x-4">
-                  <div className="w-20 font-medium">
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][index]}
+                  <div className="w-28 font-medium text-gray-700">
+                    {day}
                   </div>
                   <input
                     type="time"
                     {...register(`defaultAvailability.${index}.startTime` as const)}
-                    className="rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent"
+                    className="px-3 py-2 border rounded-lg focus:ring-accent focus:border-accent"
                   />
-                  <span>to</span>
+                  <span className="text-gray-600">to</span>
                   <input
                     type="time"
                     {...register(`defaultAvailability.${index}.endTime` as const)}
-                    className="rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent"
+                    className="px-3 py-2 border rounded-lg focus:ring-accent focus:border-accent"
                   />
                 </div>
               ))}
             </div>
+            <p className="mt-2 text-sm text-gray-600">
+              Set the default working hours for each day of the week
+            </p>
           </div>
 
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+              className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-accent border border-transparent rounded-md shadow-sm hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50"
             >
-              {isSubmitting ? 'Saving...' : staff ? 'Save Changes' : 'Add Staff Member'}
+              {isSubmitting
+                ? 'Saving...'
+                : staff
+                ? 'Save Changes'
+                : 'Add Staff Member'}
             </button>
           </div>
         </form>

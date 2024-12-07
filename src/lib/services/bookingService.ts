@@ -57,6 +57,18 @@ export class BookingService {
         return result.Items || [];
     }
 
+    static async deleteServiceCategory(id: string): Promise<void> {
+        const deleteParams = {
+          TableName: SERVICES_TABLE,
+          Key: {
+            pk: `CATEGORY#${id}`,
+            sk: `CATEGORY#${id}`,
+          },
+        };
+
+        await dynamoDb.send(new DeleteCommand(deleteParams));
+    }
+
     // Service Methods
     static async createService(service: {
         categoryId: string;
@@ -111,6 +123,16 @@ export class BookingService {
         }));
 
         return result.Item;
+    }
+
+    static async deleteService(id: string) {
+        await dynamoDb.send(new DeleteCommand({
+            TableName: SERVICES_TABLE,
+            Key: {
+                pk: 'SERVICES',
+                sk: `SERVICE#${id}`,
+            },
+        }));
     }
 
     // Staff Methods
@@ -193,6 +215,16 @@ export class BookingService {
         }));
 
         return result.Items || [];
+    }
+
+    static async deleteStaffMember(id: string) {
+        await dynamoDb.send(new DeleteCommand({
+            TableName: STAFF_TABLE,
+            Key: {
+                pk: `STAFF#${id}`,
+                sk: `STAFF#${id}`,
+            },
+        }));
     }
 
     // Addon Methods
@@ -427,6 +459,7 @@ export class BookingService {
         image?: string;
         isActive?: boolean;
         requiredForms?: string[];
+        categoryId?: string;
     }) {
         const updateExpressions: string[] = [];
         const expressionAttributeNames: Record<string, string> = {};
@@ -434,9 +467,16 @@ export class BookingService {
 
         Object.entries(data).forEach(([key, value]) => {
             if (value !== undefined) {
-                updateExpressions.push(`#${key} = :${key}`);
-                expressionAttributeNames[`#${key}`] = key;
-                expressionAttributeValues[`:${key}`] = value;
+                if (key === 'categoryId') {
+                    // Update the GSI1PK for category association
+                    updateExpressions.push('#GSI1PK = :GSI1PK');
+                    expressionAttributeNames['#GSI1PK'] = 'GSI1PK';
+                    expressionAttributeValues[':GSI1PK'] = `CATEGORY#${value}`;
+                } else {
+                    updateExpressions.push(`#${key} = :${key}`);
+                    expressionAttributeNames[`#${key}`] = key;
+                    expressionAttributeValues[`:${key}`] = value;
+                }
             }
         });
 

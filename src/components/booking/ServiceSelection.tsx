@@ -11,6 +11,7 @@ interface Service {
   price: number;
   image?: string;
   categoryId: string;
+  isActive: boolean;
 }
 
 interface Category {
@@ -18,6 +19,7 @@ interface Category {
   name: string;
   description: string;
   services: Service[];
+  isActive: boolean;
 }
 
 interface Props {
@@ -33,12 +35,19 @@ export default function ServiceSelection({ onSelect }: Props) {
   useEffect(() => {
     const fetchServices = async () => {
       try {
+        // Don't include inactive services in the booking page
         const response = await fetch('/api/booking/services');
         if (!response.ok) throw new Error('Failed to fetch services');
         const data = await response.json();
-        setCategories(data);
-        if (data.length > 0) {
-          setSelectedCategory(data[0].id);
+        
+        // Only show categories that have active services
+        const categoriesWithServices = data.filter(category => 
+          category.isActive && category.services.length > 0
+        );
+        
+        setCategories(categoriesWithServices);
+        if (categoriesWithServices.length > 0) {
+          setSelectedCategory(categoriesWithServices[0].id);
         }
       } catch (err: any) {
         setError(err.message);
@@ -100,23 +109,27 @@ export default function ServiceSelection({ onSelect }: Props) {
           <button
             key={service.id}
             onClick={() => onSelect(service)}
-            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-left group"
+            className="bg-white rounded-lg p-6 text-left shadow-sm hover:shadow-md transition-shadow w-full"
           >
-            {service.image && (
-              <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
-                <Image
-                  src={service.image}
-                  alt={service.name}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-medium mb-2">{service.name}</h3>
+                <p className="text-gray-600 mb-4">{service.description}</p>
+                <div className="flex space-x-4 text-sm text-gray-500">
+                  <span>{service.duration} mins</span>
+                  <span>${service.price}</span>
+                </div>
               </div>
-            )}
-            <h3 className="text-xl font-medium mb-2 text-gray-900">{service.name}</h3>
-            <p className="text-gray-600 mb-4 line-clamp-2">{service.description}</p>
-            <div className="flex justify-between items-center text-accent">
-              <span>{service.duration} mins</span>
-              <span>${service.price}</span>
+              {service.image && (
+                <div className="w-24 h-24 relative">
+                  <Image
+                    src={service.image}
+                    alt={service.name}
+                    fill
+                    className="object-cover rounded-lg"
+                  />
+                </div>
+              )}
             </div>
           </button>
         ))}
