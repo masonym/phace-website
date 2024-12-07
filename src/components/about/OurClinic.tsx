@@ -38,7 +38,7 @@ export function OurClinic() {
                 Book a Treatment
               </Link>
               <Link
-                href="https://www.beautifi.com"
+                href="https://www.beautifi.com/doctors/phace-medical-aesthetics-and-skincare/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-[#4A5568] text-white px-8 py-8 rounded-full hover:bg-[#2D3748] transition-colors"

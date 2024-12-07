@@ -30,7 +30,7 @@ export default function FloatingButtons() {
 
       {/* Finance Button */}
       <Link
-        href="https://www.beautifi.com"
+        href="https://www.beautifi.com/doctors/phace-medical-aesthetics-and-skincare/"
         target="_blank"
         rel="noopener noreferrer"
         className="group relative flex items-center justify-center w-16 h-16 bg-white hover:bg-gray-50 border-2 border-accent text-accent rounded-full shadow-lg transition-all duration-300 hover:scale-110"
