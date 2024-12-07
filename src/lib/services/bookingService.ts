@@ -392,8 +392,8 @@ export class BookingService {
         }));
 
         // Remove service associations that are no longer needed
-        const removedServiceIds = oldServiceIds.filter(id => !newServiceIds.includes(id));
-        await Promise.all(removedServiceIds.map(serviceId =>
+        const removedServiceIds = oldServiceIds.filter((id: any) => !newServiceIds.includes(id));
+        await Promise.all(removedServiceIds.map((serviceId: any) =>
             dynamoDb.send(new DeleteCommand({
                 TableName: SERVICES_TABLE,
                 Key: {
@@ -450,7 +450,7 @@ export class BookingService {
         }));
 
         // Delete all service associations
-        await Promise.all(serviceIds.map(serviceId =>
+        await Promise.all(serviceIds.map((serviceId: any) =>
             dynamoDb.send(new DeleteCommand({
                 TableName: SERVICES_TABLE,
                 Key: {
@@ -546,8 +546,6 @@ export class BookingService {
             createdAt: now,
             updatedAt: now,
         };
-
-        console.log('Saving appointment with responses:', JSON.stringify(item.consentFormResponses, null, 2));
 
         await dynamoDb.send(new PutCommand({
             TableName: APPOINTMENTS_TABLE,

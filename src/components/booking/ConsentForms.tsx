@@ -2,29 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ConsentFormRenderer from './ConsentFormRenderer';
-
-interface ConsentForm {
-  id: string;
-  title: string;
-  content?: string;
-  serviceIds: string[];
-  isActive: boolean;
-  sections?: Array<{
-    id: string;
-    title: string;
-    questions: Array<{
-      id: string;
-      type: 'text' | 'checkbox' | 'radio' | 'markdown';
-      required: boolean;
-      label: string;
-      content?: string;
-      options?: Array<{
-        id: string;
-        label: string;
-      }>;
-    }>;
-  }>;
-}
+import { ConsentForm, ConsentFormSection, Question } from '@/types/consentForm';
 
 interface ConsentFormsProps {
   serviceId: string;
@@ -46,7 +24,50 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
           throw new Error('Failed to fetch consent forms');
         }
         const data = await response.json();
-        setForms(data);
+        // Transform the data to match the ConsentForm type
+        setForms(data.map((form: any) => ({
+          id: form.id,
+          title: form.title,
+          serviceIds: form.serviceIds || [],
+          isActive: form.isActive ?? true,
+          version: form.version || 1,
+          sections: (form.sections || []).map((section: any) => ({
+            id: section.id,
+            title: section.title,
+            questions: section.questions.map((question: any) => {
+              const baseQuestion = {
+                id: question.id,
+                type: question.type,
+                required: question.required,
+                label: question.label,
+              };
+
+              switch (question.type) {
+                case 'text':
+                  return {
+                    ...baseQuestion,
+                    type: 'text' as const,
+                    placeholder: question.content,
+                  };
+                case 'checkbox':
+                case 'radio':
+                  return {
+                    ...baseQuestion,
+                    type: question.type as 'checkbox' | 'radio',
+                    options: question.options || [],
+                  };
+                case 'markdown':
+                  return {
+                    ...baseQuestion,
+                    type: 'markdown' as const,
+                    content: question.content || '',
+                  };
+                default:
+                  throw new Error(`Unknown question type: ${question.type}`);
+              }
+            }),
+          })),
+        })));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch consent forms');
       } finally {
@@ -182,21 +203,23 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Consent Forms</h2>
       <form onSubmit={handleFormSubmit} className="space-y-6">
-        {forms.map((form) => (
-          <div key={form.id} className="border rounded-lg p-6 space-y-4">
-            <h3 className="text-xl font-semibold">{form.title}</h3>
-            <ConsentFormRenderer
-              form={form}
-              onChange={(responses) => {
-                setFormResponses(prev => ({
-                  ...prev,
-                  [form.id]: responses,
-                }));
-              }}
-              responses={formResponses[form.id]}
-            />
-          </div>
-        ))}
+        {forms.map((form) => {
+          return (
+            <div key={form.id} className="border rounded-lg p-6 space-y-4">
+              <h3 className="text-xl font-semibold">{form.title}</h3>
+              <ConsentFormRenderer
+                form={form}
+                onChange={(responses) => {
+                  setFormResponses(prev => ({
+                    ...prev,
+                    [form.id]: responses,
+                  }));
+                }}
+                responses={formResponses[form.id]}
+              />
+            </div>
+          );
+        })}
         
         <div className="flex justify-between items-center pt-4">
           <button

@@ -157,14 +157,12 @@ export default function BookingPage() {
               <ConsentForms
                 serviceId={bookingData.serviceId!}
                 onSubmit={(consentData) => {
-                  console.log('Received consent data in booking page:', consentData);
                   // Using setBookingData directly to ensure state update
                   setBookingData(prevData => {
                     const newData = {
                       ...prevData,
                       consentForms: consentData
                     };
-                    console.log('New booking data:', newData);
                     return newData;
                   });
                   goToNextStep();
@@ -178,7 +176,6 @@ export default function BookingPage() {
                 bookingData={bookingData}
                 onConfirm={async () => {
                   try {
-                    console.log('Current booking data before submit:', bookingData);
                     const requestBody = {
                       serviceId: bookingData.serviceId,
                       serviceName: bookingData.serviceName,

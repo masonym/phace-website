@@ -135,13 +135,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (response.AuthenticationResult) {
           const { IdToken } = response.AuthenticationResult;
-          // Set the token in a cookie that matches the middleware expectations
-          Cookies.set('adminToken', IdToken, { 
-            expires: 7, // 7 days
-            path: '/',
-            secure: true,
-            sameSite: 'strict'
-          });
+          if (IdToken) {
+            Cookies.set('adminToken', IdToken, { 
+              expires: 7, // 7 days
+              path: '/',
+              secure: true,
+              sameSite: 'strict'
+            });
+          } else {
+            console.error("IdToken is undefined");
+            // Handle the undefined case as needed
+          }
           setIsAuthenticated(true);
           setSession(null); // Clear the session as we're done with the challenge
           return;
@@ -169,13 +173,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.AuthenticationResult) {
         const { IdToken } = response.AuthenticationResult;
-        // Set the token in a cookie
-        Cookies.set('adminToken', IdToken, { 
-          expires: 7, // 7 days
-          path: '/',
-          secure: true,
-          sameSite: 'strict'
-        });
+        if (IdToken) {
+          Cookies.set('adminToken', IdToken, { 
+            expires: 7, // 7 days
+            path: '/',
+            secure: true,
+            sameSite: 'strict'
+          });
+        } else {
+          console.error("IdToken is undefined");
+          // Handle the undefined case as needed
+        }
         setIsAuthenticated(true);
       }
     } catch (error: any) {

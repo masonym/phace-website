@@ -49,3 +49,7 @@ export interface ConsentForm {
   // For backward compatibility
   content?: string;
 }
+
+export interface ConsentForm {
+  sections: ConsentFormSection[];
+}
