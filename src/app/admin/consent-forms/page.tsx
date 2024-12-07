@@ -265,8 +265,9 @@ export default function ConsentFormsPage() {
                         <ConfirmDialog
                             title="Delete Consent Form"
                             message={`Are you sure you want to delete "${deletingForm.title}"? This action cannot be undone.`}
+                            isOpen={showDeleteDialog}
                             onConfirm={handleDeleteConfirm}
-                            onCancel={() => {
+                            onClose={() => {
                                 setShowDeleteDialog(false);
                                 setDeletingForm(null);
                             }}

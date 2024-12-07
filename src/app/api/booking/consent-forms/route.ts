@@ -25,18 +25,24 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const serviceId = searchParams.get('serviceId');
 
-        const command = new QueryCommand({
+        // Base query parameters
+        let queryParams: any = {
             TableName: 'phace-forms',
             KeyConditionExpression: 'pk = :pk',
-            FilterExpression: 'contains(serviceIds, :serviceId) and isActive = :isActive',
             ExpressionAttributeValues: {
                 ':pk': 'CONSENT_FORM',
-                ':serviceId': serviceId,
-                ':isActive': true
             },
             ProjectionExpression: 'sk, title, content, serviceIds, isActive, sections',
-        });
+        };
 
+        // Add service-specific filtering only if serviceId is provided
+        if (serviceId) {
+            queryParams.FilterExpression = 'contains(serviceIds, :serviceId) and isActive = :isActive';
+            queryParams.ExpressionAttributeValues[':serviceId'] = serviceId;
+            queryParams.ExpressionAttributeValues[':isActive'] = true;
+        }
+
+        const command = new QueryCommand(queryParams);
         const response = await docClient.send(command);
         const forms = response.Items?.map(item => ({
             id: item.sk,
