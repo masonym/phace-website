@@ -59,7 +59,6 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Raw form responses:', formResponses);
 
     // Check if all forms have been agreed to
     const allFormsAgreed = forms.every(form => {
@@ -95,7 +94,6 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
             timestamp: formResponses[formId]?.agreed?.timestamp || new Date().toISOString()
           }]
         };
-        console.log('Formatted legacy form response:', response);
         return response;
       }
 
@@ -131,11 +129,6 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
             answer: formattedAnswer,
             timestamp: formResponses[formId]?.[question.id]?.timestamp || new Date().toISOString()
           };
-          console.log('Formatted question response:', {
-            formId,
-            questionId: question.id,
-            response
-          });
           return response;
         })
       ) || [];
@@ -145,13 +138,10 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
         formTitle,
         responses
       };
-      console.log('Formatted structured form:', formattedForm);
       return formattedForm;
     });
 
-    console.log('Final formatted responses:', formattedResponses);
     const data = { consentFormResponses: formattedResponses };
-    console.log('Data being passed to onSubmit:', data);
     onSubmit(data);
   };
 
