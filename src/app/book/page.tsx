@@ -79,7 +79,7 @@ export default function BookingPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto px-4 pb-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
