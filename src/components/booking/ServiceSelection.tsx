@@ -41,7 +41,7 @@ export default function ServiceSelection({ onSelect }: Props) {
         const data = await response.json();
         
         // Only show categories that have active services
-        const categoriesWithServices = data.filter(category => 
+        const categoriesWithServices = data.filter((category: { isActive: any; services: string | any[]; }) => 
           category.isActive && category.services.length > 0
         );
         
