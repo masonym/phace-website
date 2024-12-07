@@ -1,7 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, isAfter, isBefore } from 'date-fns';
+import { 
+  format, 
+  addMonths, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  isSameDay, 
+  addDays, 
+  isAfter, 
+  isBefore,
+  startOfWeek,
+  endOfWeek 
+} from 'date-fns';
 
 interface TimeSlot {
   startTime: string;
@@ -26,9 +38,15 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
   const [checkingDates, setCheckingDates] = useState(true);
 
   // Calculate the date range for the calendar
-  const startDate = startOfMonth(currentMonth);
-  const endDate = endOfMonth(addMonths(currentMonth, 1)); // Show two months
-  const dates = eachDayOfInterval({ start: startDate, end: endDate });
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  // Get the start of the week that contains the first day of the month
+  const calendarStart = startOfWeek(monthStart);
+  // Get the end of the week that contains the last day of the month
+  const calendarEnd = endOfWeek(monthEnd);
+  
+  // Get all dates to display on the calendar
+  const dates = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   // Fetch available dates for the current month range
   useEffect(() => {
@@ -37,8 +55,9 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
       const availableDatesSet = new Set<string>();
 
       try {
-        // Fetch availability for each day in parallel
-        const promises = dates.map(async (date) => {
+        // Only fetch for dates within the current month
+        const monthDates = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        const promises = monthDates.map(async (date) => {
           if (isAfter(date, addDays(new Date(), 1)) && isBefore(date, addMonths(new Date(), 2))) {
             const response = await fetch(
               `/api/booking/availability?serviceId=${serviceId}&staffId=${staffId}&date=${format(date, 'yyyy-MM-dd')}`
@@ -91,9 +110,11 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
   const twoMonthsFromNow = addMonths(new Date(), 2);
 
   const isDateSelectable = (date: Date) => {
+    // Only allow selection of dates in the current month
+    const isCurrentMonth = format(date, 'M') === format(currentMonth, 'M');
     const isInRange = isAfter(date, tomorrow) && isBefore(date, twoMonthsFromNow);
     const dateStr = format(date, 'yyyy-MM-dd');
-    return isInRange && availableDates.has(dateStr);
+    return isCurrentMonth && isInRange && availableDates.has(dateStr);
   };
 
   return (
@@ -128,7 +149,7 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Calendar */}
-        <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="bg-white rounded-xl p-6 shadow-sm h-fit">
           <div className="mb-4 flex justify-between items-center">
             <h2 className="text-lg font-medium">
               {format(currentMonth, 'MMMM yyyy')}
@@ -167,7 +188,13 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
                   className={`
                     py-2 rounded-full text-sm
                     ${isSelected ? 'bg-accent text-white' : ''}
-                    ${isSelectable ? 'hover:bg-accent/10' : 'text-gray-300 cursor-not-allowed'}
+                    ${
+                      format(date, 'M') !== format(currentMonth, 'M')
+                        ? 'text-gray-300 opacity-0 cursor-default'
+                        : isSelectable
+                        ? 'hover:bg-accent/10'
+                        : 'text-gray-300 cursor-not-allowed'
+                    }
                     ${checkingDates ? 'animate-pulse' : ''}
                   `}
                 >
@@ -179,7 +206,7 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
         </div>
 
         {/* Time Slots */}
-        <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="bg-white rounded-xl p-6 shadow-sm h-fit">
           <h2 className="text-lg font-medium mb-4">
             {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Select a Date'}
           </h2>
