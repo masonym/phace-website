@@ -61,7 +61,7 @@ export class BookingService {
         const deleteParams = {
           TableName: SERVICES_TABLE,
           Key: {
-            pk: `CATEGORY#${id}`,
+            pk: 'CATEGORIES',
             sk: `CATEGORY#${id}`,
           },
         };

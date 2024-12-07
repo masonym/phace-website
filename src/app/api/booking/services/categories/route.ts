@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
-import { CognitoJwtVerifier } from 'aws-jwt-verify';
+import { AdminService } from '@/lib/services/adminService';
 import { BookingService } from '@/lib/services/bookingService';
-
-const verifier = CognitoJwtVerifier.create({
-  userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
-  clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
-  tokenUse: 'access',
-});
 
 export async function DELETE(request: Request) {
   try {
@@ -21,7 +15,7 @@ export async function DELETE(request: Request) {
     
     const token = authHeader.replace('Bearer ', '');
     try {
-      await verifier.verify(token);
+      await AdminService.verifyToken(token);
     } catch (error) {
       console.error('Token verification failed:', error);
       return NextResponse.json(

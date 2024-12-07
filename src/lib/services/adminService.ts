@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@a
 import { compare, hash } from 'bcryptjs';
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 
-const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
+const ddbClient = new DynamoDBClient({ region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-west-2' });
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 const ADMIN_TABLE = 'phace-admin-users';
 
@@ -69,9 +69,9 @@ export class AdminService {
         try {
             // Create a verifier that expects valid access tokens:
             const verifier = CognitoJwtVerifier.create({
-                userPoolId: process.env.COGNITO_USER_POOL_ID || '',
+                userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '',
                 tokenUse: "id",
-                clientId: process.env.COGNITO_CLIENT_ID || '',
+                clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '',
             });
 
             // Verify the token

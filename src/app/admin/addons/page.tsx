@@ -239,8 +239,9 @@ export default function AddonsPage() {
                         <ConfirmDialog
                             title="Delete Add-on"
                             message={`Are you sure you want to delete "${deletingAddon.name}"? This action cannot be undone.`}
+                            isOpen={showDeleteDialog}
                             onConfirm={handleDeleteConfirm}
-                            onCancel={() => {
+                            onClose={() => {
                                 setShowDeleteDialog(false);
                                 setDeletingAddon(null);
                             }}
