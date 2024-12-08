@@ -12,16 +12,30 @@ export async function POST(request: Request) {
             );
         }
 
-        const result = await AuthService.signIn(email, password);
-        
-        if (!result.AuthenticationResult?.IdToken) {
-            throw new Error('No token received from authentication');
-        }
+        try {
+            const result = await AuthService.signIn(email, password);
+            
+            if (!result.AuthenticationResult?.IdToken) {
+                throw new Error('No token received from authentication');
+            }
 
-        // Return just the ID token as our main auth token
-        return NextResponse.json({
-            token: result.AuthenticationResult.IdToken
-        });
+            return NextResponse.json({
+                token: result.AuthenticationResult.IdToken
+            });
+        } catch (error: any) {
+            // Check if the error is due to unconfirmed user
+            if (error.name === 'UserNotConfirmedException') {
+                return NextResponse.json(
+                    { 
+                        needsConfirmation: true,
+                        email,
+                        message: 'Please verify your email before logging in'
+                    },
+                    { status: 401 }
+                );
+            }
+            throw error;
+        }
     } catch (error: any) {
         console.error('Signin error:', error);
         return NextResponse.json(

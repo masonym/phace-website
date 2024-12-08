@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const token = Cookies.get('token');
       if (token) {
-        // Decode token to get user info
         const decoded = jwtDecode(token);
         setUser(decoded);
         setIsAuthenticated(true);
@@ -61,22 +60,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to sign in');
+        // If user is not confirmed, throw a specific error with the email
+        if (data.needsConfirmation) {
+          const error = new Error(data.message || 'Please verify your email before logging in');
+          error.needsConfirmation = true;
+          error.email = data.email;
+          throw error;
+        }
+        throw new Error(data.error || 'Failed to sign in');
       }
 
-      const { token } = await response.json();
-      
       // Store token in cookie
-      Cookies.set('token', token, {
+      Cookies.set('token', data.token, {
         expires: 7, // 7 days
         secure: true,
         sameSite: 'strict'
       });
 
       // Decode token to get user info
-      const decoded = jwtDecode(token);
+      const decoded = jwtDecode(data.token);
       setUser(decoded);
       setIsAuthenticated(true);
     } catch (error: any) {
