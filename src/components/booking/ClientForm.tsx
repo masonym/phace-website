@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ClientFormData {
   name: string;
@@ -19,7 +20,17 @@ interface Props {
 
 export default function ClientForm({ onSubmit, onBack }: Props) {
   const [wantAccount, setWantAccount] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<ClientFormData>();
+  const { user, isAuthenticated } = useAuth();
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<ClientFormData>();
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Auto-populate fields for logged-in users
+      setValue('name', user.name || '');
+      setValue('email', user.email || '');
+      setValue('phone', user.phone || '');
+    }
+  }, [isAuthenticated, user, setValue]);
 
   const onFormSubmit = (data: ClientFormData) => {
     onSubmit({
@@ -119,23 +130,25 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
             )}
           </div>
 
-          {/* Create Account Option */}
-          <div className="mb-4">
-            <label className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                checked={wantAccount}
-                onChange={(e) => setWantAccount(e.target.checked)}
-                className="rounded border-gray-300 text-accent focus:ring-accent"
-              />
-              <span className="text-sm text-gray-700">
-                Create an account to manage your appointments
-              </span>
-            </label>
-          </div>
+          {/* Create Account Option - Only show for non-authenticated users */}
+          {!isAuthenticated && (
+            <div className="mb-4">
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={wantAccount}
+                  onChange={(e) => setWantAccount(e.target.checked)}
+                  className="rounded border-gray-300 text-accent focus:ring-accent"
+                />
+                <span className="text-sm text-gray-700">
+                  Create an account to manage your appointments
+                </span>
+              </label>
+            </div>
+          )}
 
-          {/* Password Field */}
-          {wantAccount && (
+          {/* Password Field - Only show for non-authenticated users who want an account */}
+          {!isAuthenticated && wantAccount && (
             <div className="mb-4">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
@@ -155,7 +168,7 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
                   }
                 })}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-accent focus:border-accent"
-                placeholder="Create a password"
+                placeholder="Enter a secure password"
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
@@ -164,7 +177,7 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
           )}
 
           {/* Notes Field */}
-          <div>
+          <div className="mb-4">
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
               Additional Notes (Optional)
             </label>
@@ -176,16 +189,16 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
               placeholder="Any special requests or information we should know?"
             />
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
-          >
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
+            >
             Continue to Consent Forms
-          </button>
+            </button>
+          </div>
         </div>
       </form>
     </div>
