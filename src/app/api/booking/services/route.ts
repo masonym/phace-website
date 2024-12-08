@@ -61,21 +61,24 @@ export async function PUT(request: Request) {
         }
 
         const data = await request.json();
-        const { type, id, ...serviceData } = data;
+        const { type, id, ...updateData } = data;
 
         if (type === 'service' && id) {
-            const service = await BookingService.updateService(id, serviceData);
+            const service = await BookingService.updateService(id, updateData);
             return NextResponse.json(service);
+        } else if (type === 'category' && id) {
+            const category = await BookingService.updateServiceCategory(id, updateData);
+            return NextResponse.json(category);
         } else {
             return NextResponse.json(
-                { error: 'Invalid request. Service ID is required for updates.' },
+                { error: 'Invalid request. Service or Category ID is required for updates.' },
                 { status: 400 }
             );
         }
     } catch (error: any) {
-        console.error('Error updating service:', error);
+        console.error('Error updating service/category:', error);
         return NextResponse.json(
-            { error: error.message || 'Failed to update service' },
+            { error: error.message || 'Failed to update service/category' },
             { status: 500 }
         );
     }

@@ -55,7 +55,7 @@ export default function ServiceCategoryForm({
       }
 
       const response = await fetch('/api/booking/services', {
-        method: 'POST',
+        method: category ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,

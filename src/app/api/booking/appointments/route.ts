@@ -1,10 +1,26 @@
 import { NextResponse } from 'next/server';
 import { BookingService } from '@/lib/services/bookingService';
 import { parseISO, addMinutes } from 'date-fns';
+import { cookies } from 'next/headers';
+import { jwtDecode } from 'jwt-decode';
 
 export async function POST(request: Request) {
     try {
         const data = await request.json();
+        
+        // Get user ID from auth token if available
+        let userId = null;
+        const cookieStore = cookies();
+        const token = cookieStore.get('token');
+        if (token) {
+            try {
+                const decoded = jwtDecode(token.value);
+                userId = decoded.sub;
+            } catch (error) {
+                console.error('Error decoding token:', error);
+            }
+        }
+
         const {
             serviceId,
             staffId,
@@ -15,7 +31,6 @@ export async function POST(request: Request) {
             addons = [],
             consentFormResponses = [],
             notes,
-            userId,
         } = data;
 
         console.log('Raw request data:', data);
@@ -101,7 +116,7 @@ export async function POST(request: Request) {
             totalDuration,
             consentFormResponses,
             notes,
-            userId,
+            userId,  // Include userId if user is logged in
         });
 
         console.log('Created appointment with responses:', {

@@ -9,8 +9,10 @@ import AddonSelection from '@/components/booking/AddonSelection';
 import ClientForm from '@/components/booking/ClientForm';
 import ConsentForms from '@/components/booking/ConsentForms';
 import BookingSummary from '@/components/booking/BookingSummary';
+import { showToast } from '@/components/ui/Toast';
 
 type BookingStep = 
+  | 'category'
   | 'service'
   | 'staff'
   | 'datetime'
@@ -20,9 +22,9 @@ type BookingStep =
   | 'summary';
 
 interface BookingData {
+  categoryId?: string;
   serviceId?: string;
   serviceName?: string;
-  categoryId?: string;
   staffId?: string;
   staffName?: string;
   dateTime?: string;
@@ -32,13 +34,14 @@ interface BookingData {
   clientPhone?: string;
   notes?: string;
   consentForms?: Record<string, any>;
+  createAccount?: boolean;
 }
 
 export default function BookingPage() {
-  const [currentStep, setCurrentStep] = useState<BookingStep>('service');
+  const [currentStep, setCurrentStep] = useState<BookingStep>('category');
   const [bookingData, setBookingData] = useState<BookingData>({});
 
-  const steps: BookingStep[] = ['service', 'staff', 'datetime', 'addons', 'client', 'consent', 'summary'];
+  const steps: BookingStep[] = ['category', 'service', 'staff', 'datetime', 'addons', 'client', 'consent', 'summary'];
   const currentStepIndex = steps.indexOf(currentStep);
 
   const goToNextStep = () => {
@@ -88,19 +91,31 @@ export default function BookingPage() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
           >
-            {currentStep === 'service' && (
+            {currentStep === 'category' && (
               <ServiceSelection
-                onSelect={(service) => {
+                mode="category"
+                onSelect={(category) => {
                   updateBookingData({
-                    serviceId: service.id,
-                    serviceName: service.name,
-                    categoryId: service.categoryId,
+                    categoryId: category.id,
                   });
                   goToNextStep();
                 }}
               />
             )}
-
+            {currentStep === 'service' && (
+              <ServiceSelection
+                mode="service"
+                categoryId={bookingData.categoryId}
+                onSelect={(service) => {
+                  updateBookingData({
+                    serviceId: service.id,
+                    serviceName: service.name,
+                  });
+                  goToNextStep();
+                }}
+                onBack={goToPreviousStep}
+              />
+            )}
             {currentStep === 'staff' && (
               <StaffSelection
                 serviceId={bookingData.serviceId!}
@@ -114,7 +129,6 @@ export default function BookingPage() {
                 onBack={goToPreviousStep}
               />
             )}
-
             {currentStep === 'datetime' && (
               <DateTimeSelection
                 serviceId={bookingData.serviceId!}
@@ -126,7 +140,6 @@ export default function BookingPage() {
                 onBack={goToPreviousStep}
               />
             )}
-
             {currentStep === 'addons' && (
               <AddonSelection
                 serviceId={bookingData.serviceId!}
@@ -137,22 +150,60 @@ export default function BookingPage() {
                 onBack={goToPreviousStep}
               />
             )}
-
             {currentStep === 'client' && (
               <ClientForm
-                onSubmit={(clientData) => {
-                  updateBookingData({
-                    clientName: clientData.name,
-                    clientEmail: clientData.email,
-                    clientPhone: clientData.phone,
-                    notes: clientData.notes,
-                  });
-                  goToNextStep();
+                onSubmit={async (clientData) => {
+                  try {
+                    // Handle account creation if requested
+                    if (clientData.createAccount && clientData.password) {
+                      const signupResponse = await fetch('/api/auth/signup', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          email: clientData.email,
+                          password: clientData.password,
+                          name: clientData.name,
+                        }),
+                      });
+
+                      if (!signupResponse.ok) {
+                        const errorData = await signupResponse.json();
+                        throw new Error(errorData.error || 'Failed to create account');
+                      }
+
+                      // Show success message about verification email
+                      showToast({
+                        title: "Account Created!",
+                        description: "Please check your email to verify your account. You can continue with your booking and sign in after verification.",
+                        status: "success",
+                        duration: 10000,
+                      });
+                    }
+
+                    // Update booking data and continue regardless of account status
+                    updateBookingData({
+                      clientName: clientData.name,
+                      clientEmail: clientData.email,
+                      clientPhone: clientData.phone,
+                      notes: clientData.notes,
+                      createAccount: clientData.createAccount,
+                    });
+                    goToNextStep();
+                  } catch (error: any) {
+                    console.error('Error during client form submission:', error);
+                    showToast({
+                      title: "Error",
+                      description: error.message || 'An error occurred during account creation',
+                      status: "error",
+                      duration: 5000,
+                    });
+                  }
                 }}
                 onBack={goToPreviousStep}
               />
             )}
-
             {currentStep === 'consent' && (
               <ConsentForms
                 serviceId={bookingData.serviceId!}
@@ -170,7 +221,6 @@ export default function BookingPage() {
                 onBack={goToPreviousStep}
               />
             )}
-
             {currentStep === 'summary' && (
               <BookingSummary
                 bookingData={bookingData}

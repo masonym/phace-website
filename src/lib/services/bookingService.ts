@@ -19,6 +19,19 @@ const CLIENTS_TABLE = 'phace-clients';
 const WAITLIST_TABLE = 'phace-waitlist';
 const FORMS_TABLE = 'phace-forms';
 
+export interface CreateAppointmentParams {
+  serviceId: string;
+  staffId: string;
+  startTime: string;
+  endTime: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  notes?: string;
+  userId?: string;
+  addons?: string[];
+}
+
 export class BookingService {
     // Service Category Methods
     static async createServiceCategory(category: {
@@ -464,35 +477,12 @@ export class BookingService {
     }
 
     // Appointment Methods
-    static async createAppointment(appointment: {
-        clientEmail: string;
-        clientName: string;
-        clientPhone: string;
-        staffId: string;
-        serviceId: string;
-        addons: string[];
-        startTime: string;
-        endTime: string;
-        totalPrice: number;
-        totalDuration: number;
-        consentFormResponses: Array<{
-            formId: string;
-            formTitle: string;
-            responses: Array<{
-                questionId: string;
-                question: string;
-                answer: string;
-                timestamp?: string;
-            }>;
-        }>;
-        notes?: string;
-        userId?: string;
-    }) {
+    static async createAppointment(params: CreateAppointmentParams): Promise<any> {
         // Get service, staff, and addon details
         const [service, staff, addonDetails] = await Promise.all([
-            this.getServiceById(appointment.serviceId),
-            this.getStaffById(appointment.staffId),
-            this.getAddonsByIds(appointment.addons)
+            this.getServiceById(params.serviceId),
+            this.getStaffById(params.staffId),
+            this.getAddonsByIds(params.addons)
         ]);
 
         if (!service || !staff) {
@@ -503,7 +493,7 @@ export class BookingService {
         const now = new Date().toISOString();
 
         // Ensure consentFormResponses is properly structured
-        const consentFormResponses = appointment.consentFormResponses?.map(form => ({
+        const consentFormResponses = params.consentFormResponses?.map(form => ({
             formId: form.formId,
             formTitle: form.formTitle,
             responses: form.responses.map(response => ({
@@ -517,31 +507,31 @@ export class BookingService {
         const item = {
             pk: `APPOINTMENT#${id}`,
             sk: `APPOINTMENT#${id}`,
-            GSI1PK: `STAFF#${appointment.staffId}`,
-            GSI1SK: `DATE#${appointment.startTime}`,
-            GSI2PK: `CLIENT#${appointment.clientEmail}`,
-            GSI2SK: `DATE#${appointment.startTime}`,
+            GSI1PK: `STAFF#${params.staffId}`,
+            GSI1SK: `DATE#${params.startTime}`,
+            GSI2PK: `CLIENT#${params.clientEmail}`,
+            GSI2SK: `DATE#${params.startTime}`,
             id,
             type: 'appointment',
-            clientEmail: appointment.clientEmail,
-            clientName: appointment.clientName,
-            clientPhone: appointment.clientPhone,
-            staffId: appointment.staffId,
+            clientEmail: params.clientEmail,
+            clientName: params.clientName,
+            clientPhone: params.clientPhone,
+            staffId: params.staffId,
             staffName: staff.name,
-            serviceId: appointment.serviceId,
+            serviceId: params.serviceId,
             serviceName: service.name,
             addons: addonDetails.map(addon => ({
                 id: addon.id,
                 name: addon.name,
                 price: addon.price
             })),
-            startTime: appointment.startTime,
-            endTime: appointment.endTime,
-            totalPrice: appointment.totalPrice,
-            totalDuration: appointment.totalDuration,
+            startTime: params.startTime,
+            endTime: params.endTime,
+            totalPrice: params.totalPrice,
+            totalDuration: params.totalDuration,
             consentFormResponses,
-            notes: appointment.notes,
-            userId: appointment.userId,
+            notes: params.notes,
+            userId: params.userId,
             status: 'confirmed',
             createdAt: now,
             updatedAt: now,
@@ -694,7 +684,7 @@ export class BookingService {
         const result = await dynamoDb.send(new UpdateCommand({
             TableName: SERVICES_TABLE,
             Key: {
-                pk: `CATEGORY#${id}`,
+                pk: 'CATEGORIES',
                 sk: `CATEGORY#${id}`,
             },
             UpdateExpression: `SET ${updateExpressions.join(', ')}`,

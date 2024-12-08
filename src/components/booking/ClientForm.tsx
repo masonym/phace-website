@@ -29,24 +29,18 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-light text-center mb-2">Your Information</h1>
-        <p className="text-center text-gray-600 mb-8">
-          Please provide your contact details
-        </p>
-      </div>
-
-      {/* Back Button */}
+    <div className="space-y-6">
       <button
+        type="button"
         onClick={onBack}
-        className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
+        className="mb-6 text-gray-600 hover:text-gray-900 flex items-center space-x-2"
       >
         <svg
-          className="w-5 h-5 mr-2"
+          className="w-5 h-5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
         >
           <path
             strokeLinecap="round"
@@ -55,7 +49,7 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Back to Add-ons
+        <span>Back to Add-ons</span>
       </button>
 
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
@@ -68,7 +62,9 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
             <input
               type="text"
               id="name"
-              {...register('name', { required: 'Name is required' })}
+              {...register('name', { 
+                required: 'Name is required' 
+              })}
               className="w-full px-4 py-2 border rounded-lg focus:ring-accent focus:border-accent"
               placeholder="Enter your full name"
             />
@@ -138,7 +134,7 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
             </label>
           </div>
 
-          {/* Password Field (if creating account) */}
+          {/* Password Field */}
           {wantAccount && (
             <div className="mb-4">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
@@ -153,6 +149,10 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
                     value: 8,
                     message: 'Password must be at least 8 characters',
                   },
+                  pattern: {
+                    value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+                    message: 'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character'
+                  }
                 })}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-accent focus:border-accent"
                 placeholder="Create a password"

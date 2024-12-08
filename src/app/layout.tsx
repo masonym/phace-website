@@ -5,6 +5,7 @@ import { Footer } from '@/components/Footer'
 import FloatingButtons from '@/components/shared/FloatingButtons'
 import { CartProvider } from '@/hooks/useCart'
 import { AuthProvider } from '@/hooks/useAuth'
+import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: 'Phace - Medical Spa in Chilliwack',
@@ -35,6 +36,7 @@ export default function RootLayout({
             <Footer />
           </CartProvider>
         </AuthProvider>
+        <Toaster position="bottom-right" />
       </body>
     </html>
   )
