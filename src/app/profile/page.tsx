@@ -5,10 +5,22 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 
+interface Appointment {
+  id: string;
+  clientName: string;
+  clientEmail: string;
+  serviceName: string;
+  staffName: string;
+  startTime: string;
+  endTime: string;
+  totalPrice: number;
+  status: string;
+}
+
 export default function Profile() {
   const { isAuthenticated, isLoading, user, signOut } = useAuth();
   const router = useRouter();
-  const [appointments, setAppointments] = useState([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
 
   useEffect(() => {
@@ -28,7 +40,9 @@ export default function Profile() {
         const data = await response.json();
         
         // Sort appointments by date, most recent first
-        const sortedAppointments = data.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+        const sortedAppointments = data.sort((a: Appointment, b: Appointment) => 
+          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        );
         setAppointments(sortedAppointments);
       } catch (error) {
         console.error('Error fetching appointments:', error);
@@ -64,7 +78,7 @@ export default function Profile() {
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
             <button
-              onClick={signOut}
+              onClick={() => signOut()}
               className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-accent hover:bg-accent/90"
             >
               Sign Out

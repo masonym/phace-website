@@ -4,6 +4,11 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import Cookies from 'js-cookie';
 
+interface AuthError extends Error {
+  needsConfirmation?: boolean;
+  email?: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -65,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         // If user is not confirmed, throw a specific error with the email
         if (data.needsConfirmation) {
-          const error = new Error(data.message || 'Please verify your email before logging in');
+          const error: AuthError = new Error(data.message || 'Please verify your email before logging in');
           error.needsConfirmation = true;
           error.email = data.email;
           throw error;
@@ -84,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const decoded = jwtDecode(data.token);
       setUser(decoded);
       setIsAuthenticated(true);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Sign in error:', error);
       throw error;
     }

@@ -9,6 +9,112 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { nanoid } from 'nanoid';
 
+interface ServiceCategory {
+    id: string;
+    name: string;
+    description: string;
+    order: number;
+    image?: string;
+    createdAt: string;
+    updatedAt?: string;
+}
+
+interface Service {
+    id: string;
+    categoryId: string;
+    name: string;
+    description: string;
+    duration: number;
+    price: number;
+    image?: string;
+    requiredForms?: string[];
+    isActive: boolean;
+    createdAt: string;
+    updatedAt?: string;
+}
+
+interface StaffMember {
+    id: string;
+    name: string;
+    email: string;
+    passwordHash: string;
+    bio?: string;
+    image?: string;
+    services: string[];
+    defaultAvailability: {
+        dayOfWeek: number;
+        startTime: string;
+        endTime: string;
+    }[];
+    isActive: boolean;
+    createdAt: string;
+    updatedAt?: string;
+}
+
+interface ServiceAddon {
+    id: string;
+    name: string;
+    description: string;
+    duration: number;
+    price: number;
+    serviceIds: string[];
+    createdAt: string;
+    updatedAt?: string;
+}
+
+interface ConsentFormResponse {
+    formId: string;
+    formTitle: string;
+    responses: {
+        questionId: string;
+        question: string;
+        answer: string;
+        timestamp: string;
+    }[];
+}
+
+export interface CreateAppointmentParams {
+    serviceId: string;
+    staffId: string;
+    startTime: string;
+    endTime: string;
+    clientName: string;
+    clientEmail: string;
+    clientPhone: string;
+    notes?: string;
+    userId?: string;
+    addons?: string[];
+    totalPrice: number;
+    totalDuration: number;
+    consentFormResponses?: ConsentFormResponse[];
+}
+
+interface Appointment {
+    id: string;
+    clientEmail: string;
+    clientName: string;
+    clientPhone: string;
+    staffId: string;
+    staffName: string;
+    serviceId: string;
+    serviceName: string;
+    addons?: {
+        id: string;
+        name: string;
+        price: number;
+    }[];
+    startTime: string;
+    endTime: string;
+    totalPrice: number;
+    totalDuration: number;
+    consentFormResponses?: ConsentFormResponse[];
+    notes?: string;
+    userId?: string;
+    status: 'confirmed' | 'cancelled' | 'completed';
+    createdAt: string;
+    updatedAt: string;
+}
+
 const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 
@@ -18,19 +124,6 @@ const STAFF_TABLE = 'phace-staff';
 const CLIENTS_TABLE = 'phace-clients';
 const WAITLIST_TABLE = 'phace-waitlist';
 const FORMS_TABLE = 'phace-forms';
-
-export interface CreateAppointmentParams {
-  serviceId: string;
-  staffId: string;
-  startTime: string;
-  endTime: string;
-  clientName: string;
-  clientEmail: string;
-  clientPhone: string;
-  notes?: string;
-  userId?: string;
-  addons?: string[];
-}
 
 export class BookingService {
     // Service Category Methods
@@ -477,12 +570,12 @@ export class BookingService {
     }
 
     // Appointment Methods
-    static async createAppointment(params: CreateAppointmentParams): Promise<any> {
+    static async createAppointment(params: CreateAppointmentParams): Promise<Appointment> {
         // Get service, staff, and addon details
         const [service, staff, addonDetails] = await Promise.all([
             this.getServiceById(params.serviceId),
             this.getStaffById(params.staffId),
-            this.getAddonsByIds(params.addons)
+            params.addons ? this.getAddonsByIds(params.addons) : Promise.resolve([])
         ]);
 
         if (!service || !staff) {
@@ -502,17 +595,10 @@ export class BookingService {
                 answer: response.answer,
                 timestamp: response.timestamp || now
             }))
-        })) || [];
+        }));
 
-        const item = {
-            pk: `APPOINTMENT#${id}`,
-            sk: `APPOINTMENT#${id}`,
-            GSI1PK: `STAFF#${params.staffId}`,
-            GSI1SK: `DATE#${params.startTime}`,
-            GSI2PK: `CLIENT#${params.clientEmail}`,
-            GSI2SK: `DATE#${params.startTime}`,
+        const item: Appointment = {
             id,
-            type: 'appointment',
             clientEmail: params.clientEmail,
             clientName: params.clientName,
             clientPhone: params.clientPhone,
@@ -532,20 +618,31 @@ export class BookingService {
             consentFormResponses,
             notes: params.notes,
             userId: params.userId,
-            status: 'confirmed',
+            status: 'confirmed' as const,
             createdAt: now,
             updatedAt: now,
         };
 
+        const dbItem = {
+            pk: `APPOINTMENT#${id}`,
+            sk: `APPOINTMENT#${id}`,
+            GSI1PK: `STAFF#${params.staffId}`,
+            GSI1SK: `DATE#${params.startTime}`,
+            GSI2PK: `CLIENT#${params.clientEmail}`,
+            GSI2SK: `DATE#${params.startTime}`,
+            type: 'appointment',
+            ...item
+        };
+
         await dynamoDb.send(new PutCommand({
             TableName: APPOINTMENTS_TABLE,
-            Item: item,
+            Item: dbItem,
         }));
 
         return item;
     }
 
-    static async getStaffAppointments(staffId: string, startDate: string, endDate: string) {
+    static async getStaffAppointments(staffId: string, startDate: string, endDate: string): Promise<Appointment[]> {
         const result = await dynamoDb.send(new QueryCommand({
             TableName: APPOINTMENTS_TABLE,
             IndexName: 'GSI1',
@@ -557,10 +654,10 @@ export class BookingService {
             },
         }));
 
-        return result.Items || [];
+        return (result.Items || []) as Appointment[];
     }
 
-    static async getClientAppointments(clientEmail: string) {
+    static async getClientAppointments(clientEmail: string): Promise<Appointment[]> {
         const result = await dynamoDb.send(new QueryCommand({
             TableName: APPOINTMENTS_TABLE,
             IndexName: 'GSI2',
@@ -570,7 +667,7 @@ export class BookingService {
             },
         }));
 
-        return result.Items || [];
+        return (result.Items || []) as Appointment[];
     }
 
     static async getAppointmentById(id: string) {
