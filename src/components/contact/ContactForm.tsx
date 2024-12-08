@@ -62,7 +62,7 @@ export function ContactForm() {
           onChange={handleChange}
           required
           disabled={status === 'loading'}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E4B4A6] focus:ring-[#E4B4A6] sm:text-sm disabled:opacity-50"
+          className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E4B4A6] focus:ring-[#E4B4A6] sm:text-sm disabled:opacity-50"
         />
       </div>
 
@@ -78,7 +78,7 @@ export function ContactForm() {
           onChange={handleChange}
           required
           disabled={status === 'loading'}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E4B4A6] focus:ring-[#E4B4A6] sm:text-sm disabled:opacity-50"
+          className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E4B4A6] focus:ring-[#E4B4A6] sm:text-sm disabled:opacity-50"
         />
       </div>
 
@@ -93,7 +93,7 @@ export function ContactForm() {
           value={formData.phone}
           onChange={handleChange}
           disabled={status === 'loading'}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E4B4A6] focus:ring-[#E4B4A6] sm:text-sm disabled:opacity-50"
+          className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E4B4A6] focus:ring-[#E4B4A6] sm:text-sm disabled:opacity-50"
         />
       </div>
 

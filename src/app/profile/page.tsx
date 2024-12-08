@@ -41,7 +41,7 @@ export default function Profile() {
         
         // Sort appointments by date, most recent first
         const sortedAppointments = data.sort((a: Appointment, b: Appointment) => 
-          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+          new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
         );
         setAppointments(sortedAppointments);
       } catch (error) {
