@@ -95,13 +95,12 @@ export default function Login() {
 
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <button
-                type="button"
+              <a
                 onClick={() => router.push('/forgot-password')}
                 className="font-medium text-accent hover:text-accent/80"
               >
                 Forgot your password?
-              </button>
+              </a>
             </div>
           </div>
 
