@@ -1,18 +1,46 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import Link from 'next/link';
 
 export default function Profile() {
   const { isAuthenticated, isLoading, user, signOut } = useAuth();
   const router = useRouter();
+  const [appointments, setAppointments] = useState([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login?returnUrl=/profile');
     }
   }, [isLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!user?.email) return;
+      
+      setLoadingAppointments(true);
+      try {
+        const response = await fetch(`/api/booking/appointments?clientEmail=${encodeURIComponent(user.email)}`);
+        if (!response.ok) throw new Error('Failed to fetch appointments');
+        const data = await response.json();
+        
+        // Sort appointments by date, most recent first
+        const sortedAppointments = data.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+        setAppointments(sortedAppointments);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      } finally {
+        setLoadingAppointments(false);
+      }
+    };
+
+    if (user?.email) {
+      fetchAppointments();
+    }
+  }, [user?.email]);
 
   if (isLoading) {
     return (
@@ -25,6 +53,9 @@ export default function Profile() {
   if (!isAuthenticated || !user) {
     return null;
   }
+
+  const upcomingAppointments = appointments.filter(apt => new Date(apt.startTime) >= new Date());
+  const pastAppointments = appointments.filter(apt => new Date(apt.startTime) < new Date());
 
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8 pt-24">
@@ -56,15 +87,103 @@ export default function Profile() {
             </div>
 
             <div>
-              <h3 className="text-lg font-medium text-gray-900">Upcoming Appointments</h3>
-              {/* Add appointments list here */}
-              <p className="text-sm text-gray-500 mt-2">No upcoming appointments</p>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Upcoming Appointments</h3>
+                <Link
+                  href="/book"
+                  className="text-accent hover:text-accent/90 text-sm font-medium"
+                >
+                  Book New Appointment
+                </Link>
+              </div>
+              {loadingAppointments ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent mx-auto"></div>
+                </div>
+              ) : upcomingAppointments.length > 0 ? (
+                <div className="space-y-4">
+                  {upcomingAppointments.map((apt) => (
+                    <div key={apt.id} className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-gray-900">{apt.serviceName}</p>
+                          <p className="text-sm text-gray-500">with {apt.staffName}</p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {new Date(apt.startTime).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(apt.startTime).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                            {' - '}
+                            {new Date(apt.endTime).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                          Upcoming
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mt-2">No upcoming appointments</p>
+              )}
             </div>
 
             <div>
-              <h3 className="text-lg font-medium text-gray-900">Past Appointments</h3>
-              {/* Add past appointments list here */}
-              <p className="text-sm text-gray-500 mt-2">No past appointments</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Past Appointments</h3>
+              {loadingAppointments ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent mx-auto"></div>
+                </div>
+              ) : pastAppointments.length > 0 ? (
+                <div className="space-y-4">
+                  {pastAppointments.map((apt) => (
+                    <div key={apt.id} className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-gray-900">{apt.serviceName}</p>
+                          <p className="text-sm text-gray-500">with {apt.staffName}</p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {new Date(apt.startTime).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(apt.startTime).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                            {' - '}
+                            {new Date(apt.endTime).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                          Completed
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mt-2">No past appointments</p>
+              )}
             </div>
           </div>
         </div>

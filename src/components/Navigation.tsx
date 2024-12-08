@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useAuth } from '@/hooks/useAuth'
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { isAuthenticated, user } = useAuth()
 
   return (
     <nav className="fixed w-full bg-[#FFFBF0]/80 backdrop-blur-sm z-50">
@@ -68,15 +70,15 @@ export function Navigation() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Link href="/login" className="text-text hover:text-accent transition-colors">
-              Log In
-            </Link>
-            {/* <Link
-              href="/book"
-              className="bg-accent text-white px-4 py-2 rounded-full hover:bg-accent/90 transition-colors"
-            >
-              Book Now
-            </Link> */}
+            {isAuthenticated ? (
+              <Link href="/profile" className="text-text hover:text-accent transition-colors">
+                Profile
+              </Link>
+            ) : (
+              <Link href="/login" className="text-text hover:text-accent transition-colors">
+                Log In
+              </Link>
+            )}
           </div>
         </div>
 
