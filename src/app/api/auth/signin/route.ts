@@ -14,11 +14,13 @@ export async function POST(request: Request) {
 
         const result = await AuthService.signIn(email, password);
         
-        // Return the authentication tokens
+        if (!result.AuthenticationResult?.IdToken) {
+            throw new Error('No token received from authentication');
+        }
+
+        // Return just the ID token as our main auth token
         return NextResponse.json({
-            accessToken: result.AuthenticationResult?.AccessToken,
-            refreshToken: result.AuthenticationResult?.RefreshToken,
-            idToken: result.AuthenticationResult?.IdToken,
+            token: result.AuthenticationResult.IdToken
         });
     } catch (error: any) {
         console.error('Signin error:', error);
