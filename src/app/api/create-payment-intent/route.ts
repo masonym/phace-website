@@ -3,9 +3,13 @@ import { StripeService } from '@/lib/services/stripeService';
 
 export async function POST(request: Request) {
     try {
-        const { amount } = await request.json();
+        const { amount, items, shippingAddress } = await request.json();
 
-        const paymentIntent = await StripeService.createPaymentIntent(amount);
+        const paymentIntent = await StripeService.createPaymentIntent(
+            amount,
+            items,
+            shippingAddress
+        );
 
         return NextResponse.json({
             clientSecret: paymentIntent.client_secret,

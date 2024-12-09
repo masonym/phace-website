@@ -1,3 +1,8 @@
+export interface ProductColor {
+    name: string;
+    hex: string;
+}
+
 export interface Product {
     id: string;
     name: string;
@@ -9,6 +14,10 @@ export interface Product {
     inStock: boolean;
     quantity?: number;
     variants?: ProductVariant[];
+    whyWeLoveIt: string[];
+    howToUse: string[];
+    ingredients: string[];
+    colors?: ProductColor[];
 }
 
 export interface ProductVariant {
@@ -17,4 +26,10 @@ export interface ProductVariant {
     price: number;
     sku: string;
     inStock: boolean;
+    color?: ProductColor;
+}
+
+export interface CartItem extends Product {
+    quantity: number;
+    selectedColor?: ProductColor;
 }

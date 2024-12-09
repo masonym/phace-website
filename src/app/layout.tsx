@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { Navigation } from '@/components/Navigation'
 import { Footer } from '@/components/Footer'
 import FloatingButtons from '@/components/shared/FloatingButtons'
-import { CartProvider } from '@/hooks/useCart'
+import { CartProvider } from '@/components/providers/CartProvider';
 import { AuthProvider } from '@/hooks/useAuth'
 import { Toaster } from 'react-hot-toast';
 
@@ -31,7 +31,9 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             <Navigation />
-            <main className="flex-grow">{children}</main>
+            <main className="flex-grow">
+              {children}
+            </main>
             {/* <FloatingButtons /> */}
             <Footer />
           </CartProvider>

@@ -17,24 +17,15 @@ export async function GET(request: Request) {
     }
 }
 
-export async function PUT(request: Request) {
+export async function POST(request: Request) {
     try {
-        const productId = request.url.split('/').pop(); // Extract product ID from URL
         const productData = await request.json();
-
-        if (!productId) {
-            return NextResponse.json(
-                { error: 'Product ID is required' },
-                { status: 400 }
-            );
-        }
-
-        const updatedProduct = await ProductService.updateProduct(productId, productData);
-        return NextResponse.json(updatedProduct);
+        await ProductService.createProduct(productData);
+        return NextResponse.json(productData);
     } catch (error) {
-        console.error('Error updating product:', error);
+        console.error('Error creating product:', error);
         return NextResponse.json(
-            { error: 'Failed to update product' },
+            { error: 'Failed to create product' },
             { status: 500 }
         );
     }

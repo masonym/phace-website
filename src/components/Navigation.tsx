@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
+import { CartButton } from './cart/CartButton';
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -69,7 +70,8 @@ export function Navigation() {
             </button>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-4">
+            <CartButton />
             {isAuthenticated ? (
               <Link href="/profile" className="text-text hover:text-accent transition-colors">
                 Profile

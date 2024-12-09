@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/components/providers/CartProvider';
 import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+import Image from 'next/image';
 
 interface ShippingAddress {
     name: string;
@@ -16,7 +15,9 @@ interface ShippingAddress {
     country: string;
 }
 
-export default function Checkout() {
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
+export default function CheckoutPage() {
     const { cart, getCartTotal, clearCart } = useCartContext();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -29,6 +30,12 @@ export default function Checkout() {
         zipCode: '',
         country: '',
     });
+
+    useEffect(() => {
+        if (cart.length === 0) {
+            router.push('/store');
+        }
+    }, [cart, router]);
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setShippingAddress({
@@ -62,69 +69,42 @@ export default function Checkout() {
 
             const { clientSecret } = await response.json();
 
-            // Confirm payment with Stripe
+            // Load Stripe
             const stripe = await stripePromise;
-            if (!stripe) throw new Error('Stripe failed to load');
+            if (!stripe) throw new Error('Failed to load Stripe');
 
-            const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
-                payment_method: {
-                    card: {
-                        // In a real implementation, you would use Stripe Elements here
-                        token: 'tok_visa', // Test token
-                    },
+            // Confirm payment
+            const { error: stripeError } = await stripe.confirmPayment({
+                // elements: {
+                //     appearance: {
+                //         theme: 'stripe',
+                //     },
+                // },
+                confirmParams: {
+                    return_url: `${window.location.origin}/checkout/success`,
                 },
+                clientSecret,
             });
 
             if (stripeError) {
-                throw new Error(stripeError.message);
+                throw stripeError;
             }
 
-            // Create order in your system
-            const orderResponse = await fetch('/api/orders', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                },
-                body: JSON.stringify({
-                    items: cart,
-                    total: getCartTotal(),
-                    shippingAddress,
-                }),
-            });
-
-            if (!orderResponse.ok) {
-                throw new Error('Failed to create order');
-            }
-
-            // Clear cart and redirect to success page
+            // Clear cart and redirect to success page (this will only run if payment fails silently)
             clearCart();
             router.push('/checkout/success');
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
-        } finally {
             setLoading(false);
         }
     };
 
     if (cart.length === 0) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
-                    <button
-                        onClick={() => router.push('/store')}
-                        className="text-black hover:text-gray-700"
-                    >
-                        Continue Shopping
-                    </button>
-                </div>
-            </div>
-        );
+        return null; // Will redirect in useEffect
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 pt-32">
             <h1 className="text-2xl font-bold mb-8">Checkout</h1>
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="lg:w-2/3">
@@ -200,18 +180,25 @@ export default function Checkout() {
                             </div>
                         </div>
 
+                        <div className="bg-white p-6 rounded-lg shadow">
+                            <h2 className="text-xl font-semibold mb-4">
+                                Payment Information
+                            </h2>
+                            <div id="payment-element"></div>
+                        </div>
+
                         <button
                             type="submit"
                             disabled={loading}
                             className="w-full bg-black text-white py-3 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? 'Processing...' : 'Place Order'}
+                            {loading ? 'Processing...' : `Pay C$${getCartTotal().toFixed(2)}`}
                         </button>
                     </form>
                 </div>
 
                 <div className="lg:w-1/3">
-                    <div className="bg-gray-50 p-6 rounded-lg">
+                    <div className="bg-gray-50 p-6 rounded-lg sticky top-32">
                         <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
                         <div className="space-y-4">
                             {cart.map((item, index) => (
@@ -233,7 +220,7 @@ export default function Checkout() {
                                     <span>C${(item.product.price * item.quantity).toFixed(2)}</span>
                                 </div>
                             ))}
-                            <div className="border-t pt-4 mt-4">
+                            <div className="border-t pt-4">
                                 <div className="flex justify-between font-semibold">
                                     <span>Total</span>
                                     <span>C${getCartTotal().toFixed(2)}</span>
