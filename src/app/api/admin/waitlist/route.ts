@@ -5,11 +5,12 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const serviceId = searchParams.get('serviceId');
+        const staffId = searchParams.get('staffId');
         const status = (searchParams.get('status') || 'active') as 'active' | 'contacted' | 'booked' | 'expired';
 
         const entries = serviceId
-            ? await BookingService.getWaitlistEntriesByService(serviceId, status)
-            : await BookingService.getWaitlistEntries(status);
+            ? await BookingService.getWaitlistEntriesByService(serviceId, status, staffId || undefined)
+            : await BookingService.getWaitlistEntries(status, staffId || undefined);
 
         return NextResponse.json(entries);
     } catch (error: any) {

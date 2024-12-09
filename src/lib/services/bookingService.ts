@@ -278,9 +278,9 @@ export class BookingService {
     }
 
     static async getAllStaffMembers() {
-        const result = await dynamoDb.send(new QueryCommand({
+        const result = await dynamoDb.send(new ScanCommand({
             TableName: STAFF_TABLE,
-            KeyConditionExpression: 'begins_with(pk, :pk)',
+            FilterExpression: 'begins_with(pk, :pk)',
             ExpressionAttributeValues: {
                 ':pk': 'STAFF#',
             },
@@ -1000,39 +1000,127 @@ export class BookingService {
         return item;
     }
 
-    static async getWaitlistEntries(status: 'active' | 'contacted' | 'booked' | 'expired' = 'active') {
+    static async getWaitlistEntries(status: 'active' | 'contacted' | 'booked' | 'expired' = 'active', staffId?: string) {
+        let filterExpression = '#type = :type AND #status = :status';
+        let expressionAttributeValues: any = {
+            ':type': 'waitlist',
+            ':status': status
+        };
+
+        if (staffId) {
+            filterExpression += ' AND contains(preferredStaffIds, :staffId)';
+            expressionAttributeValues[':staffId'] = staffId;
+        }
+
         const result = await dynamoDb.send(new ScanCommand({
             TableName: WAITLIST_TABLE,
-            FilterExpression: '#type = :type AND #status = :status',
+            FilterExpression: filterExpression,
             ExpressionAttributeNames: {
                 '#type': 'type',
                 '#status': 'status'
             },
-            ExpressionAttributeValues: {
-                ':type': 'waitlist',
-                ':status': status
-            }
+            ExpressionAttributeValues: expressionAttributeValues
         }));
 
-        return result.Items || [];
+        const entries = result.Items || [];
+        
+        // Fetch service and staff details for each entry
+        const entriesWithDetails = await Promise.all(entries.map(async (entry) => {
+            const [serviceResult, ...staffResults] = await Promise.all([
+                // Fetch service details
+                dynamoDb.send(new GetCommand({
+                    TableName: SERVICES_TABLE,
+                    Key: {
+                        pk: 'SERVICES',
+                        sk: `SERVICE#${entry.serviceId}`,
+                    }
+                })),
+                // Fetch staff details for each preferred staff ID
+                ...entry.preferredStaffIds.map(staffId =>
+                    dynamoDb.send(new GetCommand({
+                        TableName: STAFF_TABLE,
+                        Key: {
+                            pk: `STAFF#${staffId}`,
+                            sk: `STAFF#${staffId}`,
+                        }
+                    }))
+                )
+            ]);
+            
+            const staffNames = staffResults
+                .map(result => result.Item?.name)
+                .filter(name => name) as string[];
+            
+            return {
+                ...entry,
+                serviceName: serviceResult.Item?.name || 'Unknown Service',
+                preferredStaffNames: staffNames
+            };
+        }));
+
+        return entriesWithDetails;
     }
 
-    static async getWaitlistEntriesByService(serviceId: string, status: 'active' | 'contacted' | 'booked' | 'expired' = 'active') {
+    static async getWaitlistEntriesByService(serviceId: string, status: 'active' | 'contacted' | 'booked' | 'expired' = 'active', staffId?: string) {
+        let filterExpression = '#type = :type AND #status = :status AND serviceId = :serviceId';
+        let expressionAttributeValues: any = {
+            ':type': 'waitlist',
+            ':status': status,
+            ':serviceId': serviceId
+        };
+
+        if (staffId) {
+            filterExpression += ' AND contains(preferredStaffIds, :staffId)';
+            expressionAttributeValues[':staffId'] = staffId;
+        }
+
         const result = await dynamoDb.send(new ScanCommand({
             TableName: WAITLIST_TABLE,
-            FilterExpression: '#type = :type AND #status = :status AND serviceId = :serviceId',
+            FilterExpression: filterExpression,
             ExpressionAttributeNames: {
                 '#type': 'type',
                 '#status': 'status'
             },
-            ExpressionAttributeValues: {
-                ':type': 'waitlist',
-                ':status': status,
-                ':serviceId': serviceId
-            }
+            ExpressionAttributeValues: expressionAttributeValues
         }));
 
-        return result.Items || [];
+        const entries = result.Items || [];
+        
+        // Fetch service and staff details for each entry
+        const entriesWithDetails = await Promise.all(entries.map(async (entry) => {
+            const [serviceResult, ...staffResults] = await Promise.all([
+                // Fetch service details
+                dynamoDb.send(new GetCommand({
+                    TableName: SERVICES_TABLE,
+                    Key: {
+                        pk: 'SERVICES',
+                        sk: `SERVICE#${entry.serviceId}`,
+                    }
+                })),
+                // Fetch staff details for each preferred staff ID
+                ...entry.preferredStaffIds.map(staffId =>
+                    dynamoDb.send(new GetCommand({
+                        TableName: STAFF_TABLE,
+                        Key: {
+                            pk: `STAFF#${staffId}`,
+                            sk: `STAFF#${staffId}`,
+                        }
+                    }))
+                )
+            ]);
+            
+            const staffNames = staffResults
+                .map(result => result.Item?.name)
+                .filter(name => name) as string[];
+            
+            return {
+                ...entry,
+                serviceName: serviceResult.Item?.name || 'Unknown Service',
+                preferredStaffNames: staffNames
+            };
+        }));
+
+        return entriesWithDetails;
     }
 
     static async updateWaitlistStatus(id: string, status: 'active' | 'contacted' | 'booked' | 'expired', notes?: string) {

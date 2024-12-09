@@ -14,20 +14,47 @@ interface WaitlistEntry {
     clientPhone: string;
     preferredDates: string[];
     preferredStaffIds: string[];
+    preferredStaffNames?: string[];
     status: 'active' | 'contacted' | 'booked' | 'expired';
     notes?: string;
     createdAt: string;
     updatedAt?: string;
 }
 
+interface StaffMember {
+    id: string;
+    name: string;
+}
+
 export default function WaitlistManager() {
     const [entries, setEntries] = useState<WaitlistEntry[]>([]);
+    const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<'active' | 'contacted' | 'booked' | 'expired'>('active');
+    const [staffFilter, setStaffFilter] = useState<string>('');
+
+    const fetchStaffMembers = async () => {
+        try {
+            const response = await fetch('/api/admin/staff');
+            if (!response.ok) throw new Error('Failed to fetch staff members');
+            const data = await response.json();
+            setStaffMembers(data);
+        } catch (error) {
+            showToast({
+                title: 'Error',
+                description: 'Failed to fetch staff members',
+                status: 'error',
+            });
+        }
+    };
 
     const fetchEntries = async () => {
         try {
-            const response = await fetch(`/api/admin/waitlist?status=${statusFilter}`);
+            const params = new URLSearchParams({ status: statusFilter });
+            if (staffFilter) {
+                params.append('staffId', staffFilter);
+            }
+            const response = await fetch(`/api/admin/waitlist?${params}`);
             if (!response.ok) throw new Error('Failed to fetch waitlist entries');
             const data = await response.json();
             setEntries(data);
@@ -43,8 +70,12 @@ export default function WaitlistManager() {
     };
 
     useEffect(() => {
+        fetchStaffMembers();
+    }, []);
+
+    useEffect(() => {
         fetchEntries();
-    }, [statusFilter]);
+    }, [statusFilter, staffFilter]);
 
     const updateStatus = async (id: string, newStatus: 'active' | 'contacted' | 'booked' | 'expired', notes?: string) => {
         try {
@@ -104,16 +135,30 @@ export default function WaitlistManager() {
         <div className="container mx-auto py-10">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-semibold">Waitlist Management</h1>
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="px-4 py-2 border rounded-md"
-                >
-                    <option value="active">Active</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="booked">Booked</option>
-                    <option value="expired">Expired</option>
-                </select>
+                <div className="flex gap-4">
+                    <select
+                        value={staffFilter}
+                        onChange={(e) => setStaffFilter(e.target.value)}
+                        className="px-4 py-2 border rounded-md"
+                    >
+                        <option value="">All Staff</option>
+                        {staffMembers.map((staff) => (
+                            <option key={staff.id} value={staff.id}>
+                                {staff.name}
+                            </option>
+                        ))}
+                    </select>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                        className="px-4 py-2 border rounded-md"
+                    >
+                        <option value="active">Active</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="booked">Booked</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                </div>
             </div>
 
             {isLoading ? (
@@ -131,6 +176,7 @@ export default function WaitlistManager() {
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preferred Staff</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preferred Dates</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
@@ -147,6 +193,15 @@ export default function WaitlistManager() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm text-gray-900">{entry.serviceName}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <ul className="list-disc list-inside">
+                                            {entry.preferredStaffNames?.map((name) => (
+                                                <li key={name} className="text-sm text-gray-900">
+                                                    {name}
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </td>
                                     <td className="px-6 py-4">
                                         <ul className="list-disc list-inside">

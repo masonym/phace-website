@@ -39,6 +39,16 @@ export default function AdminDashboard() {
                 </Link>
 
                 <Link
+                    href="/admin/waitlist"
+                    className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                >
+                    <h2 className="text-xl font-semibold mb-2">Waitlist Manager</h2>
+                    <p className="text-gray-600">
+                        View and manage customer waitlist entries by service and staff member
+                    </p>
+                </Link>
+
+                <Link
                     href="/admin/products"
                     className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
                 >

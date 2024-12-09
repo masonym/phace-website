@@ -83,6 +83,18 @@ export default function AdminLayout({
                             </div>
                             <div className="flex space-x-4">
                                 <Link
+                                    href="/admin/services"
+                                    className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100"
+                                >
+                                    Services
+                                </Link>
+                                <Link
+                                    href="/admin/waitlist"
+                                    className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100"
+                                >
+                                    Waitlist
+                                </Link>
+                                <Link
                                     href="/admin/products"
                                     className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100"
                                 >

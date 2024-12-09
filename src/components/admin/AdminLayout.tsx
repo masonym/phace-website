@@ -77,6 +77,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 >
                   Calendar
                 </Link>
+                <Link
+                  href="/admin/waitlist"
+                  className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                >
+                  Waitlist Manager
+                </Link>
               </div>
             </div>
 
