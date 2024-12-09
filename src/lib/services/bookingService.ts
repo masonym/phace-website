@@ -83,7 +83,7 @@ export interface CreateAppointmentParams {
     clientEmail: string;
     clientPhone: string;
     notes?: string;
-    userId?: string;
+    userId?: string | null;
     addons?: string[];
     totalPrice: number;
     totalDuration: number;
@@ -110,7 +110,7 @@ interface Appointment {
     totalDuration: number;
     consentFormResponses?: ConsentFormResponse[];
     notes?: string;
-    userId?: string;
+    userId?: string | null;
     status: 'confirmed' | 'cancelled' | 'completed';
     createdAt: string;
     updatedAt: string;
