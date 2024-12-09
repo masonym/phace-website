@@ -12,18 +12,15 @@ A modern, performant website for Phace Med-Spa built with Next.js 14.
 - Team member profiles
 - Client testimonials
 - Location integration with Google Maps
-- (Coming soon) Appointment booking system
-- (Coming soon) Staff dashboard
+- Appointment booking system
+- Staff dashboard
 
 ## Tech Stack
 
 - Next.js 14
 - TypeScript
 - Tailwind CSS
-- Prisma (Database ORM)
-- PostgreSQL
-- NextAuth.js (Authentication)
-- Cloudinary (Image management)
+- AWS Services (Cognito, S3, SES, DynamoDB)
 - Stripe (Payments)
 
 ## Getting Started
@@ -41,35 +38,3 @@ A modern, performant website for Phace Med-Spa built with Next.js 14.
    ```bash
    npm run dev
    ```
-
-## Project Structure
-
-```
-src/
-├── app/                    # App router pages
-├── components/            # Reusable components
-│   ├── ui/               # Basic UI components
-│   ├── layout/           # Layout components
-│   └── sections/         # Page sections
-├── lib/                  # Utility functions and configurations
-├── styles/               # Global styles
-└── types/               # TypeScript types
-
-public/                  # Static assets
-prisma/                 # Database schema and migrations
-```
-
-## Environment Variables
-
-Create a `.env.local` file with the following variables:
-
-```
-DATABASE_URL=
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=
-STRIPE_SECRET_KEY=
-STRIPE_PUBLISHABLE_KEY=
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-```
