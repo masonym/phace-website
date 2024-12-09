@@ -19,6 +19,7 @@ interface AuthContextType {
   getIdToken: () => Promise<string | null>;
   getAccessToken: () => Promise<string | null>;
   refreshUser: () => Promise<void>;
+  changePassword: (email: string, oldPassword: string, newPassword: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -31,6 +32,7 @@ export const AuthContext = createContext<AuthContextType>({
   getIdToken: async () => null,
   getAccessToken: async () => null,
   refreshUser: async () => {},
+  changePassword: async (email: string, oldPassword: string, newPassword: string) => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -119,6 +121,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const changePassword = async (email: string, oldPassword: string, newPassword: string) => {
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, oldPassword, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change password');
+      }
+
+      // After password change, sign in with the new password
+      await signIn(email, newPassword);
+    } catch (error) {
+      console.error('Change password error:', error);
+      throw error;
+    }
+  };
+
   const signOut = () => {
     Cookies.remove('idToken');
     Cookies.remove('accessToken');
@@ -183,6 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         getIdToken,
         getAccessToken,
         refreshUser,
+        changePassword,
       }}
     >
       {children}

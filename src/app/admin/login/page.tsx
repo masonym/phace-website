@@ -12,7 +12,7 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, changePassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,12 +21,12 @@ export default function AdminLogin() {
 
     try {
       if (isNewPasswordRequired) {
-        await signIn(email, password, newPassword);
+        await changePassword(email, password, newPassword);
         // Reset form after successful password change
         setIsNewPasswordRequired(false);
         setNewPassword('');
-        // Don't redirect yet - let them login with new password
-        setPassword('');
+        // Password has been changed and user is now signed in
+        router.push('/admin');
       } else {
         await signIn(email, password);
         console.log('Sign in successful, redirecting...');

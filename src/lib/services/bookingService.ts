@@ -1036,7 +1036,7 @@ export class BookingService {
                     }
                 })),
                 // Fetch staff details for each preferred staff ID
-                ...entry.preferredStaffIds.map(staffId =>
+                ...entry.preferredStaffIds.map((staffId: any) =>
                     dynamoDb.send(new GetCommand({
                         TableName: STAFF_TABLE,
                         Key: {
@@ -1098,7 +1098,7 @@ export class BookingService {
                     }
                 })),
                 // Fetch staff details for each preferred staff ID
-                ...entry.preferredStaffIds.map(staffId =>
+                ...entry.preferredStaffIds.map((staffId: any) =>
                     dynamoDb.send(new GetCommand({
                         TableName: STAFF_TABLE,
                         Key: {
