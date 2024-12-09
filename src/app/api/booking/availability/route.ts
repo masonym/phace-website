@@ -53,7 +53,11 @@ export async function GET(request: Request) {
         const staffAvailability = await BookingService.getStaffAvailability(staffId, dayOfWeek);
 
         if (!staffAvailability) {
-            return NextResponse.json([]);
+            return NextResponse.json({
+                slots: [],
+                isFullyBooked: false, 
+                staffAvailable: false
+            });
         }
 
         // Get blocked times
@@ -75,6 +79,8 @@ export async function GET(request: Request) {
             { start: dayStart, end: dayEnd },
             { step: 15 }
         );
+
+        let hasConflicts = false;
 
         for (const slotStart of intervals) {
             const slotEnd = addMinutes(slotStart, totalDuration);
@@ -110,6 +116,8 @@ export async function GET(request: Request) {
                 );
             });
 
+            if (hasConflict) hasConflicts = true;
+
             if (!hasConflict && !isBlocked) {
                 availableTimeSlots.push({
                     startTime: format(slotStart, "yyyy-MM-dd'T'HH:mm:ss"),
@@ -119,7 +127,11 @@ export async function GET(request: Request) {
             }
         }
 
-        return NextResponse.json(availableTimeSlots);
+        return NextResponse.json({
+            slots: availableTimeSlots,
+            isFullyBooked: hasConflicts && availableTimeSlots.length === 0,
+            staffAvailable: true
+        });
     } catch (error) {
         console.error('Error in availability endpoint:', error);
         return NextResponse.json(

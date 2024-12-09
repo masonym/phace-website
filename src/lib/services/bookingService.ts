@@ -5,7 +5,8 @@ import {
     PutCommand, 
     QueryCommand,
     UpdateCommand,
-    DeleteCommand
+    DeleteCommand,
+    ScanCommand
 } from '@aws-sdk/lib-dynamodb';
 import { nanoid } from 'nanoid';
 
@@ -997,6 +998,76 @@ export class BookingService {
         }));
 
         return item;
+    }
+
+    static async getWaitlistEntries(status: 'active' | 'contacted' | 'booked' | 'expired' = 'active') {
+        const result = await dynamoDb.send(new ScanCommand({
+            TableName: WAITLIST_TABLE,
+            FilterExpression: '#type = :type AND #status = :status',
+            ExpressionAttributeNames: {
+                '#type': 'type',
+                '#status': 'status'
+            },
+            ExpressionAttributeValues: {
+                ':type': 'waitlist',
+                ':status': status
+            }
+        }));
+
+        return result.Items || [];
+    }
+
+    static async getWaitlistEntriesByService(serviceId: string, status: 'active' | 'contacted' | 'booked' | 'expired' = 'active') {
+        const result = await dynamoDb.send(new ScanCommand({
+            TableName: WAITLIST_TABLE,
+            FilterExpression: '#type = :type AND #status = :status AND serviceId = :serviceId',
+            ExpressionAttributeNames: {
+                '#type': 'type',
+                '#status': 'status'
+            },
+            ExpressionAttributeValues: {
+                ':type': 'waitlist',
+                ':status': status,
+                ':serviceId': serviceId
+            }
+        }));
+
+        return result.Items || [];
+    }
+
+    static async updateWaitlistStatus(id: string, status: 'active' | 'contacted' | 'booked' | 'expired', notes?: string) {
+        const result = await dynamoDb.send(new UpdateCommand({
+            TableName: WAITLIST_TABLE,
+            Key: {
+                pk: `WAITLIST#${id}`,
+                sk: `WAITLIST#${id}`,
+            },
+            UpdateExpression: notes 
+                ? 'SET GSI1SK = :status, #status = :statusValue, notes = :notes, updatedAt = :updatedAt'
+                : 'SET GSI1SK = :status, #status = :statusValue, updatedAt = :updatedAt',
+            ExpressionAttributeNames: {
+                '#status': 'status',
+            },
+            ExpressionAttributeValues: {
+                ':status': `STATUS#${status}`,
+                ':statusValue': status,
+                ':updatedAt': new Date().toISOString(),
+                ...(notes && { ':notes': notes }),
+            },
+            ReturnValues: 'ALL_NEW',
+        }));
+
+        return result.Attributes;
+    }
+
+    static async deleteWaitlistEntry(id: string) {
+        await dynamoDb.send(new DeleteCommand({
+            TableName: WAITLIST_TABLE,
+            Key: {
+                pk: `WAITLIST#${id}`,
+                sk: `WAITLIST#${id}`,
+            },
+        }));
     }
 
     // Form Methods
