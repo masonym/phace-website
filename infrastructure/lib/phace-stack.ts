@@ -30,6 +30,7 @@ export class PhaceStack extends Stack {
                         s3.HttpMethods.HEAD,
                     ],
                     allowedOrigins: [
+                        'http://localhost:3000',
                         'http://localhost:3001',
                         'https://phace.ca',
                         'https://www.phace.ca',
