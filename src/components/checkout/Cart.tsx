@@ -5,19 +5,19 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function Cart() {
-    const { state: cart, removeFromCart, updateQuantity } = useCart();
+    const { cart, removeFromCart, updateQuantity } = useCart();
     const router = useRouter();
 
-    const handleQuantityChange = (productId: string, newQuantity: number) => {
+    const handleQuantityChange = (productId: string, colorName: string | null, newQuantity: number) => {
         if (newQuantity < 1) return;
-        updateQuantity(productId, newQuantity);
+        updateQuantity(productId, colorName, newQuantity);
     };
 
     const handleCheckout = () => {
         router.push('/checkout');
     };
 
-    if (cart.items.length === 0) {
+    if (cart.length === 0) {
         return (
             <div className="p-4 text-center">
                 <h2 className="text-xl font-semibold mb-4">Your cart is empty</h2>
@@ -36,73 +36,74 @@ export default function Cart() {
             <h1 className="text-2xl font-bold mb-8">Shopping Cart</h1>
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="lg:w-2/3">
-                    {cart.items.map((item) => (
+                    {cart.map((item) => (
                         <div
-                            key={item.id}
+                            key={`${item.product.id}-${item.selectedColor?.name ?? 'no-color'}`}
                             className="flex items-center border-b py-4 space-x-4"
                         >
                             <div className="relative h-24 w-24">
                                 <Image
-                                    src={item.images[0] || '/images/placeholder.jpg'}
-                                    alt={item.name}
+                                    src={item.product.images[0] || '/images/placeholder.jpg'}
+                                    alt={item.product.name}
                                     fill
                                     className="object-cover"
                                 />
                             </div>
                             <div className="flex-grow">
-                                <h3 className="font-semibold">{item.name}</h3>
-                                <p className="text-gray-600">${item.price.toFixed(2)}</p>
+                                <h3 className="font-semibold">{item.product.name}</h3>
+                                {item.selectedColor && (
+                                    <p className="text-gray-600">Color: {item.selectedColor.name}</p>
+                                )}
+                                <div className="flex items-center mt-2">
+                                    <button
+                                        onClick={() => handleQuantityChange(
+                                            item.product.id,
+                                            item.selectedColor?.name ?? null,
+                                            item.quantity - 1
+                                        )}
+                                        className="px-2 py-1 border rounded-l"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="px-4 py-1 border-t border-b">
+                                        {item.quantity}
+                                    </span>
+                                    <button
+                                        onClick={() => handleQuantityChange(
+                                            item.product.id,
+                                            item.selectedColor?.name ?? null,
+                                            item.quantity + 1
+                                        )}
+                                        className="px-2 py-1 border rounded-r"
+                                    >
+                                        +
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center space-x-2">
+                            <div className="text-right">
+                                <p className="font-semibold">${(item.product.price * item.quantity).toFixed(2)}</p>
                                 <button
-                                    onClick={() =>
-                                        handleQuantityChange(item.id, item.quantity - 1)
-                                    }
-                                    className="px-2 py-1 border rounded"
+                                    onClick={() => removeFromCart(item.product.id, item.selectedColor?.name ?? null)}
+                                    className="text-red-500 hover:text-red-700"
                                 >
-                                    -
-                                </button>
-                                <span>{item.quantity}</span>
-                                <button
-                                    onClick={() =>
-                                        handleQuantityChange(item.id, item.quantity + 1)
-                                    }
-                                    className="px-2 py-1 border rounded"
-                                >
-                                    +
+                                    Remove
                                 </button>
                             </div>
-                            <button
-                                onClick={() => removeFromCart(item.id)}
-                                className="text-red-500 hover:text-red-700"
-                            >
-                                Remove
-                            </button>
                         </div>
                     ))}
                 </div>
                 <div className="lg:w-1/3">
                     <div className="bg-gray-50 p-6 rounded-lg">
                         <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-                        <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <span>Subtotal</span>
-                                <span>${cart.total.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Shipping</span>
-                                <span>Calculated at checkout</span>
-                            </div>
-                            <div className="border-t pt-2 mt-2">
-                                <div className="flex justify-between font-semibold">
-                                    <span>Total</span>
-                                    <span>${cart.total.toFixed(2)}</span>
-                                </div>
-                            </div>
+                        <div className="flex justify-between mb-4">
+                            <span>Total</span>
+                            <span className="font-semibold">
+                                ${cart.reduce((total, item) => total + (item.product.price * item.quantity), 0).toFixed(2)}
+                            </span>
                         </div>
                         <button
                             onClick={handleCheckout}
-                            className="w-full mt-6 bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition-colors"
+                            className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark"
                         >
                             Proceed to Checkout
                         </button>
