@@ -24,16 +24,12 @@ export async function GET(request: Request) {
 
     const params = {
       TableName: process.env.STAFF_TABLE,
-      KeyConditionExpression: 'staffId = :staffId AND #date BETWEEN :startDate AND :endDate',
-      ExpressionAttributeNames: {
-        '#date': 'startTime'
-      },
+      KeyConditionExpression: 'pk = :pk AND sk BETWEEN :startDate AND :endDate',
       ExpressionAttributeValues: {
-        ':staffId': staffId,
+        ':pk': `STAFF#${staffId}#BLOCKED`,
         ':startDate': startDate,
         ':endDate': endDate
-      },
-      IndexName: 'staffId-startTime-index'
+      }
     };
 
     const command = new QueryCommand(params);
@@ -61,12 +57,16 @@ export async function POST(request: Request) {
     } = body;
 
     const blockedTimeData = {
+      pk: `STAFF#${staffId}#BLOCKED`,
+      sk: startTime,
       id: uuidv4(),
+      type: 'blocked_time',
       staffId,
       startTime,
       endTime,
       reason,
       ...(recurring && { recurring }),
+      createdAt: new Date().toISOString(),
     };
 
     const params = {
@@ -88,12 +88,16 @@ export async function POST(request: Request) {
         // Skip the first occurrence as it's already created
         if (currentStart > new Date(startTime)) {
           const recurringBlock = {
+            pk: `STAFF#${staffId}#BLOCKED`,
+            sk: currentStart.toISOString(),
             id: uuidv4(),
+            type: 'blocked_time',
             staffId,
             startTime: currentStart.toISOString(),
             endTime: currentEnd.toISOString(),
             reason,
             recurring: { frequency, until },
+            createdAt: new Date().toISOString(),
           };
 
           const recurringParams = {
@@ -142,8 +146,8 @@ export async function DELETE(request: Request) {
     const params = {
       TableName: process.env.STAFF_TABLE,
       Key: {
-        staffId,
-        startTime,
+        pk: `STAFF#${staffId}#BLOCKED`,
+        sk: startTime,
       },
     };
 

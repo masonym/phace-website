@@ -29,13 +29,20 @@ export async function GET(request: Request) {
 
     const params = {
       TableName: process.env.STAFF_TABLE!,
+      FilterExpression: 'begins_with(pk, :pk) AND attribute_exists(#n)',
+      ExpressionAttributeNames: {
+        '#n': 'name'
+      },
+      ExpressionAttributeValues: {
+        ':pk': 'STAFF#',
+      },
     };
 
     const command = new ScanCommand(params);
     const result = await docClient.send(command);
     
     // Transform the items to match the expected format
-    let transformedItems = result.Items?.map(item => ({
+    let transformedItems = result.Items?.filter(item => !item.pk.includes('#BLOCKED')).map(item => ({
       id: item.pk.replace('STAFF#', ''),
       name: item.name,
       email: item.email,

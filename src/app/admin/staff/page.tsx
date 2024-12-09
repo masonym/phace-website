@@ -83,9 +83,14 @@ export default function StaffPage() {
         );
         if (!response.ok) throw new Error('Failed to fetch blocked times');
         const data = await response.json();
-        setBlockedTimes(data);
+        if (Array.isArray(data)) {
+          setBlockedTimes(data);
+        } else {
+          setBlockedTimes([]);
+        }
       } catch (err: any) {
         console.error('Error fetching blocked times:', err);
+        setBlockedTimes([]);
       }
     };
 
@@ -240,9 +245,7 @@ export default function StaffPage() {
                           className="bg-gray-50 p-3 rounded-lg"
                         >
                           <div className="font-medium">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][
-                              availability.dayOfWeek
-                            ]}
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][availability.dayOfWeek]}
                           </div>
                           <div className="text-sm text-gray-600">
                             {availability.startTime} - {availability.endTime}
@@ -265,6 +268,10 @@ export default function StaffPage() {
                             <div className="font-medium">
                               {new Date(blocked.startTime).toLocaleDateString()} -{' '}
                               {new Date(blocked.endTime).toLocaleDateString()}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {new Date(blocked.startTime).toLocaleTimeString()} -{' '}
+                              {new Date(blocked.endTime).toLocaleTimeString()}
                             </div>
                             {blocked.reason && (
                               <div className="text-sm text-gray-600">
