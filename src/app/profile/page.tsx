@@ -18,10 +18,13 @@ interface Appointment {
 }
 
 export default function Profile() {
-  const { isAuthenticated, isLoading, user, signOut } = useAuth();
+  const { isAuthenticated, isLoading, user, signOut, refreshUser } = useAuth();
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [updatingPhone, setUpdatingPhone] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -55,6 +58,41 @@ export default function Profile() {
       fetchAppointments();
     }
   }, [user?.email]);
+
+  useEffect(() => {
+    if (user?.phone) {
+      setPhone(user.phone);
+    }
+  }, [user?.phone]);
+
+  const handleUpdatePhone = async () => {
+    if (!user?.email) return;
+    
+    setUpdatingPhone(true);
+    try {
+      const response = await fetch('/api/user/update-phone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update phone number');
+      }
+      
+      // Refresh user data to get the updated phone number
+      await refreshUser();
+      setIsEditingPhone(false);
+    } catch (error: any) {
+      console.error('Error updating phone number:', error);
+      // toast.error(error.message || 'Failed to update phone number');
+    } finally {
+      setUpdatingPhone(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -96,6 +134,46 @@ export default function Profile() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Email</dt>
                   <dd className="mt-1 text-sm text-gray-900">{user.email}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Phone Number</dt>
+                  {isEditingPhone ? (
+                    <div className="flex items-center mt-2">
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="border rounded-lg px-3 py-2 mr-2"
+                        placeholder="Enter phone number"
+                      />
+                      <button
+                        onClick={handleUpdatePhone}
+                        disabled={updatingPhone}
+                        className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
+                      >
+                        {updatingPhone ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditingPhone(false);
+                          setPhone(user?.phone || '');
+                        }}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center mt-2">
+                      <span className="text-gray-800">{phone || 'Not set'}</span>
+                      <button
+                        onClick={() => setIsEditingPhone(true)}
+                        className="ml-2 text-accent hover:text-accent/90"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )}
                 </div>
               </dl>
             </div>

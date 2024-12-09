@@ -18,6 +18,7 @@ interface AuthContextType {
   getSession: () => Promise<any | null>;
   getIdToken: () => Promise<string | null>;
   getAccessToken: () => Promise<string | null>;
+  refreshUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -29,6 +30,7 @@ export const AuthContext = createContext<AuthContextType>({
   getSession: async () => null,
   getIdToken: async () => null,
   getAccessToken: async () => null,
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -42,14 +44,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuthState = async () => {
     try {
-      const token = Cookies.get('token');
-      if (token) {
-        const decoded = jwtDecode(token);
+      const idToken = Cookies.get('idToken');
+      if (idToken) {
+        // Set initial state from token to avoid flicker
+        const decoded = jwtDecode(idToken);
         setUser(decoded);
         setIsAuthenticated(true);
+        
+        // Fetch fresh user data from Cognito
+        const response = await fetch('/api/auth/user', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${await getAccessToken()}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        }
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
+      setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -78,15 +96,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'Failed to sign in');
       }
 
-      // Store token in cookie
-      Cookies.set('token', data.token, {
+      // Store tokens in cookies
+      Cookies.set('idToken', data.idToken, {
+        expires: 7, // 7 days
+        secure: true,
+        sameSite: 'strict'
+      });
+      
+      Cookies.set('accessToken', data.accessToken, {
         expires: 7, // 7 days
         secure: true,
         sameSite: 'strict'
       });
 
       // Decode token to get user info
-      const decoded = jwtDecode(data.token);
+      const decoded = jwtDecode(data.idToken);
       setUser(decoded);
       setIsAuthenticated(true);
     } catch (error) {
@@ -96,23 +120,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = () => {
-    Cookies.remove('token');
+    Cookies.remove('idToken');
+    Cookies.remove('accessToken');
     setUser(null);
     setIsAuthenticated(false);
   };
 
   const getSession = async () => {
-    const token = Cookies.get('token');
-    if (!token) return null;
-    return jwtDecode(token);
+    const idToken = Cookies.get('idToken');
+    if (!idToken) return null;
+    return jwtDecode(idToken);
   };
 
   const getIdToken = async () => {
-    return Cookies.get('token') || null;
+    return Cookies.get('idToken') || null;
   };
 
   const getAccessToken = async () => {
-    return Cookies.get('token') || null;
+    return Cookies.get('accessToken') || null;
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await fetch('/api/auth/user', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${await getAccessToken()}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to refresh user data');
+      }
+
+      const data = await response.json();
+      
+      // Update user state with the fresh data
+      setUser(data.user);
+      
+      // Update the ID token if provided
+      if (data.token) {
+        Cookies.set('idToken', data.token, {
+          expires: 7,
+          secure: true,
+          sameSite: 'strict'
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
   };
 
   return (
@@ -126,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         getSession,
         getIdToken,
         getAccessToken,
+        refreshUser,
       }}
     >
       {children}

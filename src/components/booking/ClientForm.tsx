@@ -118,12 +118,12 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
               {...register('phone', {
                 required: 'Phone number is required',
                 pattern: {
-                  value: /^\+?[\d\s-()]+$/,
-                  message: 'Invalid phone number',
-                },
+                  value: /^(\+?1)?[-. ]?\(?[0-9]{3}\)?[-. ]?[0-9]{3}[-. ]?[0-9]{4}$/,
+                  message: 'Please enter a valid phone number'
+                }
               })}
               className="w-full px-4 py-2 border rounded-lg focus:ring-accent focus:border-accent"
-              placeholder="Enter your phone number"
+              placeholder="(123) 456-7890"
             />
             {errors.phone && (
               <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>

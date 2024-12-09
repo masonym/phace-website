@@ -15,12 +15,13 @@ export async function POST(request: Request) {
         try {
             const result = await AuthService.signIn(email, password);
             
-            if (!result.AuthenticationResult?.IdToken) {
+            if (!result.AuthenticationResult?.IdToken || !result.AuthenticationResult?.AccessToken) {
                 throw new Error('No token received from authentication');
             }
 
             return NextResponse.json({
-                token: result.AuthenticationResult.IdToken
+                idToken: result.AuthenticationResult.IdToken,
+                accessToken: result.AuthenticationResult.AccessToken
             });
         } catch (error: any) {
             // Check if the error is due to unconfirmed user
