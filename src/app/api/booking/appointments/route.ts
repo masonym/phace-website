@@ -58,35 +58,27 @@ export async function POST(request: Request) {
         }
 
         // Calculate total duration including addons
-        let totalDuration = service.duration;
+        let totalDuration = parseInt(service.duration.toString(), 10);
         let totalPrice = parseInt(service.price, 10);
 
         if (addons.length > 0) {
             const addonDetails = await BookingService.getAddonsByIds(addons);
             const validAddons = addonDetails.filter(addon => addon != null);
             for (const addon of validAddons) {
-                totalDuration += addon.duration;
+                totalDuration += parseInt(addon.duration.toString(), 10);
                 totalPrice += parseInt(addon.price);
             }
         }
 
-        // Calculate end time and round up to nearest 15 minutes
+        // Calculate end time
         const startDate = parseISO(startTime);
-        const rawEndTime = addMinutes(startDate, totalDuration);
-        
-        // Round up to nearest 15 minutes
-        const minutes = rawEndTime.getMinutes();
-        const roundUpTo = Math.ceil(minutes / 15) * 15;
-        const endTime = addMinutes(
-            new Date(
-                rawEndTime.getFullYear(),
-                rawEndTime.getMonth(),
-                rawEndTime.getDate(),
-                rawEndTime.getHours(),
-                roundUpTo
-            ),
-            roundUpTo === 60 ? 0 : 0 // If we rounded to 60, the hour will auto-increment
-        );
+        const endTime = addMinutes(startDate, totalDuration);
+
+        console.log('Appointment times:', {
+            startTime,
+            endTime: endTime.toISOString(),
+            totalDuration
+        });
 
         // Check if the time slot is still available
         const isAvailable = await BookingService.checkTimeSlotAvailability(

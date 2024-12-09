@@ -24,11 +24,12 @@ interface TimeSlot {
 interface Props {
   serviceId: string;
   staffId: string;
+  addons: string[];
   onSelect: (dateTime: string) => void;
   onBack: () => void;
 }
 
-export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack }: Props) {
+export default function DateTimeSelection({ serviceId, staffId, addons, onSelect, onBack }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,61 +51,74 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
 
   // Fetch available dates for the current month range
   useEffect(() => {
-    const fetchAvailableDates = async () => {
+    const checkDateAvailability = async (startDate: Date, endDate: Date) => {
       setCheckingDates(true);
-      const availableDatesSet = new Set<string>();
+      const availableDateSet = new Set<string>();
 
       try {
-        // Only fetch for dates within the current month
-        const monthDates = eachDayOfInterval({ start: monthStart, end: monthEnd });
-        const promises = monthDates.map(async (date) => {
-          if (isAfter(date, addDays(new Date(), 1)) && isBefore(date, addMonths(new Date(), 2))) {
-            const response = await fetch(
-              `/api/booking/availability?serviceId=${serviceId}&staffId=${staffId}&date=${format(date, 'yyyy-MM-dd')}`
-            );
-            if (response.ok) {
-              const data = await response.json();
-              if (data.length > 0) {
-                availableDatesSet.add(format(date, 'yyyy-MM-dd'));
-              }
-            }
+        const datePromises = eachDayOfInterval({ start: startDate, end: endDate }).map(async (date) => {
+          const formattedDate = format(date, 'yyyy-MM-dd');
+          const params = new URLSearchParams({
+            serviceId,
+            staffId,
+            date: formattedDate,
+            addons: addons.join(',')
+          });
+
+          const response = await fetch(`/api/booking/availability?${params}`);
+          if (!response.ok) return null;
+
+          const slots = await response.json();
+          if (slots.some((slot: TimeSlot) => slot.available)) {
+            availableDateSet.add(formattedDate);
           }
         });
 
-        await Promise.all(promises);
-        setAvailableDates(availableDatesSet);
+        await Promise.all(datePromises);
+        setAvailableDates(availableDateSet);
       } catch (err) {
-        console.error('Error fetching available dates:', err);
+        console.error('Error checking date availability:', err);
       } finally {
         setCheckingDates(false);
       }
     };
 
-    fetchAvailableDates();
-  }, [currentMonth, serviceId, staffId]);
+    checkDateAvailability(monthStart, monthEnd);
+  }, [currentMonth, serviceId, staffId, addons]);
 
   // Fetch available time slots when a date is selected
   useEffect(() => {
     if (!selectedDate) return;
 
-    const fetchTimeSlots = async () => {
+    const fetchTimeSlots = async (date: Date) => {
       setLoading(true);
+      setError('');
       try {
-        const response = await fetch(
-          `/api/booking/availability?serviceId=${serviceId}&staffId=${staffId}&date=${format(selectedDate, 'yyyy-MM-dd')}`
-        );
-        if (!response.ok) throw new Error('Failed to fetch time slots');
-        const data = await response.json();
-        setAvailableTimeSlots(data);
-      } catch (err: any) {
-        setError(err.message);
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        const params = new URLSearchParams({
+          serviceId,
+          staffId,
+          date: formattedDate,
+          addons: addons.join(',')
+        });
+
+        const response = await fetch(`/api/booking/availability?${params}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch time slots');
+        }
+
+        const slots = await response.json();
+        setAvailableTimeSlots(slots);
+      } catch (err) {
+        console.error('Error fetching time slots:', err);
+        setError('Failed to load available time slots');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTimeSlots();
-  }, [selectedDate, serviceId, staffId]);
+    fetchTimeSlots(selectedDate);
+  }, [selectedDate, serviceId, staffId, addons]);
 
   const tomorrow = addDays(new Date(), 1);
   const twoMonthsFromNow = addMonths(new Date(), 2);
@@ -144,7 +158,7 @@ export default function DateTimeSelection({ serviceId, staffId, onSelect, onBack
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Back to Staff Selection
+        Back to Add-on Selection
       </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

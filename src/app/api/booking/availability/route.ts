@@ -8,6 +8,7 @@ export async function GET(request: Request) {
         const serviceId = searchParams.get('serviceId');
         const staffId = searchParams.get('staffId');
         const date = searchParams.get('date');
+        const addons = searchParams.get('addons')?.split(',').filter(Boolean) || [];
 
         if (!serviceId || !staffId || !date) {
             return NextResponse.json(
@@ -25,9 +26,20 @@ export async function GET(request: Request) {
             );
         }
 
+        // Calculate total duration including addons
+        let totalDuration = parseInt(service.duration.toString(), 10);
+        if (addons.length > 0) {
+            const addonDetails = await BookingService.getAddonsByIds(addons);
+            for (const addon of addonDetails) {
+                if (addon) {
+                    totalDuration += parseInt(addon.duration.toString(), 10);
+                }
+            }
+        }
+
         // Get staff availability for the date
-        const startOfDay = `${date}T00:00:00Z`;
-        const endOfDay = `${date}T23:59:59Z`;
+        const startOfDay = `${date}T00:00:00`;
+        const endOfDay = `${date}T23:59:59`;
         
         // Get existing appointments
         const appointments = await BookingService.getStaffAppointments(
@@ -51,7 +63,7 @@ export async function GET(request: Request) {
             endOfDay
         );
 
-        // Generate all possible time slots based on service duration
+        // Generate all possible time slots based on total duration
         const availableTimeSlots = [];
         const { startTime, endTime } = staffAvailability;
         
@@ -65,45 +77,53 @@ export async function GET(request: Request) {
         );
 
         for (const slotStart of intervals) {
-            const slotEnd = addMinutes(slotStart, service.duration);
+            const slotEnd = addMinutes(slotStart, totalDuration);
             
             // Check if slot ends before closing time
             if (slotEnd > dayEnd) continue;
 
             // Check if slot conflicts with any appointments
             const hasConflict = appointments.some(apt => {
-                const aptStart = parseISO(apt.startTime);
-                const aptEnd = parseISO(apt.endTime);
+                const aptStart = new Date(apt.startTime);
+                const aptEnd = new Date(apt.endTime);
                 return (
+                    // Check if our slot starts during another appointment
                     (slotStart >= aptStart && slotStart < aptEnd) ||
-                    (slotEnd > aptStart && slotEnd <= aptEnd)
+                    // Check if our slot ends during another appointment
+                    (slotEnd > aptStart && slotEnd <= aptEnd) ||
+                    // Check if our slot completely encompasses another appointment
+                    (slotStart <= aptStart && slotEnd >= aptEnd)
                 );
             });
 
             // Check if slot is in blocked time
             const isBlocked = blockedTimes.some(block => {
-                const blockStart = parseISO(block.startTime);
-                const blockEnd = parseISO(block.endTime);
+                const blockStart = new Date(block.startTime);
+                const blockEnd = new Date(block.endTime);
                 return (
+                    // Check if our slot starts during a blocked time
                     (slotStart >= blockStart && slotStart < blockEnd) ||
-                    (slotEnd > blockStart && slotEnd <= blockEnd)
+                    // Check if our slot ends during a blocked time
+                    (slotEnd > blockStart && slotEnd <= blockEnd) ||
+                    // Check if our slot completely encompasses a blocked time
+                    (slotStart <= blockStart && slotEnd >= blockEnd)
                 );
             });
 
             if (!hasConflict && !isBlocked) {
                 availableTimeSlots.push({
-                    startTime: format(slotStart, "yyyy-MM-dd'T'HH:mm:ssXXX"),
-                    endTime: format(slotEnd, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                    startTime: format(slotStart, "yyyy-MM-dd'T'HH:mm:ss"),
+                    endTime: format(addMinutes(slotStart, totalDuration), "yyyy-MM-dd'T'HH:mm:ss"),
                     available: true,
                 });
             }
         }
 
         return NextResponse.json(availableTimeSlots);
-    } catch (error: any) {
-        console.error('Error fetching availability:', error);
+    } catch (error) {
+        console.error('Error in availability endpoint:', error);
         return NextResponse.json(
-            { error: error.message || 'Failed to fetch availability' },
+            { error: 'Failed to get availability' },
             { status: 500 }
         );
     }

@@ -41,17 +41,22 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h1 className="text-4xl font-light text-center mb-2">Confirm Your Information</h1>
+        <p className="text-center text-gray-600 mb-8">
+          Please fill out the form below to confirm your information, and add any special requests or notes.
+        </p>
+      </div>
+      {/* Back Button */}
       <button
-        type="button"
         onClick={onBack}
-        className="mb-6 text-gray-600 hover:text-gray-900 flex items-center space-x-2"
+        className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
       >
         <svg
-          className="w-5 h-5"
+          className="w-5 h-5 mr-2"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
         >
           <path
             strokeLinecap="round"
@@ -60,7 +65,7 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        <span>Back to Add-ons</span>
+        Back to Date & Time Selection
       </button>
 
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">

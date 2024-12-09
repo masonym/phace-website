@@ -201,7 +201,32 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold">Consent Forms</h2>
+      <div>
+        <h1 className="text-4xl font-light text-center mb-2">Consent Forms</h1>
+        <p className="text-center text-gray-600 mb-8">
+          Please fill out the consent forms below to confirm your appointment.
+        </p>
+      </div>
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
+      >
+        <svg
+          className="w-5 h-5 mr-2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back to Date & Time Selection
+      </button>
       <form onSubmit={handleFormSubmit} className="space-y-6">
         {forms.map((form) => {
           return (
@@ -221,32 +246,12 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
           );
         })}
         
-        <div className="flex justify-between items-center pt-4">
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-accent hover:text-accent/80 transition-colors flex items-center"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Back
-          </button>
+        <div className="flex justify-end pt-4">
           <button
             type="submit"
             className="bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
           >
-            Continue
+            Review Your Booking
           </button>
         </div>
       </form>

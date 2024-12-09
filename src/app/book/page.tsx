@@ -41,7 +41,7 @@ export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState<BookingStep>('category');
   const [bookingData, setBookingData] = useState<BookingData>({});
 
-  const steps: BookingStep[] = ['category', 'service', 'staff', 'datetime', 'addons', 'client', 'consent', 'summary'];
+  const steps: BookingStep[] = ['category', 'service', 'staff', 'addons', 'datetime', 'client', 'consent', 'summary'];
   const currentStepIndex = steps.indexOf(currentStep);
 
   const goToNextStep = () => {
@@ -129,22 +129,23 @@ export default function BookingPage() {
                 onBack={goToPreviousStep}
               />
             )}
-            {currentStep === 'datetime' && (
-              <DateTimeSelection
-                serviceId={bookingData.serviceId!}
-                staffId={bookingData.staffId!}
-                onSelect={(dateTime) => {
-                  updateBookingData({ dateTime });
-                  goToNextStep();
-                }}
-                onBack={goToPreviousStep}
-              />
-            )}
             {currentStep === 'addons' && (
               <AddonSelection
                 serviceId={bookingData.serviceId!}
                 onSelect={(addons) => {
                   updateBookingData({ addons });
+                  goToNextStep();
+                }}
+                onBack={goToPreviousStep}
+              />
+            )}
+            {currentStep === 'datetime' && (
+              <DateTimeSelection
+                serviceId={bookingData.serviceId!}
+                staffId={bookingData.staffId!}
+                addons={bookingData.addons || []}
+                onSelect={(dateTime) => {
+                  updateBookingData({ dateTime });
                   goToNextStep();
                 }}
                 onBack={goToPreviousStep}

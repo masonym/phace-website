@@ -96,7 +96,7 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Back to Date & Time
+        Back to Staff Selection
       </button>
 
       {/* Add-ons Grid */}

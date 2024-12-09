@@ -700,6 +700,14 @@ export class BookingService {
         startTime: string,
         endTime: string
     ) {
+        // Get all appointments that could potentially overlap with our time slot
+        const startDate = new Date(startTime);
+        const endDate = new Date(endTime);
+        const dayStart = new Date(startDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(startDate);
+        dayEnd.setHours(23, 59, 59, 999);
+
         const result = await dynamoDb.send(new QueryCommand({
             TableName: APPOINTMENTS_TABLE,
             IndexName: 'GSI1',
@@ -710,13 +718,49 @@ export class BookingService {
             },
             ExpressionAttributeValues: {
                 ':staffId': `STAFF#${staffId}`,
-                ':start': `DATE#${startTime}`,
-                ':end': `DATE#${endTime}`,
+                ':start': `DATE#${dayStart.toISOString()}`,
+                ':end': `DATE#${dayEnd.toISOString()}`,
                 ':cancelled': 'cancelled',
             },
         }));
 
-        return (result.Items || []).length === 0;
+        // Check for any overlapping appointments
+        const hasOverlap = (result.Items || []).some(apt => {
+            const aptStartTime = new Date(apt.startTime);
+            const aptEndTime = new Date(apt.endTime);
+            
+            return (
+                // Check if our slot starts during another appointment
+                (startDate >= aptStartTime && startDate < aptEndTime) ||
+                // Check if our slot ends during another appointment
+                (endDate > aptStartTime && endDate <= aptEndTime) ||
+                // Check if our slot completely encompasses another appointment
+                (startDate <= aptStartTime && endDate >= aptEndTime)
+            );
+        });
+
+        // Also check for any blocked times
+        const blockedTimes = await this.getBlockedTimes(
+            staffId,
+            dayStart.toISOString(),
+            dayEnd.toISOString()
+        );
+
+        const hasBlockedOverlap = blockedTimes.some(block => {
+            const blockStartTime = new Date(block.startTime);
+            const blockEndTime = new Date(block.endTime);
+            
+            return (
+                // Check if our slot starts during a blocked time
+                (startDate >= blockStartTime && startDate < blockEndTime) ||
+                // Check if our slot ends during a blocked time
+                (endDate > blockStartTime && endDate <= blockEndTime) ||
+                // Check if our slot completely encompasses a blocked time
+                (startDate <= blockStartTime && endDate >= blockEndTime)
+            );
+        });
+
+        return !hasOverlap && !hasBlockedOverlap;
     }
 
     static async updateAppointmentStatus(appointmentId: string, status: string) {
