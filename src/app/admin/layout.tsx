@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
+import '@uiw/react-md-editor/markdown-editor.css';
+import '@uiw/react-markdown-preview/markdown.css';
+import './admin.css';
 
 export default function AdminLayout({
     children,
@@ -68,7 +71,7 @@ export default function AdminLayout({
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-100">
             {pathname !== '/admin/login' && (
                 <nav className="bg-white shadow">
                     <div className="container mx-auto px-4">

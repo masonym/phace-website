@@ -5,6 +5,7 @@ import { Product } from '@/types/product';
 import Image from 'next/image';
 import Cookies from 'js-cookie';
 import { v4 as uuidv4 } from 'uuid';
+import MDEditor from '@uiw/react-md-editor';
 
 const DEFAULT_PRODUCT: Product = {
     id: '',
@@ -133,36 +134,37 @@ export default function ProductManager() {
         });
     };
 
-    const handleArrayFieldChange = (
-        field: 'whyWeLoveIt' | 'howToUse' | 'ingredients',
-        index: number,
-        value: string
-    ) => {
-        if (!editingProduct) return;
-
-        const newArray = [...editingProduct[field]];
-        newArray[index] = value;
-        setEditingProduct({ ...editingProduct, [field]: newArray });
-    };
-
     const handleAddArrayItem = (field: 'whyWeLoveIt' | 'howToUse' | 'ingredients') => {
         if (!editingProduct) return;
-
         setEditingProduct({
             ...editingProduct,
             [field]: [...editingProduct[field], '']
         });
     };
 
-    const handleRemoveArrayItem = (
+    const handleRemoveArrayItem = (field: 'whyWeLoveIt' | 'howToUse' | 'ingredients', index: number) => {
+        if (!editingProduct) return;
+        const newArray = [...editingProduct[field]];
+        if (newArray.length > 1) { 
+            newArray.splice(index, 1);
+            setEditingProduct({
+                ...editingProduct,
+                [field]: newArray
+            });
+        }
+    };
+
+    const handleArrayChange = (
         field: 'whyWeLoveIt' | 'howToUse' | 'ingredients',
-        index: number
+        index: number,
+        value: string
     ) => {
         if (!editingProduct) return;
-
+        const newArray = [...editingProduct[field]];
+        newArray[index] = value;
         setEditingProduct({
             ...editingProduct,
-            [field]: editingProduct[field].filter((_, i) => i !== index)
+            [field]: newArray
         });
     };
 
@@ -404,7 +406,7 @@ export default function ProductManager() {
                                 <input
                                     type="text"
                                     value={item}
-                                    onChange={(e) => handleArrayFieldChange('whyWeLoveIt', index, e.target.value)}
+                                    onChange={(e) => handleArrayChange('whyWeLoveIt', index, e.target.value)}
                                     className="flex-grow p-2 border rounded"
                                 />
                                 <button
@@ -431,7 +433,7 @@ export default function ProductManager() {
                                 <input
                                     type="text"
                                     value={item}
-                                    onChange={(e) => handleArrayFieldChange('howToUse', index, e.target.value)}
+                                    onChange={(e) => handleArrayChange('howToUse', index, e.target.value)}
                                     className="flex-grow p-2 border rounded"
                                 />
                                 <button
@@ -458,7 +460,7 @@ export default function ProductManager() {
                                 <input
                                     type="text"
                                     value={item}
-                                    onChange={(e) => handleArrayFieldChange('ingredients', index, e.target.value)}
+                                    onChange={(e) => handleArrayChange('ingredients', index, e.target.value)}
                                     className="flex-grow p-2 border rounded"
                                 />
                                 <button

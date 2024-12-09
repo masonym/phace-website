@@ -3,23 +3,6 @@ export interface ProductColor {
     hex: string;
 }
 
-export interface Product {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    images: string[];
-    category: string;
-    sku: string;
-    inStock: boolean;
-    quantity?: number;
-    variants?: ProductVariant[];
-    whyWeLoveIt: string[];
-    howToUse: string[];
-    ingredients: string[];
-    colors?: ProductColor[];
-}
-
 export interface ProductVariant {
     id: string;
     name: string;
@@ -27,6 +10,25 @@ export interface ProductVariant {
     sku: string;
     inStock: boolean;
     color?: ProductColor;
+}
+
+export interface Product {
+    id: string;
+    name: string;
+    description: string; // Markdown
+    price: number;
+    images: string[];
+    category: string;
+    sku: string;
+    inStock: boolean;
+    quantity?: number;
+    variants?: ProductVariant[];
+    whyWeLoveIt: string[]; // Markdown items
+    howToUse: string[]; // Markdown items
+    ingredients: string[]; // Markdown items
+    colors?: ProductColor[];
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface CartItem extends Product {

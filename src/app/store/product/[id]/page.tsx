@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { Product, ProductColor } from '@/types/product';
 import Image from 'next/image';
 import { AddToCartDialog } from '@/components/cart/AddToCartDialog';
+import ReactMarkdown from 'react-markdown';
 
 export default function ProductPage() {
     const { id } = useParams();
@@ -68,7 +69,9 @@ export default function ProductPage() {
                 <div>
                     <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
                     <p className="text-xl font-semibold mb-4">C${product.price.toFixed(2)}</p>
-                    <p className="text-gray-600 mb-6">{product.description}</p>
+                    <div className="prose prose-sm mb-6">
+                        <ReactMarkdown>{product.description}</ReactMarkdown>
+                    </div>
 
                     {/* Color Selection */}
                     {product.colors && product.colors.length > 0 && (
@@ -128,7 +131,7 @@ export default function ProductPage() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 mb-8">
                         <button
                             onClick={handleAddToCart}
                             className="w-full bg-black text-white py-3 rounded-md hover:bg-gray-800"
@@ -141,6 +144,57 @@ export default function ProductPage() {
                         >
                             Buy Now
                         </button>
+                    </div>
+
+                    {/* Product Details */}
+                    <div className="space-y-6">
+                        {/* Why we love it */}
+                        {product.whyWeLoveIt.length > 0 && product.whyWeLoveIt[0] !== '' && (
+                            <div>
+                                <h3 className="text-lg font-semibold mb-2">Why we love it</h3>
+                                <ul className="list-none list-inside space-y-1">
+                                    {product.whyWeLoveIt.map((item, index) => (
+                                        <li key={index} className="text-gray-600">
+                                            <div className="inline prose prose-sm">
+                                                <ReactMarkdown>{item}</ReactMarkdown>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {/* How to use */}
+                        {product.howToUse.length > 0 && product.howToUse[0] !== '' && (
+                            <div>
+                                <h3 className="text-lg font-semibold mb-2">How to use</h3>
+                                <ul className="list-none list-inside space-y-1">
+                                    {product.howToUse.map((item, index) => (
+                                        <li key={index} className="text-gray-600">
+                                            <div className="inline prose prose-sm">
+                                                <ReactMarkdown>{item}</ReactMarkdown>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {/* Ingredients */}
+                        {product.ingredients.length > 0 && product.ingredients[0] !== '' && (
+                            <div>
+                                <h3 className="text-lg font-semibold mb-2">Ingredients</h3>
+                                <ul className="list-none list-inside space-y-1">
+                                    {product.ingredients.map((item, index) => (
+                                        <li key={index} className="text-gray-600">
+                                            <div className="inline prose prose-sm">
+                                                <ReactMarkdown>{item}</ReactMarkdown>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
