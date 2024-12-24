@@ -18,7 +18,7 @@ interface MobileMenuContextType {
 
 const MobileMenuContext = createContext<MobileMenuContextType>({
   mobileMenuOpen: false,
-  setMobileMenuOpen: () => {},
+  setMobileMenuOpen: () => { },
 });
 
 export const useMobileMenu = () => useContext(MobileMenuContext);
@@ -49,8 +49,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <MobileMenuContext.Provider value={{ mobileMenuOpen, setMobileMenuOpen }}>
-      <div className="min-h-screen bg-gray-100 overflow-x-hidden">
+    <MobileMenuContext.Provider value={{ mobileMenuOpen, setMobileMenuOpen } as MobileMenuContextType}>
+      <div className="min-h-screen py-6 px-4 bg-gray-100 overflow-x-hidden">
         {/* Navigation */}
         <nav className="bg-white shadow-sm relative">
           <div className="w-full px-4 sm:px-6 lg:px-8">
@@ -115,6 +115,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 >
                   Calendar
                 </Link>
+                <Link
+                  href="/admin/waitlist"
+                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-3 py-2 text-sm font-medium whitespace-nowrap"
+                >
+                  Waitlist Manager
+                </Link>
 
                 {/* Desktop sign out button */}
                 <button
@@ -162,6 +168,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
               >
                 Calendar
+              </Link>
+              <Link
+                href="/admin/waitlist"
+                className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
+              >
+                Waitlist Manager
               </Link>
               <button
                 onClick={() => {
