@@ -283,148 +283,85 @@ export default function ConsentFormsPage() {
 
     return (
         <AdminLayout>
-            <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    <div className="flex justify-between items-center mb-6">
-                        <h1 className="text-3xl font-light text-gray-900">Consent Forms</h1>
+            <div className="p-4 sm:p-6">
+                <div className="mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h1 className="text-2xl font-semibold">Consent Forms</h1>
                         <button
-                            onClick={() => setShowForm(true)}
-                            className="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors"
+                            onClick={() => {
+                                setEditingForm(null);
+                                setShowForm(true);
+                            }}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full sm:w-auto"
                         >
-                            Create Consent Form
+                            Create Form
                         </button>
                     </div>
 
                     {message && (
-                        <div className={`p-4 rounded-md mb-6 ${
-                            message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-                        }`}>
+                        <div className={`p-4 rounded-md mb-4 ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {message.text}
                         </div>
                     )}
 
-                    {/* Form Modal */}
-                    {(showForm || editingForm) && (
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-                                <h2 className="text-2xl font-light mb-6">
-                                    {editingForm ? 'Edit Consent Form' : 'Create New Consent Form'}
-                                </h2>
-                                <ConsentFormForm
-                                    categories={categories}
-                                    onSubmit={editingForm ? handleUpdateForm : handleCreateForm}
-                                    onCancel={() => {
-                                        setShowForm(false);
-                                        setEditingForm(null);
-                                    }}
-                                    initialData={editingForm || undefined}
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Preview Modal */}
-                    {previewForm && (
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-                                <div className="flex justify-between items-start mb-4">
-                                    <h2 className="text-2xl font-light">{previewForm.title}</h2>
-                                    <button
-                                        onClick={() => setPreviewForm(null)}
-                                        className="text-gray-400 hover:text-gray-500"
-                                    >
-                                        <span className="sr-only">Close</span>
-                                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <ConsentFormRenderer
-                                    form={previewForm}
-                                    onChange={() => {}}
-                                    responses={{}}
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Delete Confirmation Dialog */}
-                    {showDeleteDialog && deletingForm && (
-                        <ConfirmDialog
-                            title="Delete Consent Form"
-                            message={`Are you sure you want to delete "${deletingForm.title}"? This action cannot be undone.`}
-                            isOpen={showDeleteDialog}
-                            onConfirm={handleDeleteConfirm}
-                            onClose={() => {
-                                setShowDeleteDialog(false);
-                                setDeletingForm(null);
-                            }}
-                        />
-                    )}
-
-                    {/* Consent Forms List */}
-                    <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                        {loading ? (
-                            <p className="p-4">Loading consent forms...</p>
-                        ) : consentForms.length === 0 ? (
-                            <p className="p-4">No consent forms found.</p>
-                        ) : (
-                            <ul className="divide-y divide-gray-200">
-                                {consentForms.map((form) => (
-                                    <li key={form.id} className="px-6 py-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1 mr-4">
-                                                <div className="flex items-center space-x-2">
-                                                    <h3 className="text-lg font-medium text-gray-900">{form.title}</h3>
-                                                    {!form.isActive && (
-                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                            Inactive
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="mt-2">
-                                                    <h4 className="text-sm font-medium text-gray-700">Required for:</h4>
-                                                    <div className="mt-1 flex flex-wrap gap-2">
-                                                        {form.serviceIds.map(serviceId => (
-                                                            <span
-                                                                key={serviceId}
-                                                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent"
-                                                            >
-                                                                {getServiceNameById(serviceId)}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
+                    {loading ? (
+                        <div className="text-center py-4">Loading...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                            {consentForms.map(form => (
+                                <div key={form.id} className="bg-white p-4 rounded-lg shadow">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                        <div className="space-y-2 w-full sm:w-auto">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-lg font-medium">{form.title}</h3>
+                                                <span className="text-sm bg-gray-100 px-2 py-1 rounded">
+                                                    v{form.version}
+                                                </span>
+                                                {!form.isActive && (
+                                                    <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                                        Inactive
+                                                    </span>
+                                                )}
                                             </div>
-                                            <div className="flex space-x-2">
-                                                <button
-                                                    onClick={() => setPreviewForm(form)}
-                                                    className="text-sm px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                                                >
-                                                    Preview
-                                                </button>
-                                                <button
-                                                    onClick={() => setEditingForm(form)}
-                                                    className="text-sm px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setDeletingForm(form);
-                                                        setShowDeleteDialog(true);
-                                                    }}
-                                                    className="text-sm px-3 py-1 border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-colors"
-                                                >
-                                                    Delete
-                                                </button>
+                                            <div className="flex flex-wrap gap-2">
+                                                {form.sections.map((section, index) => (
+                                                    <span key={section.id} className="text-sm bg-gray-100 px-2 py-1 rounded">
+                                                        Section {index + 1}: {section.title}
+                                                    </span>
+                                                ))}
                                             </div>
                                         </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
+                                        <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
+                                            <button
+                                                onClick={() => setPreviewForm(form)}
+                                                className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+                                            >
+                                                Preview
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingForm(form);
+                                                    setShowForm(true);
+                                                }}
+                                                className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setDeletingForm(form);
+                                                    setShowDeleteDialog(true);
+                                                }}
+                                                className="flex-1 sm:flex-none bg-red-100 text-red-700 px-4 py-2 rounded hover:bg-red-200"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </AdminLayout>

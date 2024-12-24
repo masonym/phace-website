@@ -194,116 +194,116 @@ export default function AddonsPage() {
 
     return (
         <AdminLayout>
-            <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    <div className="flex justify-between items-center mb-6">
-                        <h1 className="text-3xl font-light text-gray-900">Add-ons</h1>
+            <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h1 className="text-2xl font-semibold break-words max-w-full">Add-ons</h1>
                         <button
-                            onClick={() => setShowForm(true)}
-                            className="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors"
+                            onClick={() => {
+                                setEditingAddon(null);
+                                setShowForm(true);
+                            }}
+                            className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent/90 w-full sm:w-auto whitespace-nowrap transition-colors"
                         >
                             Create Add-on
                         </button>
                     </div>
 
                     {message && (
-                        <div className={`p-4 rounded-md mb-6 ${
-                            message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-                        }`}>
+                        <div className={`p-4 rounded-lg mb-4 ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {message.text}
                         </div>
                     )}
 
-                    {/* Form Modal */}
-                    {(showForm || editingAddon) && (
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-                                <h2 className="text-2xl font-light mb-6">
-                                    {editingAddon ? 'Edit Add-on' : 'Create New Add-on'}
-                                </h2>
-                                <AddonForm
-                                    categories={categories}
-                                    onSubmit={editingAddon ? handleUpdateAddon : handleCreateAddon}
-                                    onCancel={() => {
-                                        setShowForm(false);
-                                        setEditingAddon(null);
-                                    }}
-                                    initialData={editingAddon || undefined}
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Delete Confirmation Dialog */}
-                    {showDeleteDialog && deletingAddon && (
-                        <ConfirmDialog
-                            title="Delete Add-on"
-                            message={`Are you sure you want to delete "${deletingAddon.name}"? This action cannot be undone.`}
-                            isOpen={showDeleteDialog}
-                            onConfirm={handleDeleteConfirm}
-                            onClose={() => {
-                                setShowDeleteDialog(false);
-                                setDeletingAddon(null);
-                            }}
-                        />
-                    )}
-
-                    {/* Add-ons List */}
-                    <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                        {loading ? (
-                            <p className="p-4">Loading add-ons...</p>
-                        ) : addons.length === 0 ? (
-                            <p className="p-4">No add-ons found.</p>
-                        ) : (
-                            <ul className="divide-y divide-gray-200">
-                                {addons.map((addon) => (
-                                    <li key={addon.id} className="px-6 py-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <h3 className="text-lg font-medium text-gray-900">{addon.name}</h3>
-                                                <p className="text-sm text-gray-500 mt-1">{addon.description}</p>
-                                                <div className="mt-2 space-x-4">
-                                                    <span className="text-sm text-gray-600">Duration: {addon.duration} minutes</span>
-                                                    <span className="text-sm text-gray-600">Price: ${addon.price}</span>
-                                                </div>
-                                                <div className="mt-2">
-                                                    <h4 className="text-sm font-medium text-gray-700">Available for:</h4>
-                                                    <div className="mt-1 flex flex-wrap gap-2">
-                                                        {addon.serviceIds.map(serviceId => (
-                                                            <span
-                                                                key={serviceId}
-                                                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent"
-                                                            >
-                                                                {getServiceNameById(serviceId)}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
+                    {loading ? (
+                        <div className="text-center py-4">Loading...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                            {addons.map(addon => (
+                                <div key={addon.id} className="bg-white p-4 rounded-lg shadow-sm">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                                        <div className="space-y-2 w-full">
+                                            <h3 className="text-lg font-medium break-words">{addon.name}</h3>
+                                            <p className="text-gray-600 text-sm break-words">{addon.description}</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className="text-sm bg-gray-100 px-2 py-1 rounded-lg whitespace-nowrap">
+                                                    {addon.duration} min
+                                                </span>
+                                                <span className="text-sm bg-gray-100 px-2 py-1 rounded-lg whitespace-nowrap">
+                                                    ${addon.price}
+                                                </span>
                                             </div>
-                                            <div className="flex space-x-2">
-                                                <button
-                                                    onClick={() => setEditingAddon(addon)}
-                                                    className="text-sm px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setDeletingAddon(addon);
-                                                        setShowDeleteDialog(true);
-                                                    }}
-                                                    className="text-sm px-3 py-1 border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-colors"
-                                                >
-                                                    Delete
-                                                </button>
+                                            <div className="text-sm text-gray-500">
+                                                <p className="font-medium mb-1">Available for:</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {addon.serviceIds.map(serviceId => (
+                                                        <span key={serviceId} className="bg-gray-100 px-2 py-1 rounded-lg text-gray-700 break-words">
+                                                            {getServiceNameById(serviceId)}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
+                                        <div className="flex gap-2 w-full sm:w-auto">
+                                            <button
+                                                onClick={() => {
+                                                    setEditingAddon(addon);
+                                                    setShowForm(true);
+                                                }}
+                                                className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 whitespace-nowrap transition-colors text-center"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setDeletingAddon(addon);
+                                                    setShowDeleteDialog(true);
+                                                }}
+                                                className="flex-1 sm:flex-none bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 whitespace-nowrap transition-colors text-center"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
+
+                {/* Form Modal */}
+                {(showForm || editingAddon) && (
+                    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 overflow-y-auto">
+                        <div className="bg-white rounded-lg max-w-2xl w-full p-4 sm:p-6 my-8">
+                            <h2 className="text-2xl font-light mb-6 break-words">
+                                {editingAddon ? 'Edit Add-on' : 'Create New Add-on'}
+                            </h2>
+                            <AddonForm
+                                categories={categories}
+                                onSubmit={editingAddon ? handleUpdateAddon : handleCreateAddon}
+                                onCancel={() => {
+                                    setShowForm(false);
+                                    setEditingAddon(null);
+                                }}
+                                initialData={editingAddon || undefined}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete Confirmation Dialog */}
+                {showDeleteDialog && deletingAddon && (
+                    <ConfirmDialog
+                        title="Delete Add-on"
+                        message={`Are you sure you want to delete "${deletingAddon.name}"? This action cannot be undone.`}
+                        isOpen={showDeleteDialog}
+                        onConfirm={handleDeleteConfirm}
+                        onClose={() => {
+                            setShowDeleteDialog(false);
+                            setDeletingAddon(null);
+                        }}
+                    />
+                )}
             </div>
         </AdminLayout>
     );

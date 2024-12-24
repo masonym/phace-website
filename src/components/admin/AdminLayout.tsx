@@ -3,16 +3,30 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
+import { createContext, useContext } from 'react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+interface MobileMenuContextType {
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
+}
+
+const MobileMenuContext = createContext<MobileMenuContextType>({
+  mobileMenuOpen: false,
+  setMobileMenuOpen: () => {},
+});
+
+export const useMobileMenu = () => useContext(MobileMenuContext);
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const { isAuthenticated, isLoading, isAdmin, signOut } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const adminToken = Cookies.get('adminToken');
@@ -35,149 +49,138 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
-              {/* Logo */}
-              <div className="flex-shrink-0 flex items-center">
-                <Link href="/admin" className="text-xl font-bold text-accent">
-                  Admin Dashboard
-                </Link>
+    <MobileMenuContext.Provider value={{ mobileMenuOpen, setMobileMenuOpen }}>
+      <div className="min-h-screen bg-gray-100 overflow-x-hidden">
+        {/* Navigation */}
+        <nav className="bg-white shadow-sm relative">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row justify-between min-h-[64px]">
+              <div className="flex items-center justify-between w-full lg:w-auto py-4 lg:py-0">
+                {/* Logo */}
+                <div className="flex items-center min-w-0">
+                  <Link href="/admin" className="text-xl font-bold text-accent truncate">
+                    Admin
+                  </Link>
+                </div>
+
+                {/* Mobile menu button */}
+                <div className="flex items-center lg:hidden ml-2">
+                  <button
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                  >
+                    <span className="sr-only">Open main menu</span>
+                    {mobileMenuOpen ? (
+                      <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    ) : (
+                      <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              {/* Navigation Links */}
-              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <div className="hidden lg:flex flex-wrap items-center gap-2">
+                {/* Navigation Links */}
                 <Link
                   href="/admin/services"
-                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-3 py-2 text-sm font-medium whitespace-nowrap"
                 >
                   Services
                 </Link>
                 <Link
                   href="/admin/addons"
-                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-3 py-2 text-sm font-medium whitespace-nowrap"
                 >
                   Add-ons
                 </Link>
                 <Link
                   href="/admin/consent-forms"
-                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-3 py-2 text-sm font-medium whitespace-nowrap"
                 >
                   Consent Forms
                 </Link>
                 <Link
                   href="/admin/staff"
-                  className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-3 py-2 text-sm font-medium whitespace-nowrap"
                 >
                   Staff
                 </Link>
                 <Link
                   href="/admin/calendar"
-                  className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-3 py-2 text-sm font-medium whitespace-nowrap"
                 >
                   Calendar
                 </Link>
-                <Link
-                  href="/admin/waitlist"
-                  className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+
+                {/* Desktop sign out button */}
+                <button
+                  onClick={() => {
+                    Cookies.remove('adminToken', { path: '/' });
+                    signOut();
+                  }}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-accent hover:bg-accent/90 whitespace-nowrap"
                 >
-                  Waitlist Manager
-                </Link>
+                  Sign Out
+                </button>
               </div>
             </div>
-
-            {/* Right side buttons */}
-            <div className="hidden sm:ml-6 sm:flex sm:items-center">
-              <button
-                onClick={() => signOut()}
-                className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-accent hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
-              >
-                Sign Out
-              </button>
-            </div>
-
-            {/* Mobile menu button */}
-            <div className="-mr-2 flex items-center sm:hidden">
-              <button
-                type="button"
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent"
-                aria-controls="mobile-menu"
-                aria-expanded="false"
-              >
-                <span className="sr-only">Open main menu</span>
-                {/* Icon when menu is closed */}
-                <svg
-                  className="block h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              </button>
-            </div>
           </div>
-        </div>
 
-        {/* Mobile menu */}
-        <div className="sm:hidden" id="mobile-menu">
-          <div className="pt-2 pb-3 space-y-1">
-            <Link
-              href="/admin/services"
-              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
-            >
-              Services
-            </Link>
-            <Link
-              href="/admin/addons"
-              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
-            >
-              Add-ons
-            </Link>
-            <Link
-              href="/admin/consent-forms"
-              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
-            >
-              Consent Forms
-            </Link>
-            <Link
-              href="/admin/staff"
-              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
-            >
-              Staff
-            </Link>
-            <Link
-              href="/admin/appointments"
-              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
-            >
-              Appointments
-            </Link>
-          </div>
-          <div className="pt-4 pb-3 border-t border-gray-200">
-            <div className="mt-3 space-y-1">
+          {/* Mobile menu */}
+          <div className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:hidden`}>
+            <div className="pt-2 pb-3 space-y-1">
+              <Link
+                href="/admin/services"
+                className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
+              >
+                Services
+              </Link>
+              <Link
+                href="/admin/addons"
+                className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
+              >
+                Add-ons
+              </Link>
+              <Link
+                href="/admin/consent-forms"
+                className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
+              >
+                Consent Forms
+              </Link>
+              <Link
+                href="/admin/staff"
+                className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
+              >
+                Staff
+              </Link>
+              <Link
+                href="/admin/calendar"
+                className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
+              >
+                Calendar
+              </Link>
               <button
-                onClick={() => signOut()}
-                className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                onClick={() => {
+                  Cookies.remove('adminToken', { path: '/' });
+                  signOut();
+                }}
+                className="block w-full text-left px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
               >
                 Sign Out
               </button>
             </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* Page Content */}
-      <main>{children}</main>
-    </div>
+        {/* Page content */}
+        <main className="w-full max-w-full">
+          {children}
+        </main>
+      </div>
+    </MobileMenuContext.Provider>
   );
 }

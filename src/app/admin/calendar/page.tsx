@@ -57,9 +57,9 @@ export default function CalendarPage() {
       endDate.setMonth(endDate.getMonth() + 3); // Fetch until 3 months ahead
 
       const response = await fetch(
-        `/api/booking/appointments?staffId=${selectedStaffId}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+        `/api/booking/appointments?staffId=${selectedStaffId}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
       );
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch appointments');
       }
@@ -77,7 +77,7 @@ export default function CalendarPage() {
         totalPrice: apt.totalPrice,
         notes: apt.notes,
         addons: apt.addons || [],
-        consentFormResponses: apt.consentFormResponses || []
+        consentFormResponses: apt.consentFormResponses || [],
       }));
 
       setAppointments(formattedAppointments);
@@ -95,153 +95,169 @@ export default function CalendarPage() {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'green';
+      case 'pending':
+        return 'yellow';
+      default:
+        return 'gray';
+    }
+  };
+
   return (
     <AdminLayout>
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Staff Calendar</h1>
-          <StaffSelector
-            selectedStaffId={selectedStaffId}
-            onStaffSelect={setSelectedStaffId}
-          />
-        </div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h1 className="text-2xl font-semibold">Calendar</h1>
+            <StaffSelector
+              onStaffSelect={setSelectedStaffId}
+              selectedStaffId={selectedStaffId}
+            />
+          </div>
 
-        {selectedStaffId ? (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4">
-              <FullCalendar
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView="dayGridMonth"
-                headerToolbar={{
-                  left: 'prev,next today',
-                  center: 'title',
-                  right: 'dayGridMonth,timeGridWeek,timeGridDay',
-                }}
-                slotMinTime="09:00:00"
-                slotMaxTime="18:00:00"
-                events={appointments}
-                eventClick={handleEventClick}
-                height="auto"
-                allDaySlot={false}
-                slotDuration="00:15:00"
-                slotLabelInterval="01:00"
-              />
+          {selectedStaffId ? (
+            <div className="bg-white rounded-lg shadow">
+              <div className="calendar-container overflow-x-auto">
+                <div className="min-w-[800px]">
+                  <FullCalendar
+                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                    initialView="timeGridWeek"
+                    headerToolbar={{
+                      left: 'prev,next today',
+                      center: 'title',
+                      right: 'dayGridMonth,timeGridWeek,timeGridDay',
+                    }}
+                    events={appointments.map(apt => ({
+                      id: apt.id,
+                      title: apt.title,
+                      start: apt.start,
+                      end: apt.end,
+                      backgroundColor: getStatusColor(apt.status),
+                    }))}
+                    eventClick={handleEventClick}
+                    height="auto"
+                    slotMinTime="09:00:00"
+                    slotMaxTime="18:00:00"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-600">Please select a staff member to view their calendar</p>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-8 bg-white rounded-lg shadow">
+              <p className="text-gray-600">Please select a staff member to view their calendar</p>
+            </div>
+          )}
 
-        {/* Appointment Details Modal */}
-        {selectedAppointment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
-              <div className="p-6 border-b">
-                <div className="flex justify-between items-start">
-                  <h2 className="text-xl font-semibold">Appointment Details</h2>
+          {selectedAppointment && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-start mb-6">
+                  <h2 className="text-2xl font-semibold">Appointment Details</h2>
                   <button
                     onClick={() => setSelectedAppointment(null)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-400 hover:text-gray-500"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="sr-only">Close</span>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
-              </div>
 
-              <div className="p-6 overflow-y-auto flex-1">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Client</label>
-                    <p className="mt-1">{selectedAppointment.clientName}</p>
+                    <h3 className="font-medium">Client Information</h3>
+                    <p className="text-gray-600">{selectedAppointment.clientName}</p>
+                    <p className="text-gray-600">{selectedAppointment.clientEmail}</p>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Email</label>
-                    <p className="mt-1">{selectedAppointment.clientEmail}</p>
+                    <h3 className="font-medium">Service</h3>
+                    <p className="text-gray-600">{selectedAppointment.serviceName}</p>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Service</label>
-                    <p className="mt-1">{selectedAppointment.serviceName}</p>
+                    <h3 className="font-medium">Time</h3>
+                    <p className="text-gray-600">
+                      {format(parseISO(selectedAppointment.start), 'PPpp')} - {format(parseISO(selectedAppointment.end), 'p')}
+                    </p>
                   </div>
+
+                  <div>
+                    <h3 className="font-medium">Status</h3>
+                    <p className="text-gray-600">{selectedAppointment.status}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-medium">Total Price</h3>
+                    <p className="text-gray-600">${selectedAppointment.totalPrice}</p>
+                  </div>
+
                   {selectedAppointment.addons.length > 0 && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Add-ons</label>
-                      <ul className="mt-1 space-y-1">
-                        {selectedAppointment.addons.map((addon) => (
-                          <li key={addon.id} className="text-sm flex justify-between">
-                            <span>{addon.name}</span>
-                            <span>${addon.price.toFixed(2)}</span>
+                      <h3 className="font-medium">Add-ons</h3>
+                      <ul className="list-disc list-inside text-gray-600">
+                        {selectedAppointment.addons.map(addon => (
+                          <li key={addon.id}>
+                            {addon.name} (${addon.price})
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Total Price</label>
-                    <p className="mt-1 text-lg font-semibold">${selectedAppointment.totalPrice.toFixed(2)}</p>
-                  </div>
+
                   {selectedAppointment.notes && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Additional Notes</label>
-                      <p className="mt-1 text-sm whitespace-pre-wrap">{selectedAppointment.notes}</p>
+                      <h3 className="font-medium">Notes</h3>
+                      <p className="text-gray-600">{selectedAppointment.notes}</p>
                     </div>
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Time</label>
-                    <p className="mt-1">
-                      {format(parseISO(selectedAppointment.start), 'PPpp')} -{' '}
-                      {format(parseISO(selectedAppointment.end), 'p')}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Status</label>
-                    <span className={`inline-block px-2 py-1 rounded-full text-sm ${
-                      selectedAppointment.status === 'confirmed' 
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {selectedAppointment.status.charAt(0).toUpperCase() + selectedAppointment.status.slice(1)}
-                    </span>
-                  </div>
+
                   {selectedAppointment.consentFormResponses && selectedAppointment.consentFormResponses.length > 0 && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-2">Consent Form Responses</label>
-                      <div className="space-y-4">
-                        {selectedAppointment.consentFormResponses.map((form, formIndex) => (
-                          <div key={form.formId} className="bg-gray-50 p-4 rounded-lg">
-                            <h4 className="font-medium text-gray-700 mb-2">{form.formTitle}</h4>
-                            <div className="space-y-2">
-                              {form.responses.map((response, responseIndex) => (
-                                <div key={response.questionId} className="text-sm">
-                                  <p className="text-gray-600 font-medium">{response.question}</p>
-                                  <p className="text-gray-900 mt-1">{response.answer}</p>
-                                </div>
-                              ))}
-                            </div>
+                      <h3 className="font-medium">Consent Forms</h3>
+                      {selectedAppointment.consentFormResponses.map(form => (
+                        <div key={form.formId} className="mt-2">
+                          <h4 className="font-medium text-sm">{form.formTitle}</h4>
+                          <div className="mt-1 space-y-2">
+                            {form.responses.map(response => (
+                              <div key={response.questionId}>
+                                <p className="text-sm font-medium">{response.question}</p>
+                                <p className="text-sm text-gray-600">{response.answer}</p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
                   )}
-                </div>
-              </div>
-
-              <div className="p-6 border-t bg-gray-50">
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => setSelectedAppointment(null)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                  >
-                    Close
-                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        <style jsx global>{`
+          .calendar-container {
+            -webkit-overflow-scrolling: touch;
+          }
+          @media (max-width: 640px) {
+            .fc .fc-toolbar {
+              flex-direction: column;
+              gap: 1rem;
+            }
+            .fc .fc-toolbar-title {
+              font-size: 1.2rem;
+            }
+            .fc .fc-button {
+              padding: 0.2rem 0.5rem;
+              font-size: 0.875rem;
+            }
+          }
+        `}</style>
       </div>
     </AdminLayout>
   );

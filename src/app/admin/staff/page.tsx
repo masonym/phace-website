@@ -159,36 +159,34 @@ export default function StaffPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-semibold">Staff Management</h1>
-          <button
-            onClick={handleCreateStaff}
-            className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors"
-          >
-            Add Staff Member
-          </button>
-        </div>
+      <div className="p-4 sm:p-6">
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h1 className="text-2xl font-semibold">Staff</h1>
+            <button
+              onClick={handleCreateStaff}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full sm:w-auto"
+            >
+              Add Staff Member
+            </button>
+          </div>
 
-        <div className="grid grid-cols-12 gap-8">
-          {/* Staff List */}
-          <div className="col-span-4">
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-medium mb-4">Staff Members</h2>
-              <div className="space-y-4">
-                {staff.map((member) => (
-                  <button
-                    key={member.id}
-                    onClick={() => setSelectedStaff(member)}
-                    className={`w-full text-left p-4 rounded-lg transition-colors ${
-                      selectedStaff?.id === member.id
-                        ? 'bg-accent text-white'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-4">
+          {error && (
+            <div className="bg-red-100 text-red-700 p-4 rounded-md mb-4">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="text-center py-4">Loading...</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {staff.map(member => (
+                <div key={member.id} className="bg-white p-4 rounded-lg shadow">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
                       {member.image && (
-                        <div className="relative h-12 w-12 rounded-full overflow-hidden flex-shrink-0">
+                        <div className="relative w-20 h-20 rounded-full overflow-hidden">
                           <Image
                             src={member.image}
                             alt={member.name}
@@ -197,106 +195,47 @@ export default function StaffPage() {
                           />
                         </div>
                       )}
-                      <div>
-                        <div className="font-medium">{member.name}</div>
-                        <div className="text-sm opacity-75">{member.email}</div>
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-medium">{member.name}</h3>
+                          {!member.isActive && (
+                            <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-600 text-sm break-words">{member.email}</p>
+                        {member.bio && (
+                          <p className="text-gray-600 text-sm break-words">{member.bio}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {member.services.map(serviceId => (
+                            <span key={serviceId} className="text-sm bg-gray-100 px-2 py-1 rounded">
+                              {/* getServiceNameById(serviceId) */}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Staff Details and Blocked Times */}
-          <div className="col-span-8">
-            {selectedStaff ? (
-              <div className="space-y-6">
-                {/* Staff Details */}
-                <div className="bg-white rounded-xl p-6 shadow-sm">
-                  <div className="flex justify-between items-start mb-6">
-                    <div>
-                      <h2 className="text-xl font-medium">{selectedStaff.name}</h2>
-                      <p className="text-gray-600 mt-1">{selectedStaff.bio}</p>
-                    </div>
-                    <div className="space-x-4">
+                    <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
                       <button
-                        onClick={() => handleEditStaff(selectedStaff)}
-                        className="text-accent hover:text-accent/80 transition-colors"
-                      >
-                        Edit Details
-                      </button>
-                      <button
-                        onClick={handleBlockTime}
-                        className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors"
+                        onClick={() => setSelectedStaff(member)}
+                        className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
                       >
                         Block Time
                       </button>
-                    </div>
-                  </div>
-
-                  {/* Default Availability */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-medium mb-3">Default Availability</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedStaff.defaultAvailability.map((availability) => (
-                        <div
-                          key={availability.dayOfWeek}
-                          className="bg-gray-50 p-3 rounded-lg"
-                        >
-                          <div className="font-medium">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][availability.dayOfWeek]}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {availability.startTime} - {availability.endTime}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Blocked Times */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Blocked Times</h3>
-                    <div className="space-y-3">
-                      {blockedTimes.map((blocked) => (
-                        <div
-                          key={blocked.id}
-                          className="flex justify-between items-center bg-gray-50 p-3 rounded-lg"
-                        >
-                          <div>
-                            <div className="font-medium">
-                              {new Date(blocked.startTime).toLocaleDateString()} -{' '}
-                              {new Date(blocked.endTime).toLocaleDateString()}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {new Date(blocked.startTime).toLocaleTimeString()} -{' '}
-                              {new Date(blocked.endTime).toLocaleTimeString()}
-                            </div>
-                            {blocked.reason && (
-                              <div className="text-sm text-gray-600">
-                                {blocked.reason}
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleDeleteBlockedTime(blocked.startTime)}
-                            className="text-red-600 hover:text-red-700 transition-colors"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
+                      <button
+                        onClick={() => handleEditStaff(member)}
+                        className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+                      >
+                        Edit
+                      </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl p-6 shadow-sm text-center text-gray-500">
-                Select a staff member to view details
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

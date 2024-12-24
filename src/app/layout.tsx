@@ -27,15 +27,17 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Phace" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
-      <body className="min-h-screen flex flex-col overflow-x-hidden">
+      <body className="min-h-screen flex flex-col">
         <AuthProvider>
           <CartProvider>
-            <Navigation />
-            <main className="flex-grow">
-              {children}
-            </main>
-            {/* <FloatingButtons /> */}
-            <Footer />
+            <div className="relative flex flex-col min-h-screen overflow-x-hidden">
+              <Navigation />
+              <main className="flex-grow relative">
+                {children}
+              </main>
+              {/* <FloatingButtons /> */}
+              <Footer />
+            </div>
           </CartProvider>
         </AuthProvider>
         <Toaster position="bottom-right" />

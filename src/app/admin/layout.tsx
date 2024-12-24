@@ -72,55 +72,63 @@ export default function AdminLayout({
     }
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-100 overflow-x-hidden">
             {pathname !== '/admin/login' && (
-                <nav className="bg-white shadow">
-                    <div className="container mx-auto px-4">
-                        <div className="flex flex-col md:flex-row justify-between min-h-[64px]">
-                            <div className="flex items-center justify-between py-4 md:py-0">
-                                <Link
-                                    href="/admin"
-                                    className="flex items-center text-lg font-semibold"
-                                >
-                                    Admin Dashboard
-                                </Link>
+                <nav className="bg-white shadow relative w-full">
+                    <div className="w-full px-4 sm:px-6 lg:px-8">
+                        <div className="flex flex-col lg:flex-row justify-between min-h-[64px]">
+                            <div className="flex items-center justify-between w-full lg:w-auto py-4 lg:py-0">
+                                <div className="flex items-center min-w-0">
+                                    <Link
+                                        href="/admin"
+                                        className="text-lg font-semibold text-accent truncate"
+                                    >
+                                        Admin
+                                    </Link>
+                                </div>
                                 <button
                                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                    className="md:hidden p-2 rounded-md hover:bg-gray-100"
+                                    className="lg:hidden p-2 rounded-md hover:bg-gray-100 ml-2"
                                 >
                                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                                     </svg>
                                 </button>
                             </div>
-                            <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0 pb-4 md:pb-0`}>
+                            <div className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:flex flex-wrap items-center gap-2 pb-4 lg:pb-0`}>
                                 <Link
                                     href="/admin/services"
-                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
                                 >
                                     Services
                                 </Link>
                                 <Link
-                                    href="/admin/waitlist"
-                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
+                                    href="/admin/addons"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
                                 >
-                                    Waitlist
+                                    Add-ons
                                 </Link>
                                 <Link
-                                    href="/admin/products"
-                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
+                                    href="/admin/consent-forms"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
                                 >
-                                    Products
+                                    Consent Forms
                                 </Link>
                                 <Link
-                                    href="/admin/orders"
-                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
+                                    href="/admin/staff"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
                                 >
-                                    Orders
+                                    Staff
+                                </Link>
+                                <Link
+                                    href="/admin/calendar"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
+                                >
+                                    Calendar
                                 </Link>
                                 <Link
                                     href="/"
-                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
                                 >
                                     Back to Site
                                 </Link>
@@ -129,7 +137,7 @@ export default function AdminLayout({
                                         Cookies.remove('adminToken', { path: '/' });
                                         router.push('/admin/login');
                                     }}
-                                    className="px-3 py-2 rounded-md hover:bg-gray-100 text-red-600 text-left"
+                                    className="block w-full lg:w-auto text-left px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
                                 >
                                     Logout
                                 </button>
@@ -138,7 +146,9 @@ export default function AdminLayout({
                     </div>
                 </nav>
             )}
-            <main className="container mx-auto py-6 px-4">{children}</main>
+            <main className="w-full max-w-full">
+                {children}
+            </main>
         </div>
     );
 }

@@ -174,15 +174,15 @@ export default function ServicesPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8">
           {/* Categories List */}
-          <div className="lg:col-span-4 bg-white rounded-xl p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
+          <div className="lg:col-span-4 bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+            <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
               <h2 className="text-xl font-medium">Categories</h2>
               <button
                 onClick={handleCreateCategory}
-                className="text-sm px-3 py-1.5 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors"
+                className="text-sm px-3 py-1.5 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors whitespace-nowrap"
               >
                 Add Category
               </button>
@@ -236,15 +236,15 @@ export default function ServicesPage() {
 
           {/* Services List */}
           <div className="lg:col-span-8">
-            <div className="bg-white rounded-xl p-6 shadow-sm">
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h2 className="text-xl font-medium">
+                <h2 className="text-xl font-medium break-words max-w-full">
                   {selectedCategory ? `${categories.find(c => c.id === selectedCategory)?.name} Services` : 'All Services'}
                 </h2>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   <button
                     onClick={handleCreateService}
-                    className="inline-flex items-center px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors whitespace-nowrap"
                     disabled={!selectedCategory}
                   >
                     <PlusIcon className="w-5 h-5 mr-1.5" />
@@ -252,7 +252,7 @@ export default function ServicesPage() {
                   </button>
                   <button
                     onClick={() => setSelectedCategory(null)}
-                    className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="flex-1 sm:flex-none px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap text-center"
                   >
                     Show All
                   </button>
@@ -268,11 +268,11 @@ export default function ServicesPage() {
                         key={service.id}
                         className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
                       >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-lg font-medium">{service.name}</h3>
-                            <p className="text-gray-600 mt-1">{service.description}</p>
-                            <div className="flex space-x-4 mt-2 text-sm text-gray-500">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                          <div className="w-full">
+                            <h3 className="text-lg font-medium break-words">{service.name}</h3>
+                            <p className="text-gray-600 mt-1 break-words">{service.description}</p>
+                            <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
                               <span>{service.duration} mins</span>
                               <span>${service.price}</span>
                               <span
@@ -284,16 +284,16 @@ export default function ServicesPage() {
                               </span>
                             </div>
                           </div>
-                          <div className="space-x-4">
+                          <div className="flex gap-4 w-full sm:w-auto">
                             <button
                               onClick={() => handleEditService(service)}
-                              className="text-accent hover:text-accent/80 transition-colors"
+                              className="flex-1 sm:flex-none text-accent hover:text-accent/80 transition-colors text-center"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => handleDeleteService(service)}
-                              className="text-red-600 hover:text-red-500 transition-colors"
+                              className="flex-1 sm:flex-none text-red-600 hover:text-red-500 transition-colors text-center"
                             >
                               Delete
                             </button>
