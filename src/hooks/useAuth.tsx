@@ -12,6 +12,7 @@ interface AuthError extends Error {
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isAdmin: boolean;
   user: any | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => void;
@@ -25,6 +26,7 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
+  isAdmin: false,
   user: null,
   signIn: async (email: string, password: string) => {},
   signOut: () => {},
@@ -38,6 +40,7 @@ export const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState<any | null>(null);
 
   useEffect(() => {
@@ -47,11 +50,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuthState = async () => {
     try {
       const idToken = Cookies.get('idToken');
+      const adminToken = Cookies.get('adminToken');
+      
       if (idToken) {
         // Set initial state from token to avoid flicker
         const decoded = jwtDecode(idToken);
         setUser(decoded);
         setIsAuthenticated(true);
+        
+        // If we have an admin token, set admin status immediately
+        if (adminToken) {
+          setIsAdmin(true);
+        }
+        
+        // Verify admin status in the background
+        try {
+          const adminResponse = await fetch('/api/admin/auth', {
+            headers: {
+              'Authorization': `Bearer ${idToken}`
+            }
+          });
+
+          if (adminResponse.ok) {
+            setIsAdmin(true);
+            // Refresh admin token
+            Cookies.set('adminToken', idToken, {
+              expires: 7,
+              secure: true,
+              sameSite: 'strict'
+            });
+          } else {
+            setIsAdmin(false);
+            Cookies.remove('adminToken');
+          }
+        } catch (error) {
+          console.error('Admin check error:', error);
+          setIsAdmin(false);
+          Cookies.remove('adminToken');
+        }
         
         // Fetch fresh user data from Cognito
         const response = await fetch('/api/auth/user', {
@@ -70,6 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error checking auth state:', error);
       setUser(null);
       setIsAuthenticated(false);
+      setIsAdmin(false);
+      Cookies.remove('adminToken');
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (!response.ok) {
-        // If user is not confirmed, throw a specific error with the email
         if (data.needsConfirmation) {
           const error: AuthError = new Error(data.message || 'Please verify your email before logging in');
           error.needsConfirmation = true;
@@ -115,6 +152,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const decoded = jwtDecode(data.idToken);
       setUser(decoded);
       setIsAuthenticated(true);
+
+      // Check admin status
+      try {
+        const adminResponse = await fetch('/api/admin/auth', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${data.idToken}`
+          }
+        });
+
+        if (adminResponse.ok) {
+          setIsAdmin(true);
+          // Set admin token cookie
+          Cookies.set('adminToken', data.idToken, {
+            expires: 7,
+            secure: true,
+            sameSite: 'strict'
+          });
+        } else {
+          setIsAdmin(false);
+          Cookies.remove('adminToken');
+        }
+      } catch (error) {
+        console.error('Admin check error:', error);
+        setIsAdmin(false);
+        Cookies.remove('adminToken');
+      }
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
@@ -148,8 +212,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = () => {
     Cookies.remove('idToken');
     Cookies.remove('accessToken');
+    Cookies.remove('adminToken');
     setUser(null);
     setIsAuthenticated(false);
+    setIsAdmin(false);
   };
 
   const getSession = async () => {
@@ -202,6 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         isAuthenticated,
         isLoading,
+        isAdmin,
         user,
         signIn,
         signOut,

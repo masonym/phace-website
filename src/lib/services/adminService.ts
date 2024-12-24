@@ -100,6 +100,30 @@ export class AdminService {
         })) || [];
     }
 
+    static async getAdmin(email: string): Promise<AdminUser | null> {
+        const command = new GetCommand({
+            TableName: ADMIN_TABLE,
+            Key: {
+                pk: `ADMIN#${email}`,
+                sk: `ADMIN#${email}`,
+            },
+        });
+
+        const response = await dynamoDb.send(command);
+        const admin = response.Item;
+
+        if (!admin) {
+            return null;
+        }
+
+        return {
+            email: admin.email,
+            name: admin.name,
+            role: admin.role,
+            passwordHash: admin.passwordHash,
+        };
+    }
+
     static async updateAdminRole(email: string, role: AdminUser['role']) {
         const command = new PutCommand({
             TableName: ADMIN_TABLE,

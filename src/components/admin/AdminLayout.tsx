@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
+import Cookies from 'js-cookie';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -11,13 +12,14 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, signOut } = useAuth();
+  const { isAuthenticated, isLoading, isAdmin, signOut } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    const adminToken = Cookies.get('adminToken');
+    if (!isLoading && (!isAuthenticated || !isAdmin || !adminToken)) {
       router.push('/admin/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isAdmin, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -27,7 +29,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  if (!isAuthenticated) {
+  const adminToken = Cookies.get('adminToken');
+  if (!isAuthenticated || !isAdmin || !adminToken) {
     return null;
   }
 

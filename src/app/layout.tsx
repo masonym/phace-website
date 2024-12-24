@@ -27,7 +27,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Phace" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
-      <body className="min-h-screen flex flex-col">
+      <body className="min-h-screen flex flex-col overflow-x-hidden">
         <AuthProvider>
           <CartProvider>
             <Navigation />

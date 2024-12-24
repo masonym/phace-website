@@ -12,7 +12,7 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
   const router = useRouter();
-  const { signIn, changePassword } = useAuth();
+  const { signIn, changePassword, getIdToken } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,13 +25,30 @@ export default function AdminLogin() {
         // Reset form after successful password change
         setIsNewPasswordRequired(false);
         setNewPassword('');
-        // Password has been changed and user is now signed in
-        router.push('/admin');
-      } else {
-        await signIn(email, password);
-        console.log('Sign in successful, redirecting...');
-        router.push('/admin');
       }
+      
+      await signIn(email, password);
+      
+      // Get the ID token to verify admin access
+      const idToken = await getIdToken();
+      if (!idToken) {
+        throw new Error('Failed to get authentication token');
+      }
+      
+      // Verify admin access
+      const response = await fetch('/api/admin/auth', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Not authorized as admin');
+      }
+
+      console.log('Admin sign in successful, redirecting...');
+      router.push('/admin');
     } catch (err: any) {
       console.error('Login error:', err);
       if (err.message === 'NEW_PASSWORD_REQUIRED') {

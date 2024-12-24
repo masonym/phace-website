@@ -17,6 +17,7 @@ export default function AdminLayout({
     const pathname = usePathname();
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         // Skip auth check for login page
@@ -75,43 +76,51 @@ export default function AdminLayout({
             {pathname !== '/admin/login' && (
                 <nav className="bg-white shadow">
                     <div className="container mx-auto px-4">
-                        <div className="flex justify-between h-16">
-                            <div className="flex">
+                        <div className="flex flex-col md:flex-row justify-between min-h-[64px]">
+                            <div className="flex items-center justify-between py-4 md:py-0">
                                 <Link
                                     href="/admin"
-                                    className="flex items-center px-4 text-lg font-semibold"
+                                    className="flex items-center text-lg font-semibold"
                                 >
                                     Admin Dashboard
                                 </Link>
+                                <button
+                                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                    className="md:hidden p-2 rounded-md hover:bg-gray-100"
+                                >
+                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                    </svg>
+                                </button>
                             </div>
-                            <div className="flex space-x-4">
+                            <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0 pb-4 md:pb-0`}>
                                 <Link
                                     href="/admin/services"
-                                    className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100"
+                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
                                 >
                                     Services
                                 </Link>
                                 <Link
                                     href="/admin/waitlist"
-                                    className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100"
+                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
                                 >
                                     Waitlist
                                 </Link>
                                 <Link
                                     href="/admin/products"
-                                    className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100"
+                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
                                 >
                                     Products
                                 </Link>
                                 <Link
                                     href="/admin/orders"
-                                    className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100"
+                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
                                 >
                                     Orders
                                 </Link>
                                 <Link
                                     href="/"
-                                    className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100"
+                                    className="px-3 py-2 rounded-md hover:bg-gray-100"
                                 >
                                     Back to Site
                                 </Link>
@@ -120,7 +129,7 @@ export default function AdminLayout({
                                         Cookies.remove('adminToken', { path: '/' });
                                         router.push('/admin/login');
                                     }}
-                                    className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 text-red-600"
+                                    className="px-3 py-2 rounded-md hover:bg-gray-100 text-red-600 text-left"
                                 >
                                     Logout
                                 </button>

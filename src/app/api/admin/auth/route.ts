@@ -13,8 +13,25 @@ const verifier = CognitoJwtVerifier.create({
 export async function POST(request: Request) {
     try {
         const { email, password } = await request.json();
-        const result = await AdminService.verifyAdmin(email, password);
-        return NextResponse.json(result);
+        const admin = await AdminService.verifyAdmin(email, password);
+        
+        // Get the user's Cognito ID token from the request
+        const authHeader = request.headers.get('Authorization');
+        const idToken = authHeader?.replace('Bearer ', '') || '';
+        
+        // Verify the token is valid
+        try {
+            await verifier.verify(idToken);
+        } catch (error) {
+            console.error('Token verification failed:', error);
+            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        }
+        
+        // If we get here, both the admin credentials and Cognito token are valid
+        return NextResponse.json({ 
+            token: idToken, // Use the Cognito token as the admin token
+            admin 
+        });
     } catch (error: any) {
         return NextResponse.json(
             { error: error.message || 'Authentication failed' },
@@ -35,11 +52,18 @@ export async function GET(request: Request) {
         try {
             // Verify the Cognito token
             const payload = await verifier.verify(token);
+            
+            // Check if user exists in admin table
+            const admin = await AdminService.getAdmin(payload.email as string);
+            if (!admin) {
+                return NextResponse.json({ error: 'Not an admin user' }, { status: 403 });
+            }
+
             return NextResponse.json({ 
                 admin: {
-                    email: payload.email,
-                    name: payload['cognito:username'],
-                    role: 'admin' // You might want to store this in Cognito custom attributes
+                    email: admin.email,
+                    name: admin.name,
+                    role: admin.role
                 }
             });
         } catch (error) {

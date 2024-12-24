@@ -18,7 +18,7 @@ interface Appointment {
 }
 
 export default function Profile() {
-  const { isAuthenticated, isLoading, user, signOut, refreshUser } = useAuth();
+  const { isAuthenticated, isLoading, isAdmin, user, signOut, refreshUser, getIdToken } = useAuth();
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
@@ -115,12 +115,22 @@ export default function Profile() {
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-            <button
-              onClick={() => signOut()}
-              className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-accent hover:bg-accent/90"
-            >
-              Sign Out
-            </button>
+            <div className="space-x-4">
+              {isAdmin && (
+                <Link 
+                  href="/admin" 
+                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                >
+                  Admin Panel
+                </Link>
+              )}
+              <button
+                onClick={() => signOut()}
+                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-accent hover:bg-accent/90"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
 
           <div className="space-y-6">
