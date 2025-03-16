@@ -33,7 +33,7 @@ export default function ConsentFormsPage() {
     const [previewForm, setPreviewForm] = useState<ConsentForm | null>(null);
 
     const router = useRouter();
-    const { isAuthenticated, isLoading, getAccessToken } = useAuth();
+    const { isAuthenticated, isLoading, getIdToken } = useAuth();
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -115,7 +115,7 @@ export default function ConsentFormsPage() {
 
     const handleCreateForm = async (formData: Omit<ConsentForm, 'id'>) => {
         try {
-            const token = await getAccessToken();
+            const token = await getIdToken();
             if (!token) {
                 setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
                 return;
@@ -198,7 +198,7 @@ export default function ConsentFormsPage() {
 
     const handleUpdateForm = async (formData: ConsentForm) => {
         try {
-            const token = await getAccessToken();
+            const token = await getIdToken();
             if (!token) {
                 setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
                 return;
@@ -236,7 +236,7 @@ export default function ConsentFormsPage() {
         if (!deletingForm) return;
 
         try {
-            const token = await getAccessToken();
+            const token = await getIdToken();
             if (!token) {
                 setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
                 return;

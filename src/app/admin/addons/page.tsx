@@ -39,7 +39,7 @@ export default function AddonsPage() {
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     const router = useRouter();
-    const { isAuthenticated, isLoading, getAccessToken } = useAuth();
+    const { isAuthenticated, isLoading, getIdToken } = useAuth();
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -75,7 +75,7 @@ export default function AddonsPage() {
 
     const handleCreateAddon = async (addonData: Omit<Addon, 'id'>) => {
         try {
-            const token = await getAccessToken();
+            const token = await getIdToken();
             if (!token) {
                 setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
                 return;
@@ -109,7 +109,7 @@ export default function AddonsPage() {
 
     const handleUpdateAddon = async (addonData: Addon) => {
         try {
-            const token = await getAccessToken();
+            const token = await getIdToken();
             if (!token) {
                 setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
                 return;
@@ -147,7 +147,7 @@ export default function AddonsPage() {
         if (!deletingAddon) return;
 
         try {
-            const token = await getAccessToken();
+            const token = await getIdToken();
             if (!token) {
                 setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
                 return;

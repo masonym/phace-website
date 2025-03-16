@@ -43,7 +43,7 @@ export default function ServicesPage() {
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
   const router = useRouter();
-  const { isAuthenticated, isLoading, getAccessToken } = useAuth();
+  const { isAuthenticated, isLoading, getIdToken } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -104,7 +104,7 @@ export default function ServicesPage() {
 
   const confirmDelete = async () => {
     try {
-      const token = await getAccessToken();
+      const token = await getIdToken();
       if (deletingService) {
         const response = await fetch(`/api/booking/services?id=${deletingService.id}`, {
           method: 'DELETE',
