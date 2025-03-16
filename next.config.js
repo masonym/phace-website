@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    unoptimized: true, // temporary due to vercel limits
     remotePatterns: [
       {
         protocol: 'https',
