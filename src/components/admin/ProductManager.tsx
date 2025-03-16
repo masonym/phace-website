@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Cookies from 'js-cookie';
 import { v4 as uuidv4 } from 'uuid';
 import MDEditor from '@uiw/react-md-editor';
+import ProductImporter from './ProductImporter';
 
 const DEFAULT_PRODUCT: Product = {
     id: '',
@@ -30,6 +31,7 @@ export default function ProductManager() {
     const [uploadingImage, setUploadingImage] = useState(false);
     const [newColorName, setNewColorName] = useState('');
     const [newColorHex, setNewColorHex] = useState('#000000');
+    const [showImporter, setShowImporter] = useState(false);
 
     useEffect(() => {
         fetchProducts();
@@ -50,7 +52,7 @@ export default function ProductManager() {
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || !e.target.files[0]) return;
-        
+
         setUploadingImage(true);
         const file = e.target.files[0];
         try {
@@ -107,7 +109,7 @@ export default function ProductManager() {
 
     const handleRemoveImage = (indexToRemove: number) => {
         if (!editingProduct) return;
-        
+
         setEditingProduct({
             ...editingProduct,
             images: editingProduct.images.filter((_, index) => index !== indexToRemove)
@@ -145,7 +147,7 @@ export default function ProductManager() {
     const handleRemoveArrayItem = (field: 'whyWeLoveIt' | 'howToUse' | 'ingredients', index: number) => {
         if (!editingProduct) return;
         const newArray = [...editingProduct[field]];
-        if (newArray.length > 1) { 
+        if (newArray.length > 1) {
             newArray.splice(index, 1);
             setEditingProduct({
                 ...editingProduct,
@@ -175,7 +177,7 @@ export default function ProductManager() {
             const token = Cookies.get('adminToken');
             const isNewProduct = !products.some(p => p.id === editingProduct.id);
             const method = isNewProduct ? 'POST' : 'PUT';
-            const url = isNewProduct 
+            const url = isNewProduct
                 ? '/api/products'
                 : `/api/products/${editingProduct.id}`;
 
@@ -199,7 +201,7 @@ export default function ProductManager() {
                 const error = await response.json();
                 throw new Error(error.error || 'Failed to save product');
             }
-            
+
             await fetchProducts();
             setEditingProduct(null);
         } catch (err) {
@@ -224,7 +226,7 @@ export default function ProductManager() {
                 const error = await response.json();
                 throw new Error(error.error || 'Failed to delete product');
             }
-            
+
             await fetchProducts();
         } catch (err) {
             console.error('Delete error:', err);
@@ -239,18 +241,26 @@ export default function ProductManager() {
         <div className="p-6">
             <div className="flex justify-between mb-6">
                 <h1 className="text-2xl font-bold">Product Management</h1>
-                <button
-                    onClick={() => {
-                        const newProduct = {
-                            ...DEFAULT_PRODUCT,
-                            id: uuidv4()
-                        };
-                        setEditingProduct(newProduct);
-                    }}
-                    className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800"
-                >
-                    Add New Product
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowImporter(true)}
+                        className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700"
+                    >
+                        Import from JSON
+                    </button>
+                    <button
+                        onClick={() => {
+                            const newProduct = {
+                                ...DEFAULT_PRODUCT,
+                                id: uuidv4()
+                            };
+                            setEditingProduct(newProduct);
+                        }}
+                        className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800"
+                    >
+                        Add New Product
+                    </button>
+                </div>
             </div>
 
             {editingProduct ? (
@@ -258,7 +268,7 @@ export default function ProductManager() {
                     <h2 className="text-xl font-semibold mb-4">
                         {editingProduct.id ? 'Edit Product' : 'New Product'}
                     </h2>
-                    
+
                     {/* Basic Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
@@ -315,7 +325,8 @@ export default function ProductManager() {
                             {editingProduct.images.map((image, index) => (
                                 <div key={index} className="relative">
                                     <Image
-                                        src={image}
+                                        //src={image}
+                                        src={"/favicon.svg"}
                                         alt={`Product ${index + 1}`}
                                         width={100}
                                         height={100}
@@ -500,7 +511,8 @@ export default function ProductManager() {
                         <div key={product.id} className="bg-white p-4 rounded-lg shadow-sm">
                             {product.images[0] && (
                                 <Image
-                                    src={product.images[0]}
+                                    //src={product.images[0]}
+                                    src={"/favicon.svg"}
                                     alt={product.name}
                                     width={200}
                                     height={200}
@@ -526,6 +538,15 @@ export default function ProductManager() {
                         </div>
                     ))}
                 </div>
+            )}
+            {showImporter && (
+                <ProductImporter
+                    onClose={() => setShowImporter(false)}
+                    onImportComplete={() => {
+                        setShowImporter(false);
+                        fetchProducts();
+                    }}
+                />
             )}
         </div>
     );
