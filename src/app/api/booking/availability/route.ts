@@ -84,16 +84,16 @@ export async function GET(request: Request) {
         // Format the date range for Square API (must be at least 24 hours)
         const startOfDay = `${date}T00:00:00`;
         const nextDay = new Date(date);
-        nextDay.setDate(nextDay.getDate() + 1);
-        const endOfDay = format(nextDay, "yyyy-MM-dd'T'00:00:00");
+        nextDay.setDate(nextDay.getDate() + 2); // Changed from +1 to +2
+        const endOfDay = format(nextDay, "yyyy-MM-dd'T'23:59:59"); // Changed from '00:00:00' to '23:59:59'
 
         // Get all available slots from Square for the entire day
-        const squareAvailability = await SquareBookingService.getAvailableTimeSlots(
+        const squareAvailability = await SquareBookingService.getAvailableTimeSlots({
             staffId,
             serviceId,
-            startOfDay,
-            endOfDay
-        );
+            date,
+            addonIds: addons.length > 0 ? addons : undefined
+        });
 
         console.log(`Retrieved ${squareAvailability.length} available slots from Square`);
 

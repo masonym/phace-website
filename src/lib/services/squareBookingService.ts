@@ -26,6 +26,7 @@ interface Service {
   imageUrl?: string;
   isActive: boolean;
   updatedAt?: string;
+  variationId: string;
 }
 
 interface ServiceAddon {
@@ -92,6 +93,12 @@ interface CreateAppointmentParams {
   notes?: string;
   consentFormResponses?: any[];
   userId?: string;
+}
+
+interface TimeSlot {
+  startTime: string;
+  endTime: string;
+  available: boolean;
 }
 
 /**
@@ -321,7 +328,8 @@ export class SquareBookingService {
             duration: this.safeNumber(duration),
             imageUrl: item.itemData?.imageUrl,
             isActive: true,
-            updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined
+            updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined,
+            variationId: variation?.id || ''
           };
 
           console.log(`Mapped service: ${this.safeStringify(service)}`);
@@ -338,7 +346,8 @@ export class SquareBookingService {
             duration: 0,
             imageUrl: undefined,
             isActive: false,
-            updatedAt: undefined
+            updatedAt: undefined,
+            variationId: ''
           };
         }
       });
@@ -435,8 +444,11 @@ export class SquareBookingService {
         duration: this.safeNumber(duration),
         imageUrl: item.itemData?.imageUrl,
         isActive: true,
-        updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined
+        updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined,
+        variationId: variation?.id || ''
       };
+
+      console.log(`Service found: ${service.name}, duration: ${service.duration}, variationId: ${service.variationId}`);
 
       // Update the individual service cache
       this.serviceByIdCache[serviceId] = {
@@ -920,40 +932,93 @@ export class SquareBookingService {
 
   /**
    * Get available time slots for a staff member and service
-   * @param staffId The ID of the staff member
-   * @param serviceId The ID of the service
-   * @param startTime The start time in ISO format
-   * @param endTime The end time in ISO format
+   * @param params The parameters for the request
    * @returns An array of available time slots
    */
-  static async getAvailableTimeSlots(
-    staffId: string,
-    serviceId: string,
-    startTime: string,
-    endTime: string
-  ): Promise<Array<{ startTime: string; endTime: string; available: boolean }>> {
+  static async getAvailableTimeSlots(params: {
+    staffId: string;
+    serviceId: string;
+    date: string;
+    addonIds?: string[];
+  }): Promise<TimeSlot[]> {
     try {
-      console.log(`Getting available time slots for staff ${staffId}, service ${serviceId} from ${startTime} to ${endTime}`);
+      console.log(`Availability request for service: ${params.serviceId}, staff: ${params.staffId}, date: ${params.date}, addons: ${params.addonIds?.join(', ') || 'none'}`);
+      
+      // Get the service details to get the variation ID and duration
+      const service = await this.getServiceById(params.serviceId);
+      if (!service) {
+        console.error(`Service not found: ${params.serviceId}`);
+        return [];
+      }
+      
+      console.log(`Service found: ${service.name}, duration: ${service.duration}, variationId: ${service.variationId}`);
+      
+      // Check if the service variation is bookable
+      try {
+        const variationResult = await client.catalogApi.retrieveCatalogObject(service.variationId);
+        console.log('Variation details:', this.safeStringify(variationResult));
+        
+        // Check if the variation is explicitly marked as bookable
+        const isBookable = variationResult?.object?.itemVariationData?.isBookable;
+        console.log(`Is variation explicitly marked as bookable: ${isBookable}`);
+        
+        if (isBookable === false) {
+          console.error(`Service variation ${service.variationId} is not bookable. Please configure this service in the Square Dashboard.`);
+          return [];
+        }
+      } catch (err) {
+        console.error('Error checking if service variation is bookable:', err);
+        // Continue anyway, as the variation might still be bookable even if we can't check
+      }
+      
+      // Get the total duration including any addons
+      const totalDuration = await this.calculateTotalDuration(service.duration, params.addonIds);
+      console.log(`Total appointment duration: ${totalDuration} minutes`);
+      
+      // Get the staff member's availability
+      const staffMember = await this.getStaffById(params.staffId);
+      if (!staffMember) {
+        console.error(`Staff member not found: ${params.staffId}`);
+        return [];
+      }
+      
+      // Get the day of week (0-6, where 0 is Sunday)
+      const date = new Date(params.date);
+      const dayOfWeek = date.getDay();
+      console.log(`Day of week for ${params.date}: ${dayOfWeek}`);
+      
+      // Get the staff member's availability for this day
+      const availability = staffMember.defaultAvailability[dayOfWeek];
+      console.log(`Staff availability for day ${dayOfWeek}: ${availability.startTime} - ${availability.endTime}`);
+      
+      // Set the start and end time for the availability search (full day in UTC)
+      const startDateTime = `${params.date}T00:00:00`;
+      const endDate = new Date(date);
+      endDate.setDate(date.getDate() + 1);
+      const endDateTime = `${endDate.toISOString().split('T')[0]}T23:59:59`;
+      
+      console.log(`Getting available time slots for staff ${params.staffId}, service ${params.serviceId} from ${startDateTime} to ${endDateTime}`);
+      
+      // Log the Square SDK version and client structure for debugging
+      console.log('Client structure:', Object.keys(client));
+      
+      // Get the location ID
       const locationId = await this.getLocationId();
-
-      // Ensure dates are in RFC 3339 format with timezone (Z for UTC)
-      const formattedStartTime = startTime.endsWith('Z') ? startTime : `${startTime}Z`;
-      const formattedEndTime = endTime.endsWith('Z') ? endTime : `${endTime}Z`;
-
+      
       // Construct the request body for searchAvailability
       const requestBody = {
         query: {
           filter: {
             startAtRange: {
-              startAt: formattedStartTime,
-              endAt: formattedEndTime
+              startAt: `${startDateTime}Z`,
+              endAt: `${endDateTime}Z`
             },
             locationId,
             segmentFilters: [
               {
-                serviceVariationId: serviceId,
+                serviceVariationId: service.variationId,
                 teamMemberIdFilter: {
-                  any: [staffId]
+                  any: [params.staffId]
                 }
               }
             ]
@@ -961,39 +1026,64 @@ export class SquareBookingService {
         }
       };
       
-      console.log('SearchAvailability request:', this.safeStringify(requestBody));
-
-      // Search for availability
-      const result = await client.bookings.availability.search(requestBody);
-
-      console.log('Availability search result:', this.safeStringify(result));
-
-      // Map the availabilities to our format
-      const availableSlots = result.availabilities?.map(availability => {
-        // Extract the start time and calculate end time based on the duration in the first segment
-        const startTime = availability.startAt!;
-        const durationMinutes = availability.appointmentSegments?.[0]?.durationMinutes || 0;
-        
-        // Calculate end time by adding duration to start time
-        const startDate = new Date(startTime);
-        const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
-        const endTime = endDate.toISOString();
-
-        return {
-          startTime,
-          endTime,
-          available: true
-        };
-      }) || [];
-
-      console.log(`Found ${availableSlots.length} available slots`);
-      return availableSlots;
-    } catch (error) {
-      console.error('Error getting available time slots from Square:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', error.message);
-        console.error('Error stack:', error.stack);
+      console.log('SearchAvailability request:', JSON.stringify(requestBody, null, 2));
+      
+      // Try different API paths to handle different SDK versions
+      let availabilities = [];
+      let error = null;
+      
+      try {
+        // Use the standard bookingsApi for SDK v41
+        const result = await client.bookingsApi.searchAvailability(requestBody);
+        console.log('Response from bookingsApi.searchAvailability:', this.safeStringify(result));
+        availabilities = result?.result?.availabilities || [];
+      } catch (err) {
+        error = err;
+        console.error('Error getting available time slots from Square:', err);
+        console.error('Error details:', err.body || err.message);
+        console.error('Error stack:', err.stack);
       }
+      
+      console.log(`Retrieved ${availabilities.length} available slots from Square`);
+      
+      if (availabilities.length === 0 && error) {
+        // If we got an error and no availabilities, try to determine if it's a configuration issue
+        if (error.body?.errors) {
+          const errors = error.body.errors;
+          const serviceVariationError = errors.find(e => 
+            e.field?.includes('service_variation_id') && e.detail?.includes('not bookable')
+          );
+          
+          if (serviceVariationError) {
+            console.error('Service variation is not configured for booking in Square. Please update the service in the Square Dashboard.');
+            console.error('Error details:', serviceVariationError.detail);
+            return [];
+          }
+        }
+      }
+      
+      // Map the availabilities to time slots
+      const timeSlots: TimeSlot[] = [];
+      
+      for (const availability of availabilities) {
+        const startTime = new Date(availability.startAt);
+        
+        // Only include time slots within the staff member's working hours
+        const timeString = startTime.toTimeString().substring(0, 8); // Format: HH:MM:SS
+        
+        if (this.isTimeWithinRange(timeString, availability.startTime, availability.endTime)) {
+          timeSlots.push({
+            startTime: availability.startAt,
+            endTime: availability.endAt,
+            available: true
+          });
+        }
+      }
+      
+      console.log(`Filtered to ${timeSlots.length} time slots within staff working hours`);
+      return timeSlots;
+    } catch (error) {
+      console.error('Error in getAvailableTimeSlots:', error);
       return [];
     }
   }
@@ -1054,7 +1144,7 @@ export class SquareBookingService {
           startAt: params.startTime,
           appointmentSegments: [
             {
-              serviceVariationId: params.serviceId,
+              serviceVariationId: service.variationId,
               teamMemberId: params.staffId,
               durationMinutes: params.totalDuration.toString()
             }
