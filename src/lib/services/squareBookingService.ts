@@ -117,7 +117,7 @@ export class SquareBookingService {
    * @param obj The object to stringify
    */
   private static safeStringify(obj: any): string {
-    return JSON.stringify(obj, (key, value) => 
+    return JSON.stringify(obj, (key, value) =>
       typeof value === 'bigint' ? value.toString() : value
     );
   }
@@ -278,7 +278,7 @@ export class SquareBookingService {
       });
 
       console.log(`Square API returned ${result.items?.length || 0} items for category ${categoryId}`);
-      
+
       // Use a custom replacer function to handle BigInt values in logging
       console.log('Raw result:', this.safeStringify(result));
 
@@ -426,85 +426,169 @@ export class SquareBookingService {
   }
 
   /**
-   * Get staff members
+   * Cache for staff members
+   */
+  private static staffCache: {
+    data: StaffMember[];
+    timestamp: number;
+  } | null = null;
+
+  /**
+   * Cache expiration time in milliseconds (5 minutes)
+   */
+  private static STAFF_CACHE_EXPIRATION = 5 * 60 * 1000;
+
+  /**
+   * Get staff members with caching
    */
   static async getStaffMembers(): Promise<StaffMember[]> {
     try {
-      const locationId = await this.getLocationId();
+      // Check if we have cached data that's still valid
+      if (
+        this.staffCache &&
+        Date.now() - this.staffCache.timestamp < this.STAFF_CACHE_EXPIRATION
+      ) {
+        console.log('Using cached staff members data');
+        return this.staffCache.data;
+      }
 
+      console.log('Fetching fresh staff members data from Square');
+      
       // Get team members who can be booked
-      const result = await client.bookings.listTeamMemberBookingProfiles(locationId);
-
-      if (!result.teamMemberBookingProfiles) {
+      const bookingProfilesResponse = await client.bookings.teamMemberProfiles.list();
+      
+      if (!bookingProfilesResponse.data) {
+        console.log('No team member booking profiles found');
         return [];
       }
-
-      // Get detailed team member info
-      const teamMemberIds = result.teamMemberBookingProfiles.map(profile => profile.teamMemberId!);
-      const teamMembersResult = await client.teamMembers.bulkRetrieve({
-        teamMemberIds
+      
+      const bookingProfiles = bookingProfilesResponse.data;
+      console.log(`Found ${bookingProfiles.length} team member booking profiles`);
+      
+      // Get detailed team member info for all team members
+      const teamMemberIds = bookingProfiles.map(profile => profile.teamMemberId!);
+      
+      if (teamMemberIds.length === 0) {
+        console.log('No team member IDs found in booking profiles');
+        return [];
+      }
+      
+      const teamMembersResult = await client.teamMembers.search({
+        query: {
+          filter: {
+            teamMemberIds
+          }
+        }
       });
-
-      if (!teamMembersResult.teamMembers) {
+      
+      if (!teamMembersResult.teamMembers || teamMembersResult.teamMembers.length === 0) {
+        console.log('No team members found');
         return [];
       }
-
+      
+      console.log(`Found ${teamMembersResult.teamMembers.length} team members`);
+      
       // Map Square team members to our StaffMember format
-      return result.teamMemberBookingProfiles.map(profile => {
+      const staffMembers = bookingProfiles.map(profile => {
         const teamMember = teamMembersResult.teamMembers?.find(
           tm => tm.id === profile.teamMemberId
         );
-
+        
+        if (!teamMember) {
+          console.log(`No team member found for profile ${profile.teamMemberId}`);
+          return null;
+        }
+        
         // Parse availability from the booking profile
         const defaultAvailability = profile.bookableAppointmentSegments?.map(segment => ({
           dayOfWeek: this.convertDayOfWeekToNumber(segment.weekDayAvailable!),
           startTime: segment.startAt!,
           endTime: segment.endAt!
         })) || [];
-
+        
         return {
           id: profile.teamMemberId!,
-          name: `${teamMember?.givenName || ''} ${teamMember?.familyName || ''}`.trim(),
-          email: teamMember?.emailAddress,
-          phone: teamMember?.phoneNumber,
+          name: profile.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
+          email: teamMember.emailAddress,
+          phone: teamMember.phoneNumber,
           bio: profile.description,
-          imageUrl: teamMember?.profileImageUrl,
+          imageUrl: teamMember.profileImageUrl,
           defaultAvailability,
-          isActive: teamMember?.status === 'ACTIVE',
-          createdAt: new Date(teamMember?.createdAt || Date.now()).toISOString(),
-          updatedAt: teamMember?.updatedAt
+          isActive: profile.isBookable && teamMember.status === 'ACTIVE',
+          createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
+          updatedAt: teamMember.updatedAt
             ? new Date(teamMember.updatedAt).toISOString()
             : undefined
         };
-      });
+      }).filter(Boolean) as StaffMember[];
+      
+      // Update the cache
+      this.staffCache = {
+        data: staffMembers,
+        timestamp: Date.now()
+      };
+      
+      return staffMembers;
     } catch (error) {
       console.error('Error fetching staff members from Square:', error);
+      
+      // Return cached data if available, even if expired
+      if (this.staffCache) {
+        console.log('Returning expired cached staff data due to error');
+        return this.staffCache.data;
+      }
+      
       return [];
     }
   }
 
+  // Cache for individual staff members
+  private static staffByIdCache: {
+    [staffId: string]: {
+      data: StaffMember;
+      timestamp: number;
+    };
+  } = {};
+
   /**
-   * Get a staff member by ID
+   * Get a staff member by ID with caching
    */
   static async getStaffById(staffId: string): Promise<StaffMember | null> {
     try {
-      // Get team member booking profile
-      const result = await client.bookings.retrieveTeamMemberBookingProfile(staffId);
-
-      if (!result.teamMemberBookingProfile) {
-        return null;
+      // Check if we have cached data that's still valid
+      if (
+        this.staffByIdCache[staffId] &&
+        Date.now() - this.staffByIdCache[staffId].timestamp < this.STAFF_CACHE_EXPIRATION
+      ) {
+        console.log(`Using cached staff data for ${staffId}`);
+        return this.staffByIdCache[staffId].data;
       }
 
-      const profile = result.teamMemberBookingProfile;
-
-      // Get detailed team member info
-      const teamMemberResult = await client.teamMembers.retrieve(staffId);
-
+      console.log(`Fetching fresh staff data for ${staffId} from Square`);
+      
+      // First check if we can get the team member
+      const teamMemberResult = await client.teamMembers.get({
+        teamMemberId: staffId
+      });
+      
       if (!teamMemberResult.teamMember) {
+        console.log(`No team member found with ID ${staffId}`);
         return null;
       }
-
+      
       const teamMember = teamMemberResult.teamMember;
+
+      // Then get their booking profile
+      const bookingProfileResult = await client.bookings.teamMemberProfiles.retrieve({
+        teamMemberId: staffId
+      });
+      
+      if (!bookingProfileResult.teamMemberBookingProfile) {
+        console.log(`No booking profile found for team member ${staffId}`);
+        return null;
+      }
+      
+      const profile = bookingProfileResult.teamMemberBookingProfile;
 
       // Parse availability from the booking profile
       const defaultAvailability = profile.bookableAppointmentSegments?.map(segment => ({
@@ -513,22 +597,37 @@ export class SquareBookingService {
         endTime: segment.endAt!
       })) || [];
 
-      return {
+      const staffMember = {
         id: profile.teamMemberId!,
-        name: `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
+        name: profile.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
         email: teamMember.emailAddress,
         phone: teamMember.phoneNumber,
         bio: profile.description,
         imageUrl: teamMember.profileImageUrl,
         defaultAvailability,
-        isActive: teamMember.status === 'ACTIVE',
+        isActive: profile.isBookable && teamMember.status === 'ACTIVE',
         createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
         updatedAt: teamMember.updatedAt
           ? new Date(teamMember.updatedAt).toISOString()
           : undefined
       };
+      
+      // Update the cache
+      this.staffByIdCache[staffId] = {
+        data: staffMember,
+        timestamp: Date.now()
+      };
+      
+      return staffMember;
     } catch (error) {
       console.error('Error fetching staff member by ID from Square:', error);
+      
+      // Return cached data if available, even if expired
+      if (this.staffByIdCache[staffId]) {
+        console.log(`Returning expired cached staff data for ${staffId} due to error`);
+        return this.staffByIdCache[staffId].data;
+      }
+      
       return null;
     }
   }
@@ -901,8 +1000,9 @@ export class SquareBookingService {
         throw new Error('Failed to update booking status in Square');
       }
 
-      // Get the updated booking details
       const booking = result.booking;
+
+      // Get the updated booking details
       const segment = booking.appointmentSegments?.[0];
 
       if (!segment) {

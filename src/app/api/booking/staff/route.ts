@@ -4,9 +4,9 @@ import { CognitoJwtVerifier } from "aws-jwt-verify";
 
 // Create a verifier that expects valid ID tokens
 const verifier = CognitoJwtVerifier.create({
-    userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
-    tokenUse: "id",
-    clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
+  userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
+  tokenUse: "id",
+  clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
 });
 
 export async function GET(request: Request) {
@@ -16,19 +16,41 @@ export async function GET(request: Request) {
 
     // Get all staff members from Square
     const staffMembers = await SquareBookingService.getStaffMembers();
-    
+
     // Filter staff by service if serviceId is provided
     let filteredStaff = staffMembers;
     if (serviceId) {
-      filteredStaff = staffMembers.filter(staff => 
-        staff.services.includes(serviceId) && staff.isActive
-      );
+      // Since we don't have a direct service-to-staff mapping in Square,
+      // we'll just return all active staff for now
+      filteredStaff = staffMembers.filter(staff => staff.isActive);
     }
-    
-    return NextResponse.json(filteredStaff);
+
+    // Use a custom replacer function to handle BigInt values
+    const safeJson = JSON.stringify(filteredStaff, (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    });
+
+    return new NextResponse(safeJson, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   } catch (error) {
     console.error('Error fetching staff:', error);
-    return NextResponse.json({ error: 'Failed to fetch staff' }, { status: 500 });
+
+    const errorResponse = {
+      error: error instanceof Error ? error.message : 'Failed to fetch staff'
+    };
+
+    return new NextResponse(JSON.stringify(errorResponse), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 }
 
@@ -50,14 +72,14 @@ export async function POST(request: Request) {
 
     // Return message about using Square Dashboard
     return NextResponse.json(
-      { 
-        message: 'Staff members should be created through the Square Dashboard. They will automatically be available in the API.' 
+      {
+        message: 'Staff members should be created through the Square Dashboard. They will automatically be available in the API.'
       },
       { status: 400 }
     );
   } catch (error: any) {
     console.error('Error creating staff:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error.message || 'Failed to create staff member',
       details: error
     }, { status: 500 });
@@ -82,14 +104,14 @@ export async function PUT(request: Request) {
 
     // Return message about using Square Dashboard
     return NextResponse.json(
-      { 
-        message: 'Staff member updates should be done through the Square Dashboard. The changes will automatically be reflected in the API.' 
+      {
+        message: 'Staff member updates should be done through the Square Dashboard. The changes will automatically be reflected in the API.'
       },
       { status: 400 }
     );
   } catch (error: any) {
     console.error('Error updating staff:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error.message || 'Failed to update staff member',
       details: error
     }, { status: 500 });
@@ -114,14 +136,14 @@ export async function DELETE(request: Request) {
 
     // Return message about using Square Dashboard
     return NextResponse.json(
-      { 
-        message: 'Staff members should be managed through the Square Dashboard. The changes will automatically be reflected in the API.' 
+      {
+        message: 'Staff members should be managed through the Square Dashboard. The changes will automatically be reflected in the API.'
       },
       { status: 400 }
     );
   } catch (error: any) {
     console.error('Error deleting staff:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error.message || 'Failed to delete staff member',
       details: error
     }, { status: 500 });
