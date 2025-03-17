@@ -14,46 +14,46 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const includeInactive = searchParams.get('includeInactive') === 'true';
         const categoryId = searchParams.get('categoryId');
-        
+
         console.log("API Request - categoryId:", categoryId);
-        
+
         // If categoryId is provided, only return services for that category
         if (categoryId) {
             console.log("Fetching services for category:", categoryId);
             const services = await SquareBookingService.getServicesByCategory(categoryId);
             console.log("Services returned:", services.length);
-            
+
             // Filter out inactive services unless explicitly requested
             const filteredServices = services.filter(service => includeInactive || service.isActive);
             console.log("Filtered services:", filteredServices.length);
-            
+
             // Create a safe-to-serialize response with a custom replacer function
             const safeResponse = [{
                 id: categoryId,
                 name: "Services", // This is a placeholder, the front-end already knows the category name
                 services: filteredServices
             }];
-            
+
             // Use a custom replacer function to handle BigInt values
             const safeJson = JSON.stringify(safeResponse, (key, value) => {
                 if (typeof value === 'bigint') {
-                    return Number(value);
+                    return value.toString()
                 }
                 return value;
             });
-            
+
             return new NextResponse(safeJson, {
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
         }
-        
+
         // Otherwise, get all categories but don't load services yet
         console.log("Fetching all categories");
         const categories = await SquareBookingService.getServiceCategories();
         console.log("Categories returned:", categories.length);
-        
+
         // Return categories without services to avoid loading all services at once
         const categoriesWithoutServices = categories.map(category => ({
             ...category,
@@ -63,11 +63,11 @@ export async function GET(request: Request) {
         // Use a custom replacer function to handle BigInt values
         const safeJson = JSON.stringify(categoriesWithoutServices, (key, value) => {
             if (typeof value === 'bigint') {
-                return Number(value);
+                return value.toString()
             }
             return value;
         });
-        
+
         return new NextResponse(safeJson, {
             headers: {
                 'Content-Type': 'application/json'
@@ -78,14 +78,14 @@ export async function GET(request: Request) {
         const errorResponse = {
             error: error.message || 'An error occurred while fetching services'
         };
-        
+
         const safeJson = JSON.stringify(errorResponse, (key, value) => {
             if (typeof value === 'bigint') {
-                return Number(value);
+                return value.toString()
             }
             return value;
         });
-        
+
         return new NextResponse(safeJson, {
             status: 500,
             headers: {
@@ -110,7 +110,7 @@ export async function PUT(request: Request) {
                 { status: 401 }
             );
         }
-        
+
         const token = authHeader.replace('Bearer ', '');
         try {
             await verifier.verify(token);
@@ -124,8 +124,8 @@ export async function PUT(request: Request) {
 
         // Return message about using Square Dashboard
         return NextResponse.json(
-            { 
-                message: 'Service and category updates should be done through the Square Dashboard. The changes will automatically be reflected in the API.' 
+            {
+                message: 'Service and category updates should be done through the Square Dashboard. The changes will automatically be reflected in the API.'
             },
             { status: 400 }
         );
@@ -134,14 +134,14 @@ export async function PUT(request: Request) {
         const errorResponse = {
             error: error.message || 'Failed to update service/category'
         };
-        
+
         const safeJson = JSON.stringify(errorResponse, (key, value) => {
             if (typeof value === 'bigint') {
-                return Number(value);
+                return value.toString()
             }
             return value;
         });
-        
+
         return new NextResponse(safeJson, {
             status: 500,
             headers: {
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
                 { status: 401 }
             );
         }
-        
+
         const token = authHeader.replace('Bearer ', '');
         try {
             await verifier.verify(token);
@@ -175,8 +175,8 @@ export async function POST(request: Request) {
 
         // Return message about using Square Dashboard
         return NextResponse.json(
-            { 
-                message: 'Services and categories should be created through the Square Dashboard. They will automatically be available in the API.' 
+            {
+                message: 'Services and categories should be created through the Square Dashboard. They will automatically be available in the API.'
             },
             { status: 400 }
         );
@@ -185,14 +185,14 @@ export async function POST(request: Request) {
         const errorResponse = {
             error: error.message || 'Failed to create service'
         };
-        
+
         const safeJson = JSON.stringify(errorResponse, (key, value) => {
             if (typeof value === 'bigint') {
-                return Number(value);
+                return value.toString();
             }
             return value;
         });
-        
+
         return new NextResponse(safeJson, {
             status: 500,
             headers: {
@@ -212,7 +212,7 @@ export async function DELETE(request: Request) {
                 { status: 401 }
             );
         }
-        
+
         const token = authHeader.replace('Bearer ', '');
         try {
             await verifier.verify(token);
@@ -226,8 +226,8 @@ export async function DELETE(request: Request) {
 
         // Return message about using Square Dashboard
         return NextResponse.json(
-            { 
-                message: 'Services should be deleted through the Square Dashboard. The changes will automatically be reflected in the API.' 
+            {
+                message: 'Services should be deleted through the Square Dashboard. The changes will automatically be reflected in the API.'
             },
             { status: 400 }
         );
@@ -236,14 +236,14 @@ export async function DELETE(request: Request) {
         const errorResponse = {
             error: error.message || 'Failed to delete service'
         };
-        
+
         const safeJson = JSON.stringify(errorResponse, (key, value) => {
             if (typeof value === 'bigint') {
-                return Number(value);
+                return value.toString();
             }
             return value;
         });
-        
+
         return new NextResponse(safeJson, {
             status: 500,
             headers: {

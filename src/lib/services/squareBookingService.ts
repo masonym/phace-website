@@ -104,12 +104,22 @@ export class SquareBookingService {
    */
   private static safeNumber(value: any): number {
     if (typeof value === 'bigint') {
-      return Number(value);
+      return Number(value)
     }
     if (typeof value === 'number') {
       return value;
     }
     return 0;
+  }
+
+  /**
+   * Helper function to safely stringify objects with BigInt values
+   * @param obj The object to stringify
+   */
+  private static safeStringify(obj: any): string {
+    return JSON.stringify(obj, (key, value) => 
+      typeof value === 'bigint' ? value.toString() : value
+    );
   }
 
   /**
@@ -247,7 +257,7 @@ export class SquareBookingService {
   static async getServicesByCategory(categoryId: string, forceRefresh = false): Promise<Service[]> {
     try {
       console.log(`getServicesByCategory called for ${categoryId}, forceRefresh: ${forceRefresh}`);
-      
+
       // Check if we have a cached version that's less than 5 minutes old
       const now = Date.now();
       const cacheEntry = this.servicesByCategory[categoryId];
@@ -268,7 +278,9 @@ export class SquareBookingService {
       });
 
       console.log(`Square API returned ${result.items?.length || 0} items for category ${categoryId}`);
-      console.log('Raw result:', JSON.stringify(result));
+      
+      // Use a custom replacer function to handle BigInt values in logging
+      console.log('Raw result:', this.safeStringify(result));
 
       if (!result.items) {
         console.log(`No items found for category ${categoryId}, returning empty array`);
@@ -279,26 +291,21 @@ export class SquareBookingService {
       // Map Square catalog items to our Service format
       const services = result.items.map(item => {
         try {
-          console.log('Processing item:', JSON.stringify(item, (key, value) => 
-            typeof value === 'bigint' ? Number(value) : value
-          ));
-          
+          console.log('Processing item:', this.safeStringify(item));
+
           // Find the first variation that has appointment data
           const variations = item.itemData?.variations || [];
-          console.log('Variations:', JSON.stringify(variations, (key, value) => 
-            typeof value === 'bigint' ? Number(value) : value
-          ));
-          
-          const variation = variations.find(v => 
+          console.log('Variations:', this.safeStringify(variations));
+
+          const variation = variations.find(v =>
             v.itemVariationData?.serviceDuration !== undefined
           ) || variations[0];
-          
-          console.log('Selected variation:', JSON.stringify(variation, (key, value) => 
-            typeof value === 'bigint' ? Number(value) : value
-          ));
+
+          console.log('Selected variation:', this.safeStringify(variation));
 
           const price = variation?.itemVariationData?.priceMoney?.amount || 0;
           const duration = variation?.itemVariationData?.serviceDuration || 0;
+          const categoryId = item.itemData?.categoryId || '';
 
           const service = {
             id: item.id!,
@@ -311,8 +318,8 @@ export class SquareBookingService {
             isActive: true,
             updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined
           };
-          
-          console.log(`Mapped service: ${JSON.stringify(service)}`);
+
+          console.log(`Mapped service: ${this.safeStringify(service)}`);
           return service;
         } catch (err) {
           console.error('Error mapping service item:', err);
@@ -330,7 +337,7 @@ export class SquareBookingService {
           };
         }
       });
-      
+
       console.log(`Mapped ${services.length} services for category ${categoryId}`);
 
       // Update the cache
@@ -678,7 +685,7 @@ export class SquareBookingService {
           ],
           customerId,
           sellerNote: params.notes || '',
-          customerNote: JSON.stringify(params.consentFormResponses || [])
+          customerNote: this.safeStringify(params.consentFormResponses || [])
         },
         idempotencyKey: randomUUID()
       });

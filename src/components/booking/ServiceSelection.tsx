@@ -46,14 +46,14 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
       if (!response.ok) throw new Error('Failed to fetch services');
       const data = await response.json();
       console.log("Services data:", data);
-      
+
       if (data && data.length > 0 && Array.isArray(data[0].services)) {
         console.log("Setting services:", data[0].services.length);
         console.log("Service details:", JSON.stringify(data[0].services));
         setServices(data[0].services);
       } else {
         console.error("No services data returned or empty array");
-        
+
         // Create dummy services for testing if no services are returned
         if (process.env.NODE_ENV === 'development') {
           console.log("Creating dummy services for development");
@@ -99,12 +99,12 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
       if (!response.ok) throw new Error('Failed to fetch categories');
       const data = await response.json();
       console.log("Categories data:", data);
-      
+
       // Only show active categories if the isActive property exists
-      const activeCategories = data.filter((category: any) => 
+      const activeCategories = data.filter((category: any) =>
         category.isActive !== false // Consider undefined or true as active
       );
-      
+
       console.log("Active categories:", activeCategories.length);
       console.log("Active categories data:", JSON.stringify(activeCategories));
       setCategories(activeCategories);
@@ -136,7 +136,7 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
       } else {
         setSelectedCategoryName("Selected Category");
       }
-      
+
       fetchServicesForCategory(categoryId);
     }
   }, [mode, categoryId, categories]);
@@ -165,7 +165,7 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
           <strong className="font-bold">Error:</strong>
           <span className="block sm:inline"> {error}</span>
-          <button 
+          <button
             className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
             onClick={() => mode === 'category' ? fetchCategories() : categoryId && fetchServicesForCategory(categoryId)}
           >
@@ -173,7 +173,7 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {mode === 'category' && categories.length > 0 ? (
             categories.map((category) => (
               <div
@@ -208,35 +208,39 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
             services.map((service) => (
               <div
                 key={service.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform duration-200 hover:scale-105"
+                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105"
                 onClick={() => onSelect(service)}
               >
-                {service.imageUrl ? (
-                  <div className="h-48 overflow-hidden">
-                    <Image
-                      src={service.imageUrl}
-                      alt={service.name}
-                      width={400}
-                      height={300}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-48 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-500">No Image</span>
-                  </div>
-                )}
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
-                  {service.description && (
-                    <p className="text-gray-600 mb-2">{service.description}</p>
+                <div className="">
+                  {service.imageUrl ? (
+                    <div className="h-48 overflow-hidden">
+                      <Image
+                        src={service.imageUrl}
+                        alt={service.name}
+                        width={400}
+                        height={300}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-48 bg-gray-200 flex items-center justify-center">
+                      <span className="text-gray-500">No Image</span>
+                    </div>
                   )}
+                  <div className="p-4">
+                    <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
+                    {service.description && (
+                      <p className="text-gray-600 mb-2">{service.description}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4">
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-primary font-bold">
                       ${((service.price || 0) / 100).toFixed(2)}
                     </span>
                     <span className="text-gray-500">
-                      {service.duration || 0} min
+                      {(service.duration / 60000) || 0} min
                     </span>
                   </div>
                 </div>
@@ -245,7 +249,7 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
           ) : (
             <div className="col-span-3 text-center py-10">
               <p className="text-xl text-gray-600">
-                {mode === 'category' 
+                {mode === 'category'
                   ? 'No service categories found. Please check back later.'
                   : 'No services found in this category. Please select a different category.'}
               </p>

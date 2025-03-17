@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/components/providers/CartProvider';
-import { loadStripe } from '@stripe/stripe-js';
+import { PaymentForm, CreditCard } from 'react-square-web-payments-sdk';
 import Image from 'next/image';
 
 interface ShippingAddress {
@@ -15,13 +15,13 @@ interface ShippingAddress {
     country: string;
 }
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-
 export default function CheckoutPage() {
     const { cart, getCartTotal, clearCart } = useCartContext();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [applicationId, setApplicationId] = useState('');
+    const [locationId, setLocationId] = useState('');
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
         name: '',
         street: '',
@@ -35,6 +35,14 @@ export default function CheckoutPage() {
         if (cart.length === 0) {
             router.push('/store');
         }
+        
+        // Get Square configuration
+        const fetchSquareConfig = async () => {
+            setApplicationId(process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID || '');
+            setLocationId(process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || '');
+        };
+        
+        fetchSquareConfig();
     }, [cart, router]);
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,19 +52,19 @@ export default function CheckoutPage() {
         });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleCardTokenizeResponseReceived = async (token: any) => {
         setLoading(true);
         setError('');
 
         try {
-            // Create payment intent
-            const response = await fetch('/api/create-payment-intent', {
+            // Process payment with Square
+            const response = await fetch('/api/square-payment', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    sourceId: token.token,
                     amount: getCartTotal(),
                     items: cart,
                     shippingAddress,
@@ -64,33 +72,31 @@ export default function CheckoutPage() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to create payment intent');
+                throw new Error('Failed to process payment');
             }
 
-            const { clientSecret } = await response.json();
-
-            // Load Stripe
-            const stripe = await stripePromise;
-            if (!stripe) throw new Error('Failed to load Stripe');
-
-            // Confirm payment
-            const { error: stripeError } = await stripe.confirmPayment({
-                // elements: {
-                //     appearance: {
-                //         theme: 'stripe',
-                //     },
-                // },
-                confirmParams: {
-                    return_url: `${window.location.origin}/checkout/success`,
+            const { payment } = await response.json();
+            
+            // Create order in your system
+            const orderResponse = await fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
                 },
-                clientSecret,
+                body: JSON.stringify({
+                    items: cart,
+                    total: getCartTotal(),
+                    shippingAddress,
+                    paymentId: payment.id,
+                }),
             });
 
-            if (stripeError) {
-                throw stripeError;
+            if (!orderResponse.ok) {
+                throw new Error('Failed to create order');
             }
 
-            // Clear cart and redirect to success page (this will only run if payment fails silently)
+            // Clear cart and redirect to success page
             clearCart();
             router.push('/checkout/success');
         } catch (err: any) {
@@ -103,12 +109,20 @@ export default function CheckoutPage() {
         return null; // Will redirect in useEffect
     }
 
+    if (!applicationId || !locationId) {
+        return (
+            <div className="container mx-auto px-4 py-8 pt-32">
+                <p>Loading payment system...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto px-4 py-8 pt-32">
             <h1 className="text-2xl font-bold mb-8">Checkout</h1>
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="lg:w-2/3">
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-6">
                         {error && (
                             <div className="bg-red-50 text-red-700 p-4 rounded">
                                 {error}
@@ -184,17 +198,48 @@ export default function CheckoutPage() {
                             <h2 className="text-xl font-semibold mb-4">
                                 Payment Information
                             </h2>
-                            <div id="payment-element"></div>
+                            <PaymentForm
+                                applicationId={applicationId}
+                                locationId={locationId}
+                                cardTokenizeResponseReceived={handleCardTokenizeResponseReceived}
+                                createVerificationDetails={() => ({
+                                    amount: String(getCartTotal()),
+                                    currencyCode: 'CAD',
+                                    intent: 'CHARGE',
+                                    billingContact: {
+                                        familyName: shippingAddress.name.split(' ').slice(1).join(' '),
+                                        givenName: shippingAddress.name.split(' ')[0],
+                                        email: '',
+                                        country: shippingAddress.country,
+                                        city: shippingAddress.city,
+                                        addressLines: [shippingAddress.street],
+                                        postalCode: shippingAddress.zipCode,
+                                    }
+                                })}
+                            >
+                                <CreditCard 
+                                    buttonProps={{
+                                        isLoading: loading,
+                                        css: {
+                                            backgroundColor: '#000',
+                                            color: '#fff',
+                                            '&:hover': {
+                                                backgroundColor: '#333',
+                                            },
+                                            '&:disabled': {
+                                                opacity: 0.5,
+                                                cursor: 'not-allowed',
+                                            },
+                                            width: '100%',
+                                            padding: '0.75rem',
+                                            borderRadius: '0.375rem',
+                                            marginTop: '1rem',
+                                        }
+                                    }}
+                                />
+                            </PaymentForm>
                         </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-black text-white py-3 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? 'Processing...' : `Pay C$${getCartTotal().toFixed(2)}`}
-                        </button>
-                    </form>
+                    </div>
                 </div>
 
                 <div className="lg:w-1/3">

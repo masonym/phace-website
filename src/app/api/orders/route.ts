@@ -22,7 +22,9 @@ export async function POST(request: Request) {
         const order = await OrderService.createOrder({
             userId,
             ...orderData,
-            status: 'pending'
+            paymentProcessor: 'square',
+            paymentId: orderData.paymentId,
+            status: 'paid'
         });
 
         return NextResponse.json(order);
