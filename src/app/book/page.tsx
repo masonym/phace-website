@@ -95,6 +95,7 @@ export default function BookingPage() {
               <ServiceSelection
                 mode="category"
                 onSelect={(category) => {
+                  console.log("Selected category:", category);
                   updateBookingData({
                     categoryId: category.id,
                   });
@@ -107,6 +108,7 @@ export default function BookingPage() {
                 mode="service"
                 categoryId={bookingData.categoryId}
                 onSelect={(service) => {
+                  console.log("Selected service:", service);
                   updateBookingData({
                     serviceId: service.id,
                     serviceName: service.name,
@@ -120,6 +122,7 @@ export default function BookingPage() {
               <StaffSelection
                 serviceId={bookingData.serviceId!}
                 onSelect={(staff) => {
+                  console.log("Selected staff:", staff);
                   updateBookingData({
                     staffId: staff.id,
                     staffName: staff.name,
@@ -133,6 +136,7 @@ export default function BookingPage() {
               <AddonSelection
                 serviceId={bookingData.serviceId!}
                 onSelect={(addons) => {
+                  console.log("Selected addons:", addons);
                   updateBookingData({ addons });
                   goToNextStep();
                 }}
@@ -145,6 +149,7 @@ export default function BookingPage() {
                 staffId={bookingData.staffId!}
                 addons={bookingData.addons || []}
                 onSelect={(dateTime) => {
+                  console.log("Selected datetime:", dateTime);
                   updateBookingData({ dateTime });
                   goToNextStep();
                 }}

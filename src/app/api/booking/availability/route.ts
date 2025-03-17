@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 import { addMinutes, parseISO, format, eachMinuteOfInterval } from 'date-fns';
 
 export async function GET(request: Request) {
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
         }
 
         // Get service details to know duration
-        const service = await BookingService.getServiceById(serviceId);
+        const service = await SquareBookingService.getServiceById(serviceId);
         if (!service) {
             return NextResponse.json(
                 { error: 'Service not found' },
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         // Calculate total duration including addons
         let totalDuration = parseInt(service.duration.toString(), 10);
         if (addons.length > 0) {
-            const addonDetails = await BookingService.getAddonsByIds(addons);
+            const addonDetails = await SquareBookingService.getAddonsByIds(addons);
             for (const addon of addonDetails) {
                 if (addon) {
                     totalDuration += parseInt(addon.duration.toString(), 10);
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
         const endOfDay = `${date}T23:59:59`;
         
         // Get existing appointments
-        const appointments = await BookingService.getStaffAppointments(
+        const appointments = await SquareBookingService.getStaffAppointments(
             staffId,
             startOfDay,
             endOfDay
@@ -50,7 +50,21 @@ export async function GET(request: Request) {
 
         // Get staff's default availability for this day of week
         const dayOfWeek = parseISO(date).getDay();
-        const staffAvailability = await BookingService.getStaffAvailability(staffId, dayOfWeek);
+        
+        // Get staff member to access their availability
+        const staffMember = await SquareBookingService.getStaffById(staffId);
+        
+        if (!staffMember) {
+            return NextResponse.json(
+                { error: 'Staff member not found' },
+                { status: 404 }
+            );
+        }
+        
+        // Find availability for this day of week
+        const staffAvailability = staffMember.defaultAvailability.find(
+            avail => avail.dayOfWeek === dayOfWeek
+        );
 
         if (!staffAvailability) {
             return NextResponse.json({
@@ -59,13 +73,6 @@ export async function GET(request: Request) {
                 staffAvailable: false
             });
         }
-
-        // Get blocked times
-        const blockedTimes = await BookingService.getBlockedTimes(
-            staffId,
-            startOfDay,
-            endOfDay
-        );
 
         // Generate all possible time slots based on total duration
         const availableTimeSlots = [];
@@ -102,23 +109,17 @@ export async function GET(request: Request) {
                 );
             });
 
-            // Check if slot is in blocked time
-            const isBlocked = blockedTimes.some(block => {
-                const blockStart = new Date(block.startTime);
-                const blockEnd = new Date(block.endTime);
-                return (
-                    // Check if our slot starts during a blocked time
-                    (slotStart >= blockStart && slotStart < blockEnd) ||
-                    // Check if our slot ends during a blocked time
-                    (slotEnd > blockStart && slotEnd <= blockEnd) ||
-                    // Check if our slot completely encompasses a blocked time
-                    (slotStart <= blockStart && slotEnd >= blockEnd)
-                );
-            });
+            // For Square, we'll directly check if the slot is available
+            // instead of checking blocked times separately
+            const isAvailable = await SquareBookingService.checkTimeSlotAvailability(
+                staffId,
+                format(slotStart, "yyyy-MM-dd'T'HH:mm:ss"),
+                format(slotEnd, "yyyy-MM-dd'T'HH:mm:ss")
+            );
 
             if (hasConflict) hasConflicts = true;
 
-            if (!hasConflict && !isBlocked) {
+            if (!hasConflict && isAvailable) {
                 availableTimeSlots.push({
                     startTime: format(slotStart, "yyyy-MM-dd'T'HH:mm:ss"),
                     endTime: format(addMinutes(slotStart, totalDuration), "yyyy-MM-dd'T'HH:mm:ss"),

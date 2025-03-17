@@ -9,7 +9,7 @@ interface Service {
   description: string;
   duration: number;
   price: number;
-  image?: string;
+  imageUrl?: string;
   categoryId: string;
   isActive: boolean;
 }
@@ -17,8 +17,9 @@ interface Service {
 interface Category {
   id: string;
   name: string;
-  description: string;
-  services: Service[];
+  description?: string;
+  services?: Service[];
+  imageUrl?: string;
   isActive: boolean;
 }
 
@@ -31,138 +32,238 @@ interface Props {
 
 export default function ServiceSelection({ mode, categoryId, onSelect, onBack }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string>('');
+  const [categoriesLoaded, setCategoriesLoaded] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const response = await fetch('/api/booking/services');
-        if (!response.ok) throw new Error('Failed to fetch services');
-        const data = await response.json();
+  const fetchServicesForCategory = async (catId: string) => {
+    try {
+      setLoading(true);
+      console.log("Fetching services for category:", catId);
+      const response = await fetch(`/api/booking/services?categoryId=${encodeURIComponent(catId)}`);
+      if (!response.ok) throw new Error('Failed to fetch services');
+      const data = await response.json();
+      console.log("Services data:", data);
+      
+      if (data && data.length > 0 && Array.isArray(data[0].services)) {
+        console.log("Setting services:", data[0].services.length);
+        console.log("Service details:", JSON.stringify(data[0].services));
+        setServices(data[0].services);
+      } else {
+        console.error("No services data returned or empty array");
         
-        // Only show categories that have active services
-        const categoriesWithServices = data.filter((category: { isActive: any; services: string | any[]; }) => 
-          category.isActive && category.services.length > 0
-        );
-        
-        setCategories(categoriesWithServices);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        // Create dummy services for testing if no services are returned
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Creating dummy services for development");
+          setServices([
+            {
+              id: 'dummy-1',
+              categoryId: catId,
+              name: 'Sample Service 1',
+              description: 'This is a sample service for testing',
+              price: 9900,
+              duration: 60,
+              imageUrl: undefined,
+              isActive: true
+            },
+            {
+              id: 'dummy-2',
+              categoryId: catId,
+              name: 'Sample Service 2',
+              description: 'Another sample service for testing',
+              price: 14900,
+              duration: 90,
+              imageUrl: undefined,
+              isActive: true
+            }
+          ]);
+        } else {
+          setServices([]);
+        }
       }
-    };
+    } catch (err: any) {
+      console.error("Error fetching services:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchServices();
-  }, []);
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      console.log("Fetching categories");
+      const response = await fetch('/api/booking/services');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      const data = await response.json();
+      console.log("Categories data:", data);
+      
+      // Only show active categories if the isActive property exists
+      const activeCategories = data.filter((category: any) => 
+        category.isActive !== false // Consider undefined or true as active
+      );
+      
+      console.log("Active categories:", activeCategories.length);
+      console.log("Active categories data:", JSON.stringify(activeCategories));
+      setCategories(activeCategories);
+      setCategoriesLoaded(true);
+    } catch (err: any) {
+      console.error("Error fetching categories:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">Loading services...</div>
-      </div>
-    );
-  }
+  // Fetch categories when in category mode
+  useEffect(() => {
+    if (mode === 'category' && !categoriesLoaded) {
+      fetchCategories();
+    }
+  }, [mode, categoriesLoaded]);
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-red-600">Error: {error}</div>
-      </div>
-    );
-  }
-
-  if (mode === 'category') {
-    return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-4xl font-light text-center mb-2">Select a Category</h1>
-          <p className="text-center text-gray-600 mb-8">
-            Choose the type of service you're looking for
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => onSelect(category)}
-              className="p-6 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow duration-200 text-left"
-            >
-              <h3 className="text-xl font-medium mb-2">{category.name}</h3>
-              <p className="text-gray-600">{category.description}</p>
-              <p className="text-sm text-accent mt-2">{category.services.length} services available</p>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Service selection mode
-  const selectedCategory = categories.find(c => c.id === categoryId);
-  if (!selectedCategory) return null;
+  // Fetch services for a specific category
+  useEffect(() => {
+    // Only fetch services when in service mode and we have a categoryId
+    if (mode === 'service' && categoryId) {
+      console.log("Service mode with categoryId:", categoryId);
+      // Find the selected category name
+      const category = categories.find(c => c.id === categoryId);
+      if (category) {
+        setSelectedCategoryName(category.name);
+      } else {
+        setSelectedCategoryName("Selected Category");
+      }
+      
+      fetchServicesForCategory(categoryId);
+    }
+  }, [mode, categoryId, categories]);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-light text-center mb-2">Select a Service</h1>
-        <p className="text-center text-gray-600 mb-8">
-          Choose from {selectedCategory.name}
-        </p>
-      </div>
-
-      {/* Back Button */}
-      <button
-        onClick={onBack}
-        className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
-      >
-        <svg
-          className="w-5 h-5 mr-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        Back to Categories
-      </button>
-
-      <div className="grid grid-cols-1 gap-6">
-        {selectedCategory.services.map((service) => (
+    <div className="w-full max-w-4xl mx-auto p-6">
+      <div className="mb-6">
+        {mode === 'service' && onBack && (
           <button
-            key={service.id}
-            onClick={() => onSelect(service)}
-            className="p-6 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow duration-200 flex items-center"
+            onClick={onBack}
+            className="flex items-center text-gray-600 hover:text-gray-900"
           >
-            {service.image && (
-              <div className="flex-shrink-0 mr-6">
-                <Image
-                  src={service.image}
-                  alt={service.name}
-                  width={80}
-                  height={80}
-                  className="rounded-lg"
-                />
-              </div>
-            )}
-            <div className="flex-grow">
-              <div className="flex justify-between items-start">
-                <h3 className="text-xl font-medium">{service.name}</h3>
-                <div className="text-accent font-medium">${service.price}</div>
-              </div>
-              <p className="text-gray-600 mt-2">{service.description}</p>
-              <p className="text-sm text-gray-500 mt-2">{service.duration} minutes</p>
-            </div>
+            <span className="mr-2">←</span> Back to Categories
           </button>
-        ))}
+        )}
+        <h2 className="text-2xl font-bold mt-2">
+          {mode === 'category' ? 'Select a Service Category' : `Select a ${selectedCategoryName} Service`}
+        </h2>
       </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline"> {error}</span>
+          <button 
+            className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            onClick={() => mode === 'category' ? fetchCategories() : categoryId && fetchServicesForCategory(categoryId)}
+          >
+            Try Again
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {mode === 'category' && categories.length > 0 ? (
+            categories.map((category) => (
+              <div
+                key={category.id}
+                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform duration-200 hover:scale-105"
+                onClick={() => onSelect(category)}
+              >
+                {category.imageUrl ? (
+                  <div className="h-48 overflow-hidden">
+                    <Image
+                      src={category.imageUrl}
+                      alt={category.name}
+                      width={400}
+                      height={300}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-48 bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-500">No Image</span>
+                  </div>
+                )}
+                <div className="p-4">
+                  <h3 className="text-xl font-semibold mb-2">{category.name}</h3>
+                  {category.description && (
+                    <p className="text-gray-600">{category.description}</p>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : mode === 'service' && services.length > 0 ? (
+            services.map((service) => (
+              <div
+                key={service.id}
+                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform duration-200 hover:scale-105"
+                onClick={() => onSelect(service)}
+              >
+                {service.imageUrl ? (
+                  <div className="h-48 overflow-hidden">
+                    <Image
+                      src={service.imageUrl}
+                      alt={service.name}
+                      width={400}
+                      height={300}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-48 bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-500">No Image</span>
+                  </div>
+                )}
+                <div className="p-4">
+                  <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
+                  {service.description && (
+                    <p className="text-gray-600 mb-2">{service.description}</p>
+                  )}
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-primary font-bold">
+                      ${((service.price || 0) / 100).toFixed(2)}
+                    </span>
+                    <span className="text-gray-500">
+                      {service.duration || 0} min
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-3 text-center py-10">
+              <p className="text-xl text-gray-600">
+                {mode === 'category' 
+                  ? 'No service categories found. Please check back later.'
+                  : 'No services found in this category. Please select a different category.'}
+              </p>
+              <pre className="mt-4 text-left bg-gray-100 p-4 rounded overflow-auto max-w-lg mx-auto text-xs">
+                Debug Info:
+                {JSON.stringify({
+                  mode,
+                  categoryId,
+                  categoriesCount: categories.length,
+                  servicesCount: services.length,
+                  loading,
+                  error
+                }, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

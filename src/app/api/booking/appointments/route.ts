@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 import { parseISO, addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
 import { jwtDecode } from 'jwt-decode';
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         }
 
         // Get service details
-        const service = await BookingService.getServiceById(serviceId);
+        const service = await SquareBookingService.getServiceById(serviceId);
         if (!service) {
             return NextResponse.json(
                 { error: 'Service not found' },
@@ -59,14 +59,14 @@ export async function POST(request: Request) {
 
         // Calculate total duration including addons
         let totalDuration = parseInt(service.duration.toString(), 10);
-        let totalPrice = parseInt(service.price, 10);
+        let totalPrice = parseInt(service.price.toString(), 10);
 
         if (addons.length > 0) {
-            const addonDetails = await BookingService.getAddonsByIds(addons);
+            const addonDetails = await SquareBookingService.getAddonsByIds(addons);
             const validAddons = addonDetails.filter(addon => addon != null);
             for (const addon of validAddons) {
                 totalDuration += parseInt(addon.duration.toString(), 10);
-                totalPrice += parseInt(addon.price);
+                totalPrice += parseInt(addon.price.toString(), 10);
             }
         }
 
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         });
 
         // Check if the time slot is still available
-        const isAvailable = await BookingService.checkTimeSlotAvailability(
+        const isAvailable = await SquareBookingService.checkTimeSlotAvailability(
             staffId,
             startTime,
             endTime.toISOString()
@@ -94,8 +94,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // Create the appointment
-        const appointment = await BookingService.createAppointment({
+        // Create the appointment in Square
+        const appointment = await SquareBookingService.createAppointment({
             clientEmail,
             clientName,
             clientPhone,
@@ -116,16 +116,8 @@ export async function POST(request: Request) {
             consentFormResponses: JSON.stringify(appointment.consentFormResponses, null, 2)
         });
 
-        // Send confirmation email
-        await BookingService.sendAppointmentConfirmation({
-            appointmentId: appointment.id,
-            clientEmail,
-            clientName,
-            serviceName: service.name,
-            startTime,
-            endTime: endTime.toISOString(),
-            staffName: (await BookingService.getStaffById(staffId))?.name || '',
-        });
+        // No need to send confirmation email as Square will handle this
+        // Square sends automatic confirmations based on the seller's settings
 
         return NextResponse.json(appointment);
     } catch (error: any) {
@@ -146,12 +138,12 @@ export async function GET(request: Request) {
         const endDate = searchParams.get('endDate');
 
         if (clientEmail) {
-            const appointments = await BookingService.getClientAppointments(clientEmail);
+            const appointments = await SquareBookingService.getClientAppointments(clientEmail);
             return NextResponse.json(appointments);
         }
 
         if (staffId && startDate && endDate) {
-            const appointments = await BookingService.getStaffAppointments(
+            const appointments = await SquareBookingService.getStaffAppointments(
                 staffId,
                 startDate,
                 endDate
@@ -184,7 +176,7 @@ export async function PUT(request: Request) {
             );
         }
 
-        const appointment = await BookingService.updateAppointmentStatus(appointmentId, status);
+        const appointment = await SquareBookingService.updateAppointmentStatus(appointmentId, status);
         return NextResponse.json(appointment);
     } catch (error: any) {
         console.error('Error updating appointment:', error);

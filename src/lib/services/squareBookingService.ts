@@ -13,6 +13,7 @@ interface ServiceCategory {
   description?: string;
   imageUrl?: string;
   updatedAt?: string;
+  isActive: boolean;
 }
 
 interface Service {
@@ -20,8 +21,8 @@ interface Service {
   categoryId: string;
   name: string;
   description?: string;
-  price: number | bigint;
-  duration: number | bigint;
+  price: number;
+  duration: number;
   imageUrl?: string;
   isActive: boolean;
   updatedAt?: string;
@@ -31,8 +32,8 @@ interface ServiceAddon {
   id: string;
   name: string;
   description?: string;
-  price: number | bigint;
-  duration: number | bigint;
+  price: number;
+  duration: number;
   isActive: boolean;
 }
 
@@ -67,8 +68,8 @@ interface Appointment {
   startTime: string;
   endTime: string;
   status: string;
-  totalPrice: number | bigint;
-  totalDuration: number | bigint;
+  totalPrice: number;
+  totalDuration: number;
   addons?: ServiceAddon[];
   notes?: string;
   consentFormResponses?: any[];
@@ -85,15 +86,32 @@ interface CreateAppointmentParams {
   staffId: string;
   startTime: string;
   endTime: string;
-  totalPrice: number | bigint;
-  totalDuration: number | bigint;
+  totalPrice: number;
+  totalDuration: number;
   addons?: string[];
   notes?: string;
   consentFormResponses?: any[];
   userId?: string;
 }
 
+/**
+ * Service for interacting with Square's Booking API
+ */
 export class SquareBookingService {
+  /**
+   * Helper function to safely convert BigInt values to numbers
+   * @param value The value to convert
+   */
+  private static safeNumber(value: any): number {
+    if (typeof value === 'bigint') {
+      return Number(value);
+    }
+    if (typeof value === 'number') {
+      return value;
+    }
+    return 0;
+  }
+
   /**
    * Helper to get location ID
    */
@@ -156,12 +174,15 @@ export class SquareBookingService {
    */
   static async getServiceCategories(): Promise<ServiceCategory[]> {
     try {
+      console.log("Running getServiceCategories()")
       const locationId = await this.getLocationId();
 
       // Get catalog items that are categories
       const result = await client.catalog.search({
         objectTypes: ['CATEGORY']
       });
+
+      console.log("Result: ", result)
 
       if (!result.objects) {
         return [];
@@ -200,7 +221,9 @@ export class SquareBookingService {
           return {
             id: obj.id!,
             name: category.name!,
+            description: category.description || '',
             imageUrl,
+            isActive: true, // Set all categories to active by default
             updatedAt: obj.updatedAt ? new Date(obj.updatedAt).toISOString() : undefined
           };
         });
@@ -223,16 +246,20 @@ export class SquareBookingService {
    */
   static async getServicesByCategory(categoryId: string, forceRefresh = false): Promise<Service[]> {
     try {
+      console.log(`getServicesByCategory called for ${categoryId}, forceRefresh: ${forceRefresh}`);
+      
       // Check if we have a cached version that's less than 5 minutes old
       const now = Date.now();
       const cacheEntry = this.servicesByCategory[categoryId];
       const cacheValid = cacheEntry && (now - cacheEntry.timestamp < 5 * 60 * 1000); // 5 minutes
-      
+
       if (!forceRefresh && cacheValid) {
+        console.log(`Returning ${cacheEntry.services.length} services from cache for category ${categoryId}`);
         return cacheEntry.services;
       }
-      
+
       const locationId = await this.getLocationId();
+      console.log(`Fetching services from Square API for category ${categoryId}`);
 
       // Get catalog items that are items with the specified category
       const result = await client.catalog.searchItems({
@@ -240,39 +267,77 @@ export class SquareBookingService {
         productTypes: ['APPOINTMENTS_SERVICE']
       });
 
+      console.log(`Square API returned ${result.items?.length || 0} items for category ${categoryId}`);
+      console.log('Raw result:', JSON.stringify(result));
+
       if (!result.items) {
+        console.log(`No items found for category ${categoryId}, returning empty array`);
         this.servicesByCategory[categoryId] = { services: [], timestamp: now };
         return [];
       }
 
       // Map Square catalog items to our Service format
       const services = result.items.map(item => {
-        // Find the first variation that has appointment data
-        const variation = item.itemData?.variations?.find(v =>
-          v.itemVariationData?.serviceDuration !== undefined
-        );
+        try {
+          console.log('Processing item:', JSON.stringify(item, (key, value) => 
+            typeof value === 'bigint' ? Number(value) : value
+          ));
+          
+          // Find the first variation that has appointment data
+          const variations = item.itemData?.variations || [];
+          console.log('Variations:', JSON.stringify(variations, (key, value) => 
+            typeof value === 'bigint' ? Number(value) : value
+          ));
+          
+          const variation = variations.find(v => 
+            v.itemVariationData?.serviceDuration !== undefined
+          ) || variations[0];
+          
+          console.log('Selected variation:', JSON.stringify(variation, (key, value) => 
+            typeof value === 'bigint' ? Number(value) : value
+          ));
 
-        const price = variation?.itemVariationData?.priceMoney?.amount || 0;
-        const duration = variation?.itemVariationData?.serviceDuration || 0;
+          const price = variation?.itemVariationData?.priceMoney?.amount || 0;
+          const duration = variation?.itemVariationData?.serviceDuration || 0;
 
-        return {
-          id: item.id!,
-          categoryId,
-          name: item.itemData?.name || 'Unnamed Service',
-          description: item.itemData?.description,
-          price,
-          duration,
-          imageUrl: item.itemData?.imageUrl,
-          isActive: true,
-          updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined
-        };
+          const service = {
+            id: item.id!,
+            categoryId,
+            name: item.itemData?.name || 'Unnamed Service',
+            description: item.itemData?.description,
+            price: this.safeNumber(price),
+            duration: this.safeNumber(duration),
+            imageUrl: item.itemData?.imageUrl,
+            isActive: true,
+            updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined
+          };
+          
+          console.log(`Mapped service: ${JSON.stringify(service)}`);
+          return service;
+        } catch (err) {
+          console.error('Error mapping service item:', err);
+          // Return a default service object if mapping fails
+          return {
+            id: item.id || `unknown-${Math.random().toString(36).substring(7)}`,
+            categoryId,
+            name: 'Error Loading Service',
+            description: 'There was an error loading this service',
+            price: 0,
+            duration: 0,
+            imageUrl: undefined,
+            isActive: false,
+            updatedAt: undefined
+          };
+        }
       });
       
+      console.log(`Mapped ${services.length} services for category ${categoryId}`);
+
       // Update the cache
       this.servicesByCategory[categoryId] = { services, timestamp: now };
       return services;
     } catch (error) {
-      console.error('Error fetching services by category from Square:', error);
+      console.error(`Error fetching services for category ${categoryId}:`, error);
       return [];
     }
   }
@@ -302,7 +367,7 @@ export class SquareBookingService {
           return cachedService;
         }
       }
-      
+
       // If not in cache, fetch from Square API
       const result = await client.catalog.retrieveCatalogObject(serviceId);
 
@@ -326,13 +391,13 @@ export class SquareBookingService {
         categoryId,
         name: item.itemData?.name || 'Unnamed Service',
         description: item.itemData?.description,
-        price,
-        duration,
+        price: this.safeNumber(price),
+        duration: this.safeNumber(duration),
         imageUrl: item.itemData?.imageUrl,
         isActive: true,
         updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined
       };
-      
+
       // If this service has a category ID and we have a cache for it, add to cache
       if (categoryId && this.servicesByCategory[categoryId]) {
         // Check if service already exists in cache
@@ -345,7 +410,7 @@ export class SquareBookingService {
           this.servicesByCategory[categoryId].services.push(service);
         }
       }
-      
+
       return service;
     } catch (error) {
       console.error('Error fetching service by ID from Square:', error);
@@ -499,8 +564,8 @@ export class SquareBookingService {
             id: obj.id!,
             name: item.name || 'Unnamed Addon',
             description: item.description,
-            price,
-            duration,
+            price: this.safeNumber(price),
+            duration: this.safeNumber(duration),
             isActive: true
           };
         });
