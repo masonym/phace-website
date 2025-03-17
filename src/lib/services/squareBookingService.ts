@@ -102,24 +102,24 @@ export class SquareBookingService {
    * Helper function to safely convert BigInt values to numbers
    * @param value The value to convert
    */
-  private static safeNumber(value: any): number {
+  static safeNumber(value: number | bigint): number {
     if (typeof value === 'bigint') {
-      return Number(value)
+      return Number(value);
     }
-    if (typeof value === 'number') {
-      return value;
-    }
-    return 0;
+    return value;
   }
 
   /**
    * Helper function to safely stringify objects with BigInt values
    * @param obj The object to stringify
    */
-  private static safeStringify(obj: any): string {
-    return JSON.stringify(obj, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    );
+  static safeStringify(obj: any): string {
+    return JSON.stringify(obj, (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    }, 2);
   }
 
   /**
@@ -250,6 +250,11 @@ export class SquareBookingService {
   private static servicesByCategory: Record<string, { services: Service[], timestamp: number }> = {};
 
   /**
+   * Cache expiration time in milliseconds (5 minutes)
+   */
+  private static SERVICES_CACHE_EXPIRATION = 5 * 60 * 1000;
+
+  /**
    * Get services by category
    * @param categoryId The category ID to fetch services for
    * @param forceRefresh Whether to force a refresh from the API instead of using cache
@@ -261,7 +266,7 @@ export class SquareBookingService {
       // Check if we have a cached version that's less than 5 minutes old
       const now = Date.now();
       const cacheEntry = this.servicesByCategory[categoryId];
-      const cacheValid = cacheEntry && (now - cacheEntry.timestamp < 5 * 60 * 1000); // 5 minutes
+      const cacheValid = cacheEntry && (now - cacheEntry.timestamp < this.SERVICES_CACHE_EXPIRATION); // 5 minutes
 
       if (!forceRefresh && cacheValid) {
         console.log(`Returning ${cacheEntry.services.length} services from cache for category ${categoryId}`);
@@ -361,24 +366,52 @@ export class SquareBookingService {
     }
   }
 
+  // Cache for individual services
+  private static serviceByIdCache: {
+    [serviceId: string]: {
+      data: Service;
+      timestamp: number;
+    };
+  } = {};
+
   /**
-   * Get a service by ID
+   * Get a service by ID with caching
    */
   static async getServiceById(serviceId: string): Promise<Service | null> {
     try {
-      // First check if the service is in our cache
+      // Check if we have cached data that's still valid
+      if (
+        this.serviceByIdCache[serviceId] &&
+        Date.now() - this.serviceByIdCache[serviceId].timestamp < this.SERVICES_CACHE_EXPIRATION
+      ) {
+        console.log(`Using cached service data for ${serviceId}`);
+        return this.serviceByIdCache[serviceId].data;
+      }
+
+      // First check if the service is in our category cache
       for (const categoryId in this.servicesByCategory) {
         const cacheEntry = this.servicesByCategory[categoryId];
         const cachedService = cacheEntry.services.find(service => service.id === serviceId);
         if (cachedService) {
+          // Update the individual service cache
+          this.serviceByIdCache[serviceId] = {
+            data: cachedService,
+            timestamp: Date.now()
+          };
+          console.log(`Found service ${serviceId} in category cache`);
           return cachedService;
         }
       }
 
+      console.log(`Fetching fresh service data for ${serviceId} from Square`);
+      
       // If not in cache, fetch from Square API
-      const result = await client.catalog.retrieveCatalogObject(serviceId);
+      const result = await client.catalog.object.get({
+        objectId: serviceId
+      });
 
       if (!result.object || result.object.type !== 'ITEM') {
+        console.log(`No service found with ID ${serviceId}`);
         return null;
       }
 
@@ -405,6 +438,12 @@ export class SquareBookingService {
         updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined
       };
 
+      // Update the individual service cache
+      this.serviceByIdCache[serviceId] = {
+        data: service,
+        timestamp: Date.now()
+      };
+
       // If this service has a category ID and we have a cache for it, add to cache
       if (categoryId && this.servicesByCategory[categoryId]) {
         // Check if service already exists in cache
@@ -421,6 +460,13 @@ export class SquareBookingService {
       return service;
     } catch (error) {
       console.error('Error fetching service by ID from Square:', error);
+      
+      // Return cached data if available, even if expired
+      if (this.serviceByIdCache[serviceId]) {
+        console.log(`Returning expired cached service data for ${serviceId} due to error`);
+        return this.serviceByIdCache[serviceId].data;
+      }
+      
       return null;
     }
   }
@@ -500,12 +546,61 @@ export class SquareBookingService {
         }
         
         // Parse availability from the booking profile
-        const defaultAvailability = profile.bookableAppointmentSegments?.map(segment => ({
-          dayOfWeek: this.convertDayOfWeekToNumber(segment.weekDayAvailable!),
-          startTime: segment.startAt!,
-          endTime: segment.endAt!
-        })) || [];
+        const defaultAvailability: StaffAvailability[] = [];
         
+        if (profile.availabilityPeriods && profile.availabilityPeriods.length > 0) {
+          // Group availability periods by day of week
+          const availabilityByDay = new Map<number, { startTime: string, endTime: string }[]>();
+          
+          for (const period of profile.availabilityPeriods) {
+            if (period.dayOfWeek !== undefined && period.startAt && period.endAt) {
+              const day = period.dayOfWeek;
+              if (!availabilityByDay.has(day)) {
+                availabilityByDay.set(day, []);
+              }
+              availabilityByDay.get(day)?.push({
+                startTime: period.startAt,
+                endTime: period.endAt
+              });
+            }
+          }
+          
+          // For each day, find the earliest start time and latest end time
+          for (const [day, periods] of availabilityByDay.entries()) {
+            if (periods.length > 0) {
+              let earliestStart = periods[0].startTime;
+              let latestEnd = periods[0].endTime;
+              
+              for (const period of periods) {
+                if (period.startTime < earliestStart) {
+                  earliestStart = period.startTime;
+                }
+                if (period.endTime > latestEnd) {
+                  latestEnd = period.endTime;
+                }
+              }
+              
+              defaultAvailability.push({
+                dayOfWeek: day,
+                startTime: earliestStart,
+                endTime: latestEnd
+              });
+            }
+          }
+        }
+        
+        // If no availability was found, create default availability for all days
+        if (defaultAvailability.length === 0) {
+          console.log(`No availability periods found, creating default availability for all days`);
+          for (let day = 0; day <= 6; day++) {
+            defaultAvailability.push({
+              dayOfWeek: day,
+              startTime: '09:00:00',
+              endTime: '17:00:00'
+            });
+          }
+        }
+
         return {
           id: profile.teamMemberId!,
           name: profile.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
@@ -566,7 +661,7 @@ export class SquareBookingService {
 
       console.log(`Fetching fresh staff data for ${staffId} from Square`);
       
-      // First check if we can get the team member
+      // First check if the team member
       const teamMemberResult = await client.teamMembers.get({
         teamMemberId: staffId
       });
@@ -578,8 +673,8 @@ export class SquareBookingService {
       
       const teamMember = teamMemberResult.teamMember;
 
-      // Then get their booking profile
-      const bookingProfileResult = await client.bookings.teamMemberProfiles.retrieve({
+      // Get the booking profile for this team member
+      const bookingProfileResult = await client.bookings.teamMemberProfiles.get({
         teamMemberId: staffId
       });
       
@@ -589,21 +684,73 @@ export class SquareBookingService {
       }
       
       const profile = bookingProfileResult.teamMemberBookingProfile;
+      
+      console.log(`Retrieved booking profile for ${teamMember.givenName || ''} ${teamMember.familyName || ''}`);
+      console.log(`Availability periods:`, this.safeStringify(profile.availabilityPeriods));
 
       // Parse availability from the booking profile
-      const defaultAvailability = profile.bookableAppointmentSegments?.map(segment => ({
-        dayOfWeek: this.convertDayOfWeekToNumber(segment.weekDayAvailable!),
-        startTime: segment.startAt!,
-        endTime: segment.endAt!
-      })) || [];
+      const defaultAvailability: StaffAvailability[] = [];
+      
+      if (profile.availabilityPeriods && profile.availabilityPeriods.length > 0) {
+        // Group availability periods by day of week
+        const availabilityByDay = new Map<number, { startTime: string, endTime: string }[]>();
+        
+        for (const period of profile.availabilityPeriods) {
+          if (period.dayOfWeek !== undefined && period.startAt && period.endAt) {
+            const day = period.dayOfWeek;
+            if (!availabilityByDay.has(day)) {
+              availabilityByDay.set(day, []);
+            }
+            availabilityByDay.get(day)?.push({
+              startTime: period.startAt,
+              endTime: period.endAt
+            });
+          }
+        }
+        
+        // For each day, find the earliest start time and latest end time
+        for (const [day, periods] of availabilityByDay.entries()) {
+          if (periods.length > 0) {
+            let earliestStart = periods[0].startTime;
+            let latestEnd = periods[0].endTime;
+            
+            for (const period of periods) {
+              if (period.startTime < earliestStart) {
+                earliestStart = period.startTime;
+              }
+              if (period.endTime > latestEnd) {
+                latestEnd = period.endTime;
+              }
+            }
+            
+            defaultAvailability.push({
+              dayOfWeek: day,
+              startTime: earliestStart,
+              endTime: latestEnd
+            });
+          }
+        }
+      }
+      
+      // If no availability was found, create default availability for all days
+      if (defaultAvailability.length === 0) {
+        console.log(`No availability periods found, creating default availability for all days`);
+        for (let day = 0; day <= 6; day++) {
+          defaultAvailability.push({
+            dayOfWeek: day,
+            startTime: '09:00:00',
+            endTime: '17:00:00'
+          });
+        }
+      }
 
-      const staffMember = {
+      const staffMember: StaffMember = {
         id: profile.teamMemberId!,
         name: profile.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
         email: teamMember.emailAddress,
         phone: teamMember.phoneNumber,
-        bio: profile.description,
-        imageUrl: teamMember.profileImageUrl,
+        bio: profile.description || '',
+        imageUrl: teamMember.profileImageUrl || '',
         defaultAvailability,
         isActive: profile.isBookable && teamMember.status === 'ACTIVE',
         createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
@@ -611,7 +758,7 @@ export class SquareBookingService {
           ? new Date(teamMember.updatedAt).toISOString()
           : undefined
       };
-      
+
       // Update the cache
       this.staffByIdCache[staffId] = {
         data: staffMember,
@@ -687,23 +834,47 @@ export class SquareBookingService {
   static async checkTimeSlotAvailability(
     staffId: string,
     startTime: string,
-    endTime: string
+    endTime: string,
+    serviceId?: string
   ): Promise<boolean> {
     try {
+      console.log(`Starting availability check for staff ${staffId} from ${startTime} to ${endTime}`);
       const locationId = await this.getLocationId();
+      console.log(`Using location ID: ${locationId}`);
 
-      // Search for availability
-      const result = await client.bookings.searchAvailability({
+      // Get a valid service ID to use for availability check
+      let validServiceId = serviceId;
+      if (!validServiceId) {
+        // If no specific service ID is provided, get the first service
+        const services = await this.getServices();
+        if (!services || services.length === 0) {
+          console.error('No services found to check availability');
+          return false;
+        }
+        validServiceId = services[0].id;
+      }
+
+      console.log(`Checking availability for staff ${staffId} with service ${validServiceId} from ${startTime} to ${endTime}`);
+
+      // Ensure dates are in RFC 3339 format with timezone (Z for UTC)
+      // If the dates don't already have a timezone, assume they're in UTC
+      const formattedStartTime = startTime.endsWith('Z') ? startTime : `${startTime}Z`;
+      const formattedEndTime = endTime.endsWith('Z') ? endTime : `${endTime}Z`;
+
+      console.log(`Formatted times: ${formattedStartTime} to ${formattedEndTime}`);
+
+      // Construct the request body
+      const requestBody = {
         query: {
           filter: {
             startAtRange: {
-              startAt: startTime,
-              endAt: endTime
+              startAt: formattedStartTime,
+              endAt: formattedEndTime
             },
             locationId,
             segmentFilters: [
               {
-                serviceVariationId: "ANY_SERVICE",
+                serviceVariationId: validServiceId,
                 teamMemberIdFilter: {
                   any: [staffId]
                 }
@@ -711,13 +882,119 @@ export class SquareBookingService {
             ]
           }
         }
+      };
+      
+      console.log('SearchAvailability request:', this.safeStringify(requestBody));
+
+      // Search for availability
+      const result = await client.bookings.availability.search(requestBody);
+
+      console.log('Availability search result:', this.safeStringify(result));
+
+      // If we're checking for a full day (24+ hours), then we just need to know if any slots are available
+      const isFullDayCheck = new Date(endTime).getTime() - new Date(startTime).getTime() >= 24 * 60 * 60 * 1000;
+      
+      if (isFullDayCheck) {
+        const hasAvailability = (result.availabilities?.length || 0) > 0;
+        console.log(`Full day availability check result: ${hasAvailability ? 'AVAILABLE' : 'NOT AVAILABLE'}`);
+        return hasAvailability;
+      }
+      
+      // For specific time slot checks, we need to see if there's an availability that matches our exact time slot
+      const exactSlotAvailable = result.availabilities?.some(availability => {
+        const availStart = new Date(availability.startAt!);
+        return availStart.getTime() === new Date(startTime).getTime();
       });
 
-      // If there are available time slots that match our criteria, the slot is available
-      return (result.availabilities?.length || 0) > 0;
+      console.log(`Exact time slot availability check result: ${exactSlotAvailable ? 'AVAILABLE' : 'NOT AVAILABLE'}`);
+      return !!exactSlotAvailable;
     } catch (error) {
       console.error('Error checking time slot availability in Square:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       return false;
+    }
+  }
+
+  /**
+   * Get available time slots for a staff member and service
+   * @param staffId The ID of the staff member
+   * @param serviceId The ID of the service
+   * @param startTime The start time in ISO format
+   * @param endTime The end time in ISO format
+   * @returns An array of available time slots
+   */
+  static async getAvailableTimeSlots(
+    staffId: string,
+    serviceId: string,
+    startTime: string,
+    endTime: string
+  ): Promise<Array<{ startTime: string; endTime: string; available: boolean }>> {
+    try {
+      console.log(`Getting available time slots for staff ${staffId}, service ${serviceId} from ${startTime} to ${endTime}`);
+      const locationId = await this.getLocationId();
+
+      // Ensure dates are in RFC 3339 format with timezone (Z for UTC)
+      const formattedStartTime = startTime.endsWith('Z') ? startTime : `${startTime}Z`;
+      const formattedEndTime = endTime.endsWith('Z') ? endTime : `${endTime}Z`;
+
+      // Construct the request body for searchAvailability
+      const requestBody = {
+        query: {
+          filter: {
+            startAtRange: {
+              startAt: formattedStartTime,
+              endAt: formattedEndTime
+            },
+            locationId,
+            segmentFilters: [
+              {
+                serviceVariationId: serviceId,
+                teamMemberIdFilter: {
+                  any: [staffId]
+                }
+              }
+            ]
+          }
+        }
+      };
+      
+      console.log('SearchAvailability request:', this.safeStringify(requestBody));
+
+      // Search for availability
+      const result = await client.bookings.availability.search(requestBody);
+
+      console.log('Availability search result:', this.safeStringify(result));
+
+      // Map the availabilities to our format
+      const availableSlots = result.availabilities?.map(availability => {
+        // Extract the start time and calculate end time based on the duration in the first segment
+        const startTime = availability.startAt!;
+        const durationMinutes = availability.appointmentSegments?.[0]?.durationMinutes || 0;
+        
+        // Calculate end time by adding duration to start time
+        const startDate = new Date(startTime);
+        const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+        const endTime = endDate.toISOString();
+
+        return {
+          startTime,
+          endTime,
+          available: true
+        };
+      }) || [];
+
+      console.log(`Found ${availableSlots.length} available slots`);
+      return availableSlots;
+    } catch (error) {
+      console.error('Error getting available time slots from Square:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      return [];
     }
   }
 
