@@ -1,26 +1,38 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { SquareBookingService } from '@/lib/services/squareBookingService';
 import { addMinutes, parseISO, format, eachMinuteOfInterval } from 'date-fns';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const serviceId = searchParams.get('serviceId');
-        const staffId = searchParams.get('staffId');
         const date = searchParams.get('date');
+        const serviceId = searchParams.get('serviceId');
+        const variationId = searchParams.get('variationId');
+        const staffId = searchParams.get('staffId');
         const addons = searchParams.get('addons')?.split(',').filter(Boolean) || [];
 
-        console.log(`Availability request for service: ${serviceId}, staff: ${staffId}, date: ${date}, addons: ${addons.join(',')}`);
+        console.log(`Availability request for service: ${serviceId}, variation: ${variationId}, staff: ${staffId}, date: ${date}, addons: ${addons.join(',')}`);
 
-        if (!serviceId || !staffId || !date) {
-            return NextResponse.json(
-                { error: 'Service ID, Staff ID, and date are required' },
-                { status: 400 }
-            );
+        if (!date) {
+            return NextResponse.json({ error: 'Date is required' }, { status: 400 });
+        }
+
+        if (!serviceId && !variationId) {
+            return NextResponse.json({ error: 'Service ID or Variation ID is required' }, { status: 400 });
+        }
+
+        if (!staffId) {
+            return NextResponse.json({ error: 'Staff ID is required' }, { status: 400 });
         }
 
         // Get service details to know duration
-        const service = await SquareBookingService.getServiceById(serviceId);
+        let service;
+        if (variationId) {
+            service = await SquareBookingService.getServiceById(variationId);
+        } else {
+            service = await SquareBookingService.getServiceById(serviceId);
+        }
+
         if (!service) {
             console.log(`Service not found: ${serviceId}`);
             return NextResponse.json(
@@ -35,7 +47,7 @@ export async function GET(request: Request) {
         let totalDuration = parseInt(service.duration.toString(), 10);
         // Convert from milliseconds to minutes
         totalDuration = Math.ceil(totalDuration / 60000);
-        
+
         if (addons.length > 0) {
             const addonDetails = await SquareBookingService.getAddonsByIds(addons);
             for (const addon of addonDetails) {
@@ -50,7 +62,7 @@ export async function GET(request: Request) {
 
         // Get staff member to access their availability
         const staffMember = await SquareBookingService.getStaffById(staffId);
-        
+
         if (!staffMember) {
             console.log(`Staff member not found: ${staffId}`);
             return NextResponse.json(
@@ -58,13 +70,13 @@ export async function GET(request: Request) {
                 { status: 404 }
             );
         }
-        
+
         console.log(`Staff member found: ${staffMember.name}`);
 
         // Get day of week for the requested date
         const dayOfWeek = parseISO(date).getDay();
         console.log(`Day of week for ${date}: ${dayOfWeek}`);
-        
+
         // Find availability for this day of week in staff's default availability
         const staffAvailability = staffMember.defaultAvailability.find(
             avail => avail.dayOfWeek === dayOfWeek
@@ -74,7 +86,7 @@ export async function GET(request: Request) {
             console.log(`No availability defined for day of week ${dayOfWeek}`);
             return NextResponse.json({
                 slots: [],
-                isFullyBooked: false, 
+                isFullyBooked: false,
                 staffAvailable: false
             });
         }
@@ -88,9 +100,10 @@ export async function GET(request: Request) {
         const endOfDay = format(nextDay, "yyyy-MM-dd'T'23:59:59"); // Changed from '00:00:00' to '23:59:59'
 
         // Get all available slots from Square for the entire day
+        const idToUse = variationId || serviceId;
         const squareAvailability = await SquareBookingService.getAvailableTimeSlots({
             staffId,
-            serviceId,
+            id: idToUse,
             date,
             addonIds: addons.length > 0 ? addons : undefined
         });
@@ -115,7 +128,7 @@ export async function GET(request: Request) {
         const filteredSlots = squareAvailability.filter(slot => {
             const slotStart = new Date(slot.startTime);
             const slotEnd = new Date(slot.endTime);
-            
+
             // Check if the slot is within the staff's working hours
             return slotStart >= dayStart && slotEnd <= dayEnd;
         });

@@ -23,14 +23,18 @@ export async function POST(request: Request) {
 
         const {
             serviceId,
+            serviceName,
+            variationId,
+            variationName,
             staffId,
+            staffName,
             startTime,
             clientName,
             clientEmail,
             clientPhone,
-            addons = [],
-            consentFormResponses = [],
             notes,
+            addons = [],
+            consentFormResponses = []
         } = data;
 
         console.log('Raw request data:', data);
@@ -41,15 +45,34 @@ export async function POST(request: Request) {
         });
 
         // Validate required fields
-        if (!serviceId || !staffId || !startTime || !clientName || !clientEmail || !clientPhone) {
+        if (!variationId && !serviceId) {
             return NextResponse.json(
-                { error: 'Missing required fields' },
+                { error: 'Service ID or Variation ID is required' },
                 { status: 400 }
             );
         }
 
+        if (!staffId) {
+            return NextResponse.json({ error: 'Staff ID is required' }, { status: 400 });
+        }
+
+        if (!startTime) {
+            return NextResponse.json({ error: 'Start time is required' }, { status: 400 });
+        }
+
+        if (!clientName || !clientEmail) {
+            return NextResponse.json(
+                { error: 'Client name and email are required' },
+                { status: 400 }
+            );
+        }
+
+        // Use the variation ID if provided, otherwise use the service ID
+        const idToUse = variationId || serviceId;
+        const nameToUse = variationName ? `${serviceName} - ${variationName}` : serviceName;
+
         // Get service details
-        const service = await SquareBookingService.getServiceById(serviceId);
+        const service = await SquareBookingService.getServiceById(idToUse);
         if (!service) {
             return NextResponse.json(
                 { error: 'Service not found' },
@@ -100,7 +123,8 @@ export async function POST(request: Request) {
             clientName,
             clientPhone,
             staffId,
-            serviceId,
+            serviceId: idToUse,
+            serviceName: nameToUse,
             addons,
             startTime,
             endTime: endTime.toISOString(),
