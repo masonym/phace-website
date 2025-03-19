@@ -32,6 +32,7 @@ interface AvailabilityResponse {
 
 interface DateTimeSelectionProps {
   serviceId: string;
+  variationId?: string;
   staffId: string;
   addons: string[];
   onSelect: (dateTime: string) => void;
@@ -40,6 +41,7 @@ interface DateTimeSelectionProps {
 
 export default function DateTimeSelection({
   serviceId,
+  variationId,
   staffId,
   addons,
   onSelect,
@@ -72,6 +74,7 @@ export default function DateTimeSelection({
           const formattedDate = format(date, 'yyyy-MM-dd');
           const params = new URLSearchParams({
             serviceId,
+            ...(variationId && { variationId }),
             staffId,
             date: formattedDate,
             ...(addons.length > 0 && { addons: addons.join(',') }),
@@ -81,33 +84,38 @@ export default function DateTimeSelection({
           if (!response.ok) return;
 
           const data: AvailabilityResponse = await response.json();
-          if (data.staffAvailable) {
-            if (data.isFullyBooked) {
-              setFullyBookedDates(prev => {
-                const newSet = new Set(prev);
-                newSet.add(formattedDate);
-                return newSet;
-              });
-            } else if (data.slots.length > 0) {
-              setAvailableDates(prev => {
-                const newSet = new Set(prev);
-                newSet.add(formattedDate);
-                return newSet;
-              });
-            }
-          }
+          return { date: formattedDate, data };
         });
 
-        await Promise.all(datePromises);
-      } catch (err) {
-        console.error('Error checking date availability:', err);
+        const results = await Promise.all(datePromises);
+        
+        // Update available and fully booked dates
+        const newAvailableDates = new Set<string>();
+        const newFullyBookedDates = new Set<string>();
+        
+        results.forEach(result => {
+          if (!result) return;
+          
+          const { date, data } = result;
+          
+          if (data.slots.length > 0) {
+            newAvailableDates.add(date);
+          } else if (data.isFullyBooked) {
+            newFullyBookedDates.add(date);
+          }
+        });
+        
+        setAvailableDates(newAvailableDates);
+        setFullyBookedDates(newFullyBookedDates);
+      } catch (error) {
+        console.error('Error checking date availability:', error);
       } finally {
         setCheckingDates(false);
       }
     };
 
     checkDateAvailability(monthStart, monthEnd);
-  }, [currentMonth, serviceId, staffId, addons]);
+  }, [currentMonth, serviceId, variationId, staffId, addons]);
 
   const fetchTimeSlots = async (date: Date) => {
     setLoading(true);
@@ -115,6 +123,7 @@ export default function DateTimeSelection({
     try {
       const searchParams = new URLSearchParams({
         serviceId,
+        ...(variationId && { variationId }),
         staffId,
         date: format(date, 'yyyy-MM-dd'),
         ...(addons.length > 0 && { addons: addons.join(',') }),
@@ -298,6 +307,7 @@ export default function DateTimeSelection({
       ) : (
         <WaitlistForm
           serviceId={serviceId}
+          variationId={variationId}
           staffId={staffId}
           onBack={() => setShowWaitlist(false)}
           onSuccess={() => {

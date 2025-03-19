@@ -3,6 +3,14 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
+interface ServiceVariation {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+}
+
 interface Service {
   id: string;
   name: string;
@@ -12,6 +20,8 @@ interface Service {
   imageUrl?: string;
   categoryId: string;
   isActive: boolean;
+  variationId: string;
+  variations?: ServiceVariation[];
 }
 
 interface Category {
@@ -24,18 +34,21 @@ interface Category {
 }
 
 interface Props {
-  mode: 'category' | 'service';
+  mode: 'category' | 'service' | 'variation';
   categoryId?: string;
+  service?: Service;
   onSelect: (item: any) => void;
   onBack?: () => void;
 }
 
-export default function ServiceSelection({ mode, categoryId, onSelect, onBack }: Props) {
+export default function ServiceSelection({ mode, categoryId, service, onSelect, onBack }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [variations, setVariations] = useState<ServiceVariation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>('');
+  const [selectedServiceName, setSelectedServiceName] = useState<string>('');
   const [categoriesLoaded, setCategoriesLoaded] = useState<boolean>(false);
 
   const fetchServicesForCategory = async (catId: string) => {
@@ -66,7 +79,24 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
               price: 9900,
               duration: 60,
               imageUrl: undefined,
-              isActive: true
+              isActive: true,
+              variationId: 'dummy-var-1',
+              variations: [
+                {
+                  id: 'dummy-var-1',
+                  name: 'Standard',
+                  price: 9900,
+                  duration: 60,
+                  isActive: true
+                },
+                {
+                  id: 'dummy-var-2',
+                  name: 'Premium',
+                  price: 14900,
+                  duration: 90,
+                  isActive: true
+                }
+              ]
             },
             {
               id: 'dummy-2',
@@ -76,7 +106,17 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
               price: 14900,
               duration: 90,
               imageUrl: undefined,
-              isActive: true
+              isActive: true,
+              variationId: 'dummy-var-3',
+              variations: [
+                {
+                  id: 'dummy-var-3',
+                  name: 'Basic',
+                  price: 14900,
+                  duration: 90,
+                  isActive: true
+                }
+              ]
             }
           ]);
         } else {
@@ -141,19 +181,50 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
     }
   }, [mode, categoryId, categories]);
 
+  // Set variations when in variation mode
+  useEffect(() => {
+    if (mode === 'variation' && service) {
+      setSelectedServiceName(service.name);
+      if (service.variations && service.variations.length > 0) {
+        setVariations(service.variations);
+        setLoading(false);
+      } else {
+        // If there are no variations, create a default one based on the service
+        setVariations([{
+          id: service.variationId || service.id,
+          name: 'Standard',
+          price: service.price,
+          duration: service.duration,
+          isActive: true
+        }]);
+        setLoading(false);
+      }
+    }
+  }, [mode, service]);
+
+  const formatDuration = (durationMs: number) => {
+    // Convert from milliseconds to minutes if needed
+    const minutes = durationMs >= 1000 ? durationMs / 60000 : durationMs;
+    return `${minutes} min`;
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
       <div className="mb-6">
-        {mode === 'service' && onBack && (
+        {(mode === 'service' || mode === 'variation') && onBack && (
           <button
             onClick={onBack}
             className="flex items-center text-gray-600 hover:text-gray-900"
           >
-            <span className="mr-2">←</span> Back to Categories
+            <span className="mr-2">←</span> Back to {mode === 'service' ? 'Categories' : 'Services'}
           </button>
         )}
         <h2 className="text-2xl font-bold mt-2">
-          {mode === 'category' ? 'Select a Service Category' : `Select a ${selectedCategoryName} Service`}
+          {mode === 'category' 
+            ? 'Select a Service Category' 
+            : mode === 'service' 
+              ? `Select a ${selectedCategoryName} Service` 
+              : `Select a ${selectedServiceName} Variation`}
         </h2>
       </div>
 
@@ -209,7 +280,29 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
               <div
                 key={service.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105"
-                onClick={() => onSelect(service)}
+                onClick={() => {
+                  // If service has multiple variations, go to variation selection
+                  if (service.variations && service.variations.length > 1) {
+                    onSelect({ type: 'service', service });
+                  } else {
+                    // Otherwise, select the service directly with its default variation
+                    const defaultVariation = service.variations && service.variations.length === 1 
+                      ? service.variations[0] 
+                      : { 
+                          id: service.variationId || service.id, 
+                          name: 'Standard', 
+                          price: service.price, 
+                          duration: service.duration, 
+                          isActive: true 
+                        };
+                    
+                    onSelect({ 
+                      type: 'variation', 
+                      service, 
+                      variation: defaultVariation 
+                    });
+                  }
+                }}
               >
                 <div className="">
                   {service.imageUrl ? (
@@ -232,15 +325,50 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
                     {service.description && (
                       <p className="text-gray-600 mb-2">{service.description}</p>
                     )}
+                    {service.variations && service.variations.length > 1 && (
+                      <p className="text-sm text-primary font-medium">
+                        {service.variations.length} variations available
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="p-4">
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-primary font-bold">
                       ${((service.price || 0) / 100).toFixed(2)}
+                      {service.variations && service.variations.length > 1 && '+'}
                     </span>
                     <span className="text-gray-500">
-                      {(service.duration / 60000) || 0} min
+                      {formatDuration(service.duration)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : mode === 'variation' && variations.length > 0 ? (
+            variations.map((variation) => (
+              <div
+                key={variation.id}
+                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105"
+                onClick={() => onSelect({ 
+                  type: 'variation', 
+                  service, 
+                  variation 
+                })}
+              >
+                <div className="p-4">
+                  <h3 className="text-xl font-semibold mb-2">{variation.name}</h3>
+                  <p className="text-gray-600 mb-2">
+                    {service?.description || ''}
+                  </p>
+                </div>
+                <div className="p-4 border-t border-gray-100">
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-primary font-bold">
+                      ${((variation.price || 0) / 100).toFixed(2)}
+                    </span>
+                    <span className="text-gray-500">
+                      {formatDuration(variation.duration)}
                     </span>
                   </div>
                 </div>
@@ -251,15 +379,19 @@ export default function ServiceSelection({ mode, categoryId, onSelect, onBack }:
               <p className="text-xl text-gray-600">
                 {mode === 'category'
                   ? 'No service categories found. Please check back later.'
-                  : 'No services found in this category. Please select a different category.'}
+                  : mode === 'service'
+                    ? 'No services found in this category. Please select a different category.'
+                    : 'No variations found for this service. Please select a different service.'}
               </p>
               <pre className="mt-4 text-left bg-gray-100 p-4 rounded overflow-auto max-w-lg mx-auto text-xs">
                 Debug Info:
                 {JSON.stringify({
                   mode,
                   categoryId,
+                  service: service?.id,
                   categoriesCount: categories.length,
                   servicesCount: services.length,
+                  variationsCount: variations.length,
                   loading,
                   error
                 }, null, 2)}

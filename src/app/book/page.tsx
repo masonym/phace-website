@@ -14,6 +14,7 @@ import { showToast } from '@/components/ui/Toast';
 type BookingStep = 
   | 'category'
   | 'service'
+  | 'variation'
   | 'staff'
   | 'datetime'
   | 'addons'
@@ -21,10 +22,33 @@ type BookingStep =
   | 'consent'
   | 'summary';
 
+interface ServiceVariation {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  description?: string;
+  duration: number;
+  price: number;
+  imageUrl?: string;
+  categoryId: string;
+  isActive: boolean;
+  variationId: string;
+  variations?: ServiceVariation[];
+}
+
 interface BookingData {
   categoryId?: string;
   serviceId?: string;
   serviceName?: string;
+  variationId?: string;
+  variationName?: string;
   staffId?: string;
   staffName?: string;
   dateTime?: string;
@@ -35,13 +59,15 @@ interface BookingData {
   notes?: string;
   consentForms?: Record<string, any>;
   createAccount?: boolean;
+  service?: Service;
+  variation?: ServiceVariation;
 }
 
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState<BookingStep>('category');
   const [bookingData, setBookingData] = useState<BookingData>({});
 
-  const steps: BookingStep[] = ['category', 'service', 'staff', 'addons', 'datetime', 'client', 'consent', 'summary'];
+  const steps: BookingStep[] = ['category', 'service', 'variation', 'staff', 'addons', 'datetime', 'client', 'consent', 'summary'];
   const currentStepIndex = steps.indexOf(currentStep);
 
   const goToNextStep = () => {
@@ -107,11 +133,43 @@ export default function BookingPage() {
               <ServiceSelection
                 mode="service"
                 categoryId={bookingData.categoryId}
-                onSelect={(service) => {
-                  console.log("Selected service:", service);
+                onSelect={(selection) => {
+                  console.log("Service selection:", selection);
+                  
+                  if (selection.type === 'service') {
+                    // If this is a service with multiple variations, store the service and go to variation selection
+                    updateBookingData({
+                      serviceId: selection.service.id,
+                      serviceName: selection.service.name,
+                      service: selection.service
+                    });
+                    setCurrentStep('variation');
+                  } else if (selection.type === 'variation') {
+                    // If this is a service with only one variation, store both and skip variation selection
+                    updateBookingData({
+                      serviceId: selection.service.id,
+                      serviceName: selection.service.name,
+                      service: selection.service,
+                      variationId: selection.variation.id,
+                      variationName: selection.variation.name,
+                      variation: selection.variation
+                    });
+                    setCurrentStep('staff');
+                  }
+                }}
+                onBack={goToPreviousStep}
+              />
+            )}
+            {currentStep === 'variation' && (
+              <ServiceSelection
+                mode="variation"
+                service={bookingData.service}
+                onSelect={(selection) => {
+                  console.log("Selected variation:", selection);
                   updateBookingData({
-                    serviceId: service.id,
-                    serviceName: service.name,
+                    variationId: selection.variation.id,
+                    variationName: selection.variation.name,
+                    variation: selection.variation
                   });
                   goToNextStep();
                 }}
@@ -146,6 +204,7 @@ export default function BookingPage() {
             {currentStep === 'datetime' && (
               <DateTimeSelection
                 serviceId={bookingData.serviceId!}
+                variationId={bookingData.variationId}
                 staffId={bookingData.staffId!}
                 addons={bookingData.addons || []}
                 onSelect={(dateTime) => {
@@ -235,6 +294,8 @@ export default function BookingPage() {
                     const requestBody = {
                       serviceId: bookingData.serviceId,
                       serviceName: bookingData.serviceName,
+                      variationId: bookingData.variationId,
+                      variationName: bookingData.variationName,
                       staffId: bookingData.staffId,
                       staffName: bookingData.staffName,
                       startTime: bookingData.dateTime,

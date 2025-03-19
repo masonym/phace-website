@@ -1,20 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
+import { showToast } from '@/components/ui/Toast';
 
-interface Addon {
+interface ServiceVariation {
   id: string;
   name: string;
-  description: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  description?: string;
   duration: number;
   price: number;
+  imageUrl?: string;
+  categoryId: string;
+  isActive: boolean;
+  variationId: string;
+  variations?: ServiceVariation[];
 }
 
 interface BookingData {
+  categoryId?: string;
   serviceId?: string;
   serviceName?: string;
-  categoryId?: string;
+  variationId?: string;
+  variationName?: string;
   staffId?: string;
   staffName?: string;
   dateTime?: string;
@@ -22,7 +38,11 @@ interface BookingData {
   clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
+  notes?: string;
   consentForms?: Record<string, any>;
+  createAccount?: boolean;
+  service?: Service;
+  variation?: ServiceVariation;
 }
 
 interface Props {
@@ -32,188 +52,152 @@ interface Props {
 }
 
 export default function BookingSummary({ bookingData, onConfirm, onBack }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [addons, setAddons] = useState<Addon[]>([]);
-
-  useEffect(() => {
-    const fetchAddons = async () => {
-      if (!bookingData.addons?.length) return;
-      try {
-        const response = await fetch(`/api/booking/addons/selected?ids=${bookingData.addons.join(',')}`);
-        if (!response.ok) throw new Error('Failed to fetch selected add-ons');
-        const data = await response.json();
-        setAddons(data);
-      } catch (err: any) {
-        console.error('Error fetching add-ons:', err);
-      }
-    };
-
-    fetchAddons();
-  }, [bookingData.addons]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleConfirm = async () => {
     try {
-      setLoading(true);
-      setError('');
+      setIsSubmitting(true);
       await onConfirm();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      console.error('Error confirming booking:', error);
+      showToast({
+        title: "Booking Error",
+        description: error.message || "There was an error creating your booking. Please try again.",
+        status: "error",
+        duration: 5000,
+      });
+      setIsSubmitting(false);
     }
   };
 
-  const calculateTotalDuration = () => {
-    return addons.reduce((total, addon) => total + addon.duration, 0);
-  };
+  // Format date for display
+  const formattedDate = bookingData.dateTime
+    ? format(new Date(bookingData.dateTime), 'EEEE, MMMM d, yyyy')
+    : 'Not selected';
 
-  const calculateTotalPrice = () => {
-    return addons.reduce((total, addon) => total + addon.price, 0);
-  };
+  // Format time for display
+  const formattedTime = bookingData.dateTime
+    ? format(new Date(bookingData.dateTime), 'h:mm a')
+    : 'Not selected';
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-light text-center mb-2">Review Your Booking</h1>
-        <p className="text-center text-gray-600 mb-8">
-          Please review your appointment details
-        </p>
+    <div className="w-full max-w-4xl mx-auto p-6">
+      <div className="mb-6">
+        <button
+          onClick={onBack}
+          className="flex items-center text-gray-600 hover:text-gray-900"
+        >
+          <span className="mr-2">←</span> Back
+        </button>
+        <h2 className="text-2xl font-bold mt-2">Review Your Booking</h2>
+        <p className="text-gray-600">Please review your booking details before confirming.</p>
       </div>
 
-      {/* Back Button */}
-      <button
-        onClick={onBack}
-        className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
-      >
-        <svg
-          className="w-5 h-5 mr-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        Back to Consent Forms
-      </button>
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-6">
+          <h3 className="text-xl font-semibold mb-4">Booking Summary</h3>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium text-gray-700">Service</h4>
+                <p className="text-gray-900">{bookingData.serviceName || 'Not selected'}</p>
+                {bookingData.variationName && (
+                  <p className="text-sm text-gray-600">
+                    Variation: {bookingData.variationName}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <h4 className="font-medium text-gray-700">Staff</h4>
+                <p className="text-gray-900">{bookingData.staffName || 'Not selected'}</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium text-gray-700">Date</h4>
+                <p className="text-gray-900">{formattedDate}</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium text-gray-700">Time</h4>
+                <p className="text-gray-900">{formattedTime}</p>
+              </div>
+            </div>
+            
+            {bookingData.addons && bookingData.addons.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-700">Add-ons</h4>
+                <ul className="list-disc list-inside text-gray-900">
+                  {bookingData.addons.map((addon, index) => (
+                    <li key={index}>{addon}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium text-gray-700">Client Name</h4>
+                <p className="text-gray-900">{bookingData.clientName || 'Not provided'}</p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium text-gray-700">Contact Information</h4>
+                <p className="text-gray-900">{bookingData.clientEmail || 'No email provided'}</p>
+                <p className="text-gray-900">{bookingData.clientPhone || 'No phone provided'}</p>
+              </div>
+            </div>
+            
+            {bookingData.notes && (
+              <div>
+                <h4 className="font-medium text-gray-700">Notes</h4>
+                <p className="text-gray-900">{bookingData.notes}</p>
+              </div>
+            )}
 
-      <div className="bg-white rounded-xl p-6 shadow-sm space-y-8">
-        {/* Service Details */}
-        <div>
-          <h2 className="text-2xl font-light mb-4">Service Details</h2>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-gray-600">Service</p>
-              <p className="text-base font-medium">{bookingData.serviceName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Provider</p>
-              <p className="text-base font-medium">{bookingData.staffName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Date & Time</p>
-              <p className="text-base font-medium">
-                {bookingData.dateTime && format(new Date(bookingData.dateTime), 'PPpp')}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Add-ons */}
-        {addons.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-light mb-4">Additional Services</h2>
-            <div className="space-y-4">
-              {addons.map((addon) => (
-                <div key={addon.id} className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-base font-medium">{addon.name}</p>
-                      <p className="text-sm text-gray-600">{addon.description}</p>
-                      <p className="text-sm text-gray-600 mt-2">{addon.duration} minutes</p>
-                    </div>
-                    <p className="text-base font-medium">${addon.price}</p>
-                  </div>
-                </div>
-              ))}
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-base font-medium">Additional Time</p>
-                  <p className="text-base font-medium">{calculateTotalDuration()} minutes</p>
-                </div>
-                <div className="flex justify-between items-center mt-2">
-                  <p className="text-base font-medium">Additional Cost</p>
-                  <p className="text-base font-medium">${calculateTotalPrice()}</p>
-                </div>
+            {/* Price information */}
+            <div className="mt-6 border-t border-gray-200 pt-4">
+              <div className="flex justify-between items-center font-medium">
+                <span>Service Price:</span>
+                <span>
+                  ${bookingData.variation 
+                    ? ((bookingData.variation.price || 0) / 100).toFixed(2)
+                    : ((bookingData.service?.price || 0) / 100).toFixed(2)}
+                </span>
+              </div>
+              {/* Add add-on prices here if available */}
+              <div className="flex justify-between items-center font-bold text-lg mt-2">
+                <span>Total:</span>
+                <span>
+                  ${bookingData.variation 
+                    ? ((bookingData.variation.price || 0) / 100).toFixed(2)
+                    : ((bookingData.service?.price || 0) / 100).toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
-        )}
-
-        {/* Client Details */}
-        <div>
-          <h2 className="text-2xl font-light mb-4">Client Details</h2>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-gray-600">Name</p>
-              <p className="text-base font-medium">{bookingData.clientName || 'Not provided'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Email</p>
-              <p className="text-base font-medium">{bookingData.clientEmail || 'Not provided'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Phone</p>
-              <p className="text-base font-medium">{bookingData.clientPhone || 'Not provided'}</p>
-            </div>
+          
+          <div className="mt-8 flex flex-col md:flex-row gap-4">
+            <button
+              onClick={onBack}
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={isSubmitting}
+              className={`px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex-1 ${
+                isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {isSubmitting ? 'Confirming...' : 'Confirm Booking'}
+            </button>
           </div>
         </div>
-
-        {/* Cancellation Policy */}
-        <div className="bg-[#F8E7E1] p-4 rounded-lg">
-          <h3 className="text-lg font-medium mb-3">Cancellation Policy</h3>
-          <div className="text-sm text-gray-700 space-y-2">
-            <p>
-              • We have a 15-minute grace period but cannot guarantee completion of your full service
-              in the remaining time. No refunds will be offered for missed time or shortened service.
-            </p>
-            <p>
-              • After 15 minutes, we will have to cancel and/or reschedule your appointment with a
-              late cancel fee of 50% of your service price.
-            </p>
-            <p>
-              • We require at least 24 hours notice to cancel or rebook your appointment.
-            </p>
-            <p>
-              • Appointments cancelled or rescheduled with less than 24 hours notice will result
-              in a charge of 50% of your service fee.
-            </p>
-          </div>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-            {error}
-          </div>
-        )}
-      </div>
-
-      {/* Confirm Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleConfirm}
-          disabled={loading}
-          className={`bg-accent text-white px-6 py-2 rounded-lg transition-colors ${
-            loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent/90'
-          }`}
-        >
-          {loading ? 'Confirming...' : 'Confirm Booking'}
-        </button>
       </div>
     </div>
   );
