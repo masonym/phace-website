@@ -247,7 +247,7 @@ export class SquareBookingService {
           return {
             id: obj.id!,
             name: category.name!,
-            description: category.description || '',
+            //description: category.description || '',
             imageUrl,
             isActive: true, // Set all categories to active by default
             updatedAt: obj.updatedAt ? new Date(obj.updatedAt).toISOString() : undefined
@@ -444,12 +444,12 @@ export class SquareBookingService {
       }
 
       let service: Service;
-      
+
       // Handle different object types
       if (result.object.type === 'ITEM') {
         // This is a regular service item
         const item = result.object;
-        
+
         // Find the first variation that has appointment data
         const variation = item.itemData?.variations?.find(v =>
           v.itemVariationData?.serviceDuration !== undefined
@@ -481,28 +481,28 @@ export class SquareBookingService {
       } else if (result.object.type === 'ITEM_VARIATION') {
         // This is a variation of a service
         const variation = result.object;
-        
+
         // Get the parent item to get the service details
         const parentId = variation.itemVariationData?.itemId;
         if (!parentId) {
           console.log(`Variation ${serviceId} has no parent item ID`);
           return null;
         }
-        
+
         const parentResult = await client.catalog.object.get({
           objectId: parentId
         });
-        
+
         if (!parentResult.object || parentResult.object.type !== 'ITEM') {
           console.log(`Parent item not found for variation ${serviceId}`);
           return null;
         }
-        
+
         const item = parentResult.object;
         const price = variation.itemVariationData?.priceMoney?.amount || 0;
         const duration = variation.itemVariationData?.serviceDuration || 0;
         const categoryId = item.itemData?.categoryId || '';
-        
+
         service = {
           id: item.id!,
           categoryId,
@@ -612,9 +612,6 @@ export class SquareBookingService {
 
       const teamMembersResult = await client.teamMembers.search({
         query: {
-          filter: {
-            teamMemberIds
-          }
         }
       });
 
@@ -637,60 +634,6 @@ export class SquareBookingService {
         }
 
         // Parse availability from the booking profile
-        const defaultAvailability: StaffAvailability[] = [];
-
-        if (profile.availabilityPeriods && profile.availabilityPeriods.length > 0) {
-          // Group availability periods by day of week
-          const availabilityByDay = new Map<number, { startTime: string, endTime: string }[]>();
-
-          for (const period of profile.availabilityPeriods) {
-            if (period.dayOfWeek !== undefined && period.startAt && period.endAt) {
-              const day = period.dayOfWeek;
-              if (!availabilityByDay.has(day)) {
-                availabilityByDay.set(day, []);
-              }
-              availabilityByDay.get(day)?.push({
-                startTime: period.startAt,
-                endTime: period.endAt
-              });
-            }
-          }
-
-          // For each day, find the earliest start time and latest end time
-          for (const [day, periods] of availabilityByDay.entries()) {
-            if (periods.length > 0) {
-              let earliestStart = periods[0].startTime;
-              let latestEnd = periods[0].endTime;
-
-              for (const period of periods) {
-                if (period.startTime < earliestStart) {
-                  earliestStart = period.startTime;
-                }
-                if (period.endTime > latestEnd) {
-                  latestEnd = period.endTime;
-                }
-              }
-
-              defaultAvailability.push({
-                dayOfWeek: day,
-                startTime: earliestStart,
-                endTime: latestEnd
-              });
-            }
-          }
-        }
-
-        // If no availability was found, create default availability for all days
-        if (defaultAvailability.length === 0) {
-          console.log(`No availability periods found, creating default availability for all days`);
-          for (let day = 0; day <= 6; day++) {
-            defaultAvailability.push({
-              dayOfWeek: day,
-              startTime: '09:00:00',
-              endTime: '17:00:00'
-            });
-          }
-        }
 
         return {
           id: profile.teamMemberId!,
@@ -698,8 +641,6 @@ export class SquareBookingService {
           email: teamMember.emailAddress,
           phone: teamMember.phoneNumber,
           bio: profile.description,
-          imageUrl: teamMember.profileImageUrl,
-          defaultAvailability,
           isActive: profile.isBookable && teamMember.status === 'ACTIVE',
           createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
           updatedAt: teamMember.updatedAt
@@ -1061,7 +1002,7 @@ export class SquareBookingService {
     try {
       // Use id parameter if provided, otherwise use serviceId
       const serviceId = params.id || params.serviceId;
-      
+
       console.log(`Availability request for service: ${serviceId}, variation: ${params.variationId}, staff: ${params.staffId}, date: ${params.date}, addons: ${params.addonIds?.join(', ') || 'none'}`);
 
       // Get the service details to get the variation ID and duration
@@ -1076,7 +1017,7 @@ export class SquareBookingService {
       // Use the variation ID that was explicitly passed in the request parameters if available
       // Otherwise fall back to the variation ID from the service
       let bookableVariationId = params.variationId || service.variationId;
-      
+
       console.log(`Using variation ID: ${bookableVariationId} for availability search`);
 
       // Check if the service variation is bookable
@@ -1178,26 +1119,26 @@ export class SquareBookingService {
       try {
         const requestBody = createSearchRequest(bookableVariationId);
         console.log(`SearchAvailability request:`, JSON.stringify(requestBody, null, 2));
-        
+
         const result = await client.bookings.searchAvailability(requestBody);
         console.log('Response from bookingsApi.searchAvailability:', this.safeStringify(result));
-        
+
         availabilities = result?.availabilities || [];
         console.log(`Retrieved ${availabilities.length} available slots from Square using variation ID ${bookableVariationId}`);
       } catch (err) {
         error = err;
         console.error('Error getting available time slots from Square:', err);
         console.error('Error details:', err.body || err.message);
-        
+
         // If we get a "Service variation not found" error and we have a service ID,
         // try using the service's default variation ID as a fallback
-        if (err.body?.errors && 
-            err.body.errors.some(e => e.detail?.includes('Service variation not found')) && 
-            service.variationId && 
-            bookableVariationId !== service.variationId) {
-          
+        if (err.body?.errors &&
+          err.body.errors.some(e => e.detail?.includes('Service variation not found')) &&
+          service.variationId &&
+          bookableVariationId !== service.variationId) {
+
           console.log(`Trying fallback with service's default variation ID: ${service.variationId}`);
-          
+
           try {
             const fallbackRequestBody = createSearchRequest(service.variationId);
             const fallbackResult = await client.bookings.searchAvailability(fallbackRequestBody);
@@ -1232,15 +1173,15 @@ export class SquareBookingService {
       for (const availability of availabilities) {
         // Parse the start and end times
         const startTime = new Date(availability.startAt!);
-        
+
         // Calculate end time based on service duration
         const endTime = new Date(startTime);
         endTime.setMinutes(endTime.getMinutes() + totalDuration);
-        
+
         // Format the times for display
         const formattedStartTime = startTime.toISOString();
         const formattedEndTime = endTime.toISOString();
-        
+
         // Add to time slots if within staff availability for the day
         const timeString = startTime.toTimeString().substring(0, 8); // HH:MM:SS
         if (this.isTimeWithinRange(timeString, staffAvailability.startTime, staffAvailability.endTime)) {
@@ -1251,7 +1192,7 @@ export class SquareBookingService {
           });
         }
       }
-      
+
       console.log(`Returning ${timeSlots.length} available time slots`);
       return timeSlots;
     } catch (error) {
