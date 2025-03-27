@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  format, 
-  parseISO, 
-  addMonths, 
-  startOfMonth, 
-  endOfMonth, 
+import {
+  format,
+  parseISO,
+  addMonths,
+  startOfMonth,
+  endOfMonth,
   eachDayOfInterval,
   isSameDay,
   startOfWeek,
@@ -70,7 +70,16 @@ export default function DateTimeSelection({
     const checkDateAvailability = async (startDate: Date, endDate: Date) => {
       setCheckingDates(true);
       try {
-        const datePromises = eachDayOfInterval({ start: startDate, end: endDate }).map(async (date) => {
+        // Filter out past dates before making API calls
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to beginning of today
+
+        const datesInRange = eachDayOfInterval({ start: startDate, end: endDate })
+          .filter(date => isAfter(date, today) || isSameDay(date, today));
+
+        console.log(`Checking availability for ${datesInRange.length} dates (filtered out past dates)`);
+
+        const datePromises = datesInRange.map(async (date) => {
           const formattedDate = format(date, 'yyyy-MM-dd');
           const params = new URLSearchParams({
             serviceId,
@@ -88,23 +97,23 @@ export default function DateTimeSelection({
         });
 
         const results = await Promise.all(datePromises);
-        
+
         // Update available and fully booked dates
         const newAvailableDates = new Set<string>();
         const newFullyBookedDates = new Set<string>();
-        
+
         results.forEach(result => {
           if (!result) return;
-          
+
           const { date, data } = result;
-          
+
           if (data.slots.length > 0) {
             newAvailableDates.add(date);
           } else if (data.isFullyBooked) {
             newFullyBookedDates.add(date);
           }
         });
-        
+
         setAvailableDates(newAvailableDates);
         setFullyBookedDates(newFullyBookedDates);
       } catch (error) {
@@ -131,7 +140,7 @@ export default function DateTimeSelection({
 
       const response = await fetch(`/api/booking/availability?${searchParams}`);
       if (!response.ok) throw new Error('Failed to fetch time slots');
-      
+
       const data: AvailabilityResponse = await response.json();
       setAvailableTimeSlots(data.slots);
     } catch (err) {
@@ -148,10 +157,17 @@ export default function DateTimeSelection({
   }, [selectedDate]);
 
   const isDateSelectable = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to beginning of today
+
+    // Check if date is today or in the future
+    const isNotPast = isAfter(date, today) || isSameDay(date, today);
+
     const isCurrentMonth = format(date, 'M') === format(currentMonth, 'M');
-    const isInRange = isAfter(date, new Date()) && isBefore(date, maxDate);
+    const isInRange = isBefore(date, maxDate); // No need to check isAfter since we already check isNotPast
     const dateStr = format(date, 'yyyy-MM-dd');
-    return isCurrentMonth && isInRange && (availableDates.has(dateStr) || fullyBookedDates.has(dateStr));
+
+    return isNotPast && isCurrentMonth && isInRange && (availableDates.has(dateStr) || fullyBookedDates.has(dateStr));
   };
 
   const isDateFullyBooked = (date: Date) => {
@@ -225,6 +241,14 @@ export default function DateTimeSelection({
                   const isSelected = selectedDate && isSameDay(date, selectedDate);
                   const isBooked = isDateFullyBooked(date);
 
+                  // Check if date is in the past
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const isPast = isBefore(date, today) && !isSameDay(date, today);
+
+                  // Check if date is in current month
+                  const isCurrentMonthDate = format(date, 'M') === format(currentMonth, 'M');
+
                   return (
                     <button
                       key={i}
@@ -234,12 +258,13 @@ export default function DateTimeSelection({
                         py-2 rounded-full text-sm
                         ${isSelected ? 'bg-accent text-white' : ''}
                         ${isBooked ? 'bg-orange-100 text-orange-900 hover:bg-orange-200' : ''}
-                        ${
-                          format(date, 'M') !== format(currentMonth, 'M')
-                            ? 'text-gray-300 opacity-0 cursor-default'
+                        ${!isCurrentMonthDate
+                          ? 'text-gray-300 opacity-0 cursor-default'
+                          : isPast
+                            ? 'text-gray-300 line-through cursor-not-allowed'
                             : isSelectable && !isBooked
-                            ? 'hover:bg-accent/10'
-                            : !isSelectable && 'text-gray-300 cursor-not-allowed'
+                              ? 'hover:bg-accent/10'
+                              : !isSelectable && 'text-gray-300 cursor-not-allowed'
                         }
                         ${checkingDates ? 'animate-pulse' : ''}
                       `}
@@ -251,7 +276,7 @@ export default function DateTimeSelection({
               </div>
 
               <div className="mt-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="w-4 h-4 bg-orange-100 rounded-full"></div>
                   <span>Fully Booked - Waitlist Available</span>
                 </div>

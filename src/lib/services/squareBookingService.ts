@@ -216,7 +216,7 @@ export class SquareBookingService {
 
       // Get detailed information about each category with related objects
       const categoryIds = result.objects.map(obj => obj.id!);
-      const detailedResult = await client.catalog.batchGet({
+      const detailedResult = await client.catalogApi.batchRetrieveCatalogObjects({
         objectIds: categoryIds,
         includeRelatedObjects: true
       });
@@ -414,6 +414,8 @@ export class SquareBookingService {
         return this.serviceByIdCache[serviceId].data;
       }
 
+      console.log(`Fetching fresh service data for ${serviceId} from Square`);
+
       // First check if the service is in our category cache
       for (const categoryId in this.servicesByCategory) {
         const cacheEntry = this.servicesByCategory[categoryId];
@@ -559,6 +561,35 @@ export class SquareBookingService {
       }
 
       return null;
+    }
+  }
+
+  /**
+   * Get all services from all categories
+   */
+  static async getServices(): Promise<Service[]> {
+    try {
+      console.log("Getting all services");
+
+      // Get all categories first
+      const categories = await this.getServiceCategories();
+      if (!categories || categories.length === 0) {
+        console.log("No categories found");
+        return [];
+      }
+
+      // Get services for each category and combine them
+      const allServices: Service[] = [];
+      for (const category of categories) {
+        const services = await this.getServicesByCategory(category.id);
+        allServices.push(...services);
+      }
+
+      console.log(`Retrieved ${allServices.length} total services`);
+      return allServices;
+    } catch (error) {
+      console.error("Error getting all services:", error);
+      return [];
     }
   }
 
@@ -718,70 +749,17 @@ export class SquareBookingService {
       const profile = bookingProfileResult.teamMemberBookingProfile;
 
       console.log(`Retrieved booking profile for ${teamMember.givenName || ''} ${teamMember.familyName || ''}`);
-      console.log(`Availability periods:`, this.safeStringify(profile.availabilityPeriods));
 
-      // Parse availability from the booking profile
+      // We don't need to create default availability - we'll use searchAvailability
+      // in the booking flow to check for specific service availability
       const defaultAvailability: StaffAvailability[] = [];
-
-      if (profile.availabilityPeriods && profile.availabilityPeriods.length > 0) {
-        // Group availability periods by day of week
-        const availabilityByDay = new Map<number, { startTime: string, endTime: string }[]>();
-
-        for (const period of profile.availabilityPeriods) {
-          if (period.dayOfWeek !== undefined && period.startAt && period.endAt) {
-            const day = period.dayOfWeek;
-            if (!availabilityByDay.has(day)) {
-              availabilityByDay.set(day, []);
-            }
-            availabilityByDay.get(day)?.push({
-              startTime: period.startAt,
-              endTime: period.endAt
-            });
-          }
-        }
-
-        // For each day, find the earliest start time and latest end time
-        for (const [day, periods] of availabilityByDay.entries()) {
-          if (periods.length > 0) {
-            let earliestStart = periods[0].startTime;
-            let latestEnd = periods[0].endTime;
-
-            for (const period of periods) {
-              if (period.startTime < earliestStart) {
-                earliestStart = period.startTime;
-              }
-              if (period.endTime > latestEnd) {
-                latestEnd = period.endTime;
-              }
-            }
-
-            defaultAvailability.push({
-              dayOfWeek: day,
-              startTime: earliestStart,
-              endTime: latestEnd
-            });
-          }
-        }
-      }
-
-      // If no availability was found, create default availability for all days
-      if (defaultAvailability.length === 0) {
-        console.log(`No availability periods found, creating default availability for all days`);
-        for (let day = 0; day <= 6; day++) {
-          defaultAvailability.push({
-            dayOfWeek: day,
-            startTime: '09:00:00',
-            endTime: '17:00:00'
-          });
-        }
-      }
 
       const staffMember: StaffMember = {
         id: profile.teamMemberId!,
         name: profile.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
         email: teamMember.emailAddress,
         phone: teamMember.phoneNumber,
-        bio: profile.description || '',
+        bio: profile.description,
         imageUrl: teamMember.profileImageUrl || '',
         defaultAvailability,
         isActive: profile.isBookable && teamMember.status === 'ACTIVE',
@@ -821,7 +799,7 @@ export class SquareBookingService {
       }
 
       // Get catalog items by IDs
-      const result = await client.catalog.batchRetrieveCatalogObjects({
+      const result = await client.catalogApi.batchRetrieveCatalogObjects({
         objectIds: addonIds
       });
 
@@ -901,6 +879,16 @@ export class SquareBookingService {
   ): Promise<boolean> {
     try {
       console.log(`Starting availability check for staff ${staffId} from ${startTime} to ${endTime}`);
+
+      // Check if the requested time is in the past
+      const requestedStartTime = new Date(startTime);
+      const now = new Date();
+
+      if (requestedStartTime < now) {
+        console.log(`Requested time ${startTime} is in the past. Returning unavailable.`);
+        return false;
+      }
+
       const locationId = await this.getLocationId();
       console.log(`Using location ID: ${locationId}`);
 
@@ -916,7 +904,15 @@ export class SquareBookingService {
         validServiceId = services[0].id;
       }
 
-      console.log(`Checking availability for staff ${staffId} with service ${validServiceId} from ${startTime} to ${endTime}`);
+      // Get the service to find the variation ID
+      const service = await this.getServiceById(validServiceId);
+      if (!service) {
+        console.error(`Service not found: ${validServiceId}`);
+        return false;
+      }
+
+      const variationId = service.variationId;
+      console.log(`Checking availability for staff ${staffId} with service ${validServiceId} (variation ${variationId}) from ${startTime} to ${endTime}`);
 
       // Ensure dates are in RFC 3339 format with timezone (Z for UTC)
       // If the dates don't already have a timezone, assume they're in UTC
@@ -936,7 +932,7 @@ export class SquareBookingService {
             locationId,
             segmentFilters: [
               {
-                serviceVariationId: validServiceId,
+                serviceVariationId: variationId,
                 teamMemberIdFilter: {
                   any: [staffId]
                 }
@@ -946,10 +942,10 @@ export class SquareBookingService {
         }
       };
 
-      console.log('SearchAvailability request:', this.safeStringify(requestBody));
+      console.log('Availability check request:', JSON.stringify(requestBody, null, 2));
 
-      // Search for availability
-      const result = await client.bookings.availability.search(requestBody);
+      // Make the API call
+      const result = await client.bookings.searchAvailability(requestBody);
 
       console.log('Availability search result:', this.safeStringify(result));
 
@@ -957,13 +953,13 @@ export class SquareBookingService {
       const isFullDayCheck = new Date(endTime).getTime() - new Date(startTime).getTime() >= 24 * 60 * 60 * 1000;
 
       if (isFullDayCheck) {
-        const hasAvailability = (result.availabilities?.length || 0) > 0;
+        const hasAvailability = (result.result?.availabilities?.length || 0) > 0;
         console.log(`Full day availability check result: ${hasAvailability ? 'AVAILABLE' : 'NOT AVAILABLE'}`);
         return hasAvailability;
       }
 
       // For specific time slot checks, we need to see if there's an availability that matches our exact time slot
-      const exactSlotAvailable = result.availabilities?.some(availability => {
+      const exactSlotAvailable = result.result?.availabilities?.some(availability => {
         const availStart = new Date(availability.startAt!);
 
         // Convert times to comparable format (seconds since midnight)
@@ -1000,6 +996,16 @@ export class SquareBookingService {
     addonIds?: string[];
   }): Promise<TimeSlot[]> {
     try {
+      // Check if the requested date is in the past
+      const requestedDate = new Date(params.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to beginning of today
+
+      if (requestedDate < today) {
+        console.log(`Requested date ${params.date} is in the past. Returning empty availability.`);
+        return [];
+      }
+
       // Use id parameter if provided, otherwise use serviceId
       const serviceId = params.id || params.serviceId;
 
@@ -1055,41 +1061,17 @@ export class SquareBookingService {
         console.log(`Using fallback duration: ${totalDuration} minutes`);
       }
 
-      // Get the staff member's availability
-      const staffMember = await this.getStaffById(params.staffId);
-      console.log("Staff member: ", staffMember)
-      if (!staffMember) {
-        console.error(`Staff member not found: ${params.staffId}`);
-        return [];
-      }
-
-      // Get the day of week (0-6, where 0 is Sunday)
-      const date = new Date(params.date);
-      const dayOfWeek = date.getDay();
-      console.log(`Day of week for ${params.date}: ${dayOfWeek}`);
-
-      // Find availability for this day of week
-      const staffAvailability = staffMember.defaultAvailability.find(
-        avail => avail.dayOfWeek === dayOfWeek
-      );
-
-      if (!staffAvailability) {
-        console.error(`No availability defined for day of week ${dayOfWeek}`);
-        return [];
-      }
-
-      console.log(`Staff availability for day ${dayOfWeek}: ${staffAvailability.startTime} - ${staffAvailability.endTime}`);
+      // Get the location ID
+      const locationId = await this.getLocationId();
 
       // Set the start and end time for the availability search (full day in UTC)
+      // Square API requires at least a 24-hour time range for availability searches
       const startDateTime = `${params.date}T00:00:00`;
-      const endDate = new Date(date);
-      endDate.setDate(date.getDate() + 1);
+      const endDate = new Date(params.date);
+      endDate.setDate(endDate.getDate() + 1);
       const endDateTime = `${endDate.toISOString().split('T')[0]}T23:59:59`;
 
       console.log(`Getting available time slots for staff ${params.staffId}, service ${serviceId}, variation ${bookableVariationId} from ${startDateTime} to ${endDateTime}`);
-
-      // Get the location ID
-      const locationId = await this.getLocationId();
 
       // Create the availability search request
       const createSearchRequest = (variationId: string) => ({
@@ -1171,23 +1153,21 @@ export class SquareBookingService {
       const timeSlots: TimeSlot[] = [];
 
       for (const availability of availabilities) {
-        // Parse the start and end times
-        const startTime = new Date(availability.startAt!);
+        if (availability.startAt) {
+          const startTime = new Date(availability.startAt);
+          const endTime = new Date(startTime.getTime());
 
-        // Calculate end time based on service duration
-        const endTime = new Date(startTime);
-        endTime.setMinutes(endTime.getMinutes() + totalDuration);
+          // Add the duration to the start time to get the end time
+          if (availability.durationMinutes) {
+            endTime.setMinutes(endTime.getMinutes() + availability.durationMinutes);
+          } else {
+            // If no duration is provided, use the service duration
+            endTime.setMinutes(endTime.getMinutes() + totalDuration);
+          }
 
-        // Format the times for display
-        const formattedStartTime = startTime.toISOString();
-        const formattedEndTime = endTime.toISOString();
-
-        // Add to time slots if within staff availability for the day
-        const timeString = startTime.toTimeString().substring(0, 8); // HH:MM:SS
-        if (this.isTimeWithinRange(timeString, staffAvailability.startTime, staffAvailability.endTime)) {
           timeSlots.push({
-            startTime: formattedStartTime,
-            endTime: formattedEndTime,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
             available: true
           });
         }
@@ -1196,25 +1176,9 @@ export class SquareBookingService {
       console.log(`Returning ${timeSlots.length} available time slots`);
       return timeSlots;
     } catch (error) {
-      console.error('Error in getAvailableTimeSlots:', error);
+      console.error('Error getting available time slots:', error);
       return [];
     }
-  }
-
-  /**
-   * Check if a time is within a given range
-   * @param time The time to check in format HH:MM:SS
-   * @param startTime The start time in format HH:MM:SS
-   * @param endTime The end time in format HH:MM:SS
-   * @returns True if the time is within the range
-   */
-  static isTimeWithinRange(time: string, startTime: string, endTime: string): boolean {
-    // Convert times to comparable format (seconds since midnight)
-    const timeSeconds = this.timeToSeconds(time);
-    const startSeconds = this.timeToSeconds(startTime);
-    const endSeconds = this.timeToSeconds(endTime);
-
-    return timeSeconds >= startSeconds && timeSeconds <= endSeconds;
   }
 
   /**
