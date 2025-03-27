@@ -216,7 +216,7 @@ export class SquareBookingService {
 
       // Get detailed information about each category with related objects
       const categoryIds = result.objects.map(obj => obj.id!);
-      const detailedResult = await client.catalogApi.batchRetrieveCatalogObjects({
+      const detailedResult = await client.catalog.batchGet({
         objectIds: categoryIds,
         includeRelatedObjects: true
       });
@@ -799,7 +799,7 @@ export class SquareBookingService {
       }
 
       // Get catalog items by IDs
-      const result = await client.catalogApi.batchRetrieveCatalogObjects({
+      const result = await client.catalog.batchGet({
         objectIds: addonIds
       });
 
