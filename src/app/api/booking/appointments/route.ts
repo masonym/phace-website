@@ -155,40 +155,40 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const clientEmail = searchParams.get('clientEmail');
-        const staffId = searchParams.get('staffId');
-        const startDate = searchParams.get('startDate');
-        const endDate = searchParams.get('endDate');
-
-        if (clientEmail) {
-            const appointments = await SquareBookingService.getClientAppointments(clientEmail);
-            return NextResponse.json(appointments);
-        }
-
-        if (staffId && startDate && endDate) {
-            const appointments = await SquareBookingService.getStaffAppointments(
-                staffId,
-                startDate,
-                endDate
-            );
-            return NextResponse.json(appointments);
-        }
-
-        return NextResponse.json(
-            { error: 'Invalid query parameters' },
-            { status: 400 }
-        );
-    } catch (error: any) {
-        console.error('Error fetching appointments:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to fetch appointments' },
-            { status: 500 }
-        );
-    }
-}
+//export async function GET(request: Request) {
+//    try {
+//        const { searchParams } = new URL(request.url);
+//        const clientEmail = searchParams.get('clientEmail');
+//        const staffId = searchParams.get('staffId');
+//        const startDate = searchParams.get('startDate');
+//        const endDate = searchParams.get('endDate');
+//
+//        if (clientEmail) {
+//            const appointments = await SquareBookingService.getClientAppointments(clientEmail);
+//            return NextResponse.json(appointments);
+//        }
+//
+//        if (staffId && startDate && endDate) {
+//            const appointments = await SquareBookingService.getStaffAppointments(
+//                staffId,
+//                startDate,
+//                endDate
+//            );
+//            return NextResponse.json(appointments);
+//        }
+//
+//        return NextResponse.json(
+//            { error: 'Invalid query parameters' },
+//            { status: 400 }
+//        );
+//    } catch (error: any) {
+//        console.error('Error fetching appointments:', error);
+//        return NextResponse.json(
+//            { error: error.message || 'Failed to fetch appointments' },
+//            { status: 500 }
+//        );
+//    }
+//}
 
 export async function PUT(request: Request) {
     try {
