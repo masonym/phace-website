@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SquareBookingService } from '@/lib/services/squareBookingService';
+import { SquareBookingService } from "@/lib/services/squareBookingService";
 import { parseISO } from 'date-fns';
 
 export async function GET(request: NextRequest) {
@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
         // Check if the requested date is in the past
         const requestedDate = new Date(date);
         requestedDate.setHours(0, 0, 0, 0); // Set to beginning of day
-        
+
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Set to beginning of today
-        
+
         if (requestedDate < today) {
             console.log(`Requested date ${date} is in the past. Returning empty availability.`);
             return NextResponse.json({
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
         // Get all available slots from Square for the requested date
         const idToUse = variationId || serviceId;
-        
+
         // Verify that the service exists and is bookable
         const service = await SquareBookingService.getServiceById(idToUse);
         if (!service) {
@@ -68,9 +68,9 @@ export async function GET(request: NextRequest) {
                 message: "Service not found"
             });
         }
-        
+
         console.log(`Service found: ${service.name}, using variation ID: ${variationId || service.variationId}`);
-        
+
         // Get available time slots from Square
         const squareAvailability = await SquareBookingService.getAvailableTimeSlots({
             staffId,

@@ -11,7 +11,7 @@ import ConsentForms from '@/components/booking/ConsentForms';
 import BookingSummary from '@/components/booking/BookingSummary';
 import { showToast } from '@/components/ui/Toast';
 
-type BookingStep = 
+type BookingStep =
   | 'category'
   | 'service'
   | 'variation'
@@ -135,7 +135,7 @@ export default function BookingPage() {
                 categoryId={bookingData.categoryId}
                 onSelect={(selection) => {
                   console.log("Service selection:", selection);
-                  
+
                   if (selection.type === 'service') {
                     // If this is a service with multiple variations, store the service and go to variation selection
                     updateBookingData({

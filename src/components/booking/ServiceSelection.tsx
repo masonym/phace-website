@@ -148,12 +148,12 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
       console.log("Active categories:", activeCategories.length);
       console.log("Active categories data:", JSON.stringify(activeCategories));
       setCategories(activeCategories);
-      setCategoriesLoaded(true);
     } catch (err: any) {
       console.error("Error fetching categories:", err);
       setError(err.message);
     } finally {
       setLoading(false);
+      setCategoriesLoaded(true);
     }
   };
 
@@ -169,12 +169,14 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
     // Only fetch services when in service mode and we have a categoryId
     if (mode === 'service' && categoryId) {
       console.log("Service mode with categoryId:", categoryId);
+      console.log("Categories:", categories);
       // Find the selected category name
       const category = categories.find(c => c.id === categoryId);
+      console.log("Categories:", categories.length);
       if (category) {
         setSelectedCategoryName(category.name);
       } else {
-        setSelectedCategoryName("Selected Category");
+        setSelectedCategoryName("Selasdasdected Category");
       }
 
       fetchServicesForCategory(categoryId);
@@ -220,10 +222,10 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
           </button>
         )}
         <h2 className="text-2xl font-bold mt-2">
-          {mode === 'category' 
-            ? 'Select a Service Category' 
-            : mode === 'service' 
-              ? `Select a ${selectedCategoryName} Service` 
+          {mode === 'category'
+            ? 'Select a Service Category'
+            : mode === 'service'
+              ? `Select a ${selectedCategoryName} Service`
               : `Select a ${selectedServiceName} Variation`}
         </h2>
       </div>
@@ -286,20 +288,20 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                     onSelect({ type: 'service', service });
                   } else {
                     // Otherwise, select the service directly with its default variation
-                    const defaultVariation = service.variations && service.variations.length === 1 
-                      ? service.variations[0] 
-                      : { 
-                          id: service.variationId || service.id, 
-                          name: 'Standard', 
-                          price: service.price, 
-                          duration: service.duration, 
-                          isActive: true 
-                        };
-                    
-                    onSelect({ 
-                      type: 'variation', 
-                      service, 
-                      variation: defaultVariation 
+                    const defaultVariation = service.variations && service.variations.length === 1
+                      ? service.variations[0]
+                      : {
+                        id: service.variationId || service.id,
+                        name: 'Standard',
+                        price: service.price,
+                        duration: service.duration,
+                        isActive: true
+                      };
+
+                    onSelect({
+                      type: 'variation',
+                      service,
+                      variation: defaultVariation
                     });
                   }
                 }}
@@ -350,10 +352,10 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
               <div
                 key={variation.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105"
-                onClick={() => onSelect({ 
-                  type: 'variation', 
-                  service, 
-                  variation 
+                onClick={() => onSelect({
+                  type: 'variation',
+                  service,
+                  variation
                 })}
               >
                 <div className="p-4">

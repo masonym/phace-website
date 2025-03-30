@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SquareBookingService } from '@/lib/services/squareBookingService';
+import { SquareBookingService } from "@/lib/services/squareBookingService";
 import { parseISO, addMinutes } from 'date-fns';
 import { cookies } from 'next/headers';
 import { jwtDecode } from 'jwt-decode';
@@ -26,6 +26,7 @@ export async function POST(request: Request) {
             serviceName,
             variationId,
             variationName,
+            variationVersion,
             staffId,
             staffName,
             startTime,
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
         }
 
         // Calculate total duration including addons
-        let totalDuration = parseInt(service.duration.toString(), 10);
+        let totalDuration = parseInt(service.duration.toString(), 10) / 60000; // convert ms to minutes
         let totalPrice = parseInt(service.price.toString(), 10);
 
         if (addons.length > 0) {
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
 
         // Calculate end time
         const startDate = parseISO(startTime);
-        const endTime = addMinutes(startDate, totalDuration / 60000); // total duration is ms
+        const endTime = addMinutes(startDate, totalDuration);
 
         console.log('Appointment times:', {
             startTime,
@@ -124,6 +125,7 @@ export async function POST(request: Request) {
             clientPhone,
             staffId,
             serviceId: idToUse,
+            variationVersion,
             serviceName: nameToUse,
             addons,
             startTime,

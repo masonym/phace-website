@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from "@/lib/services/squareBookingService";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const appointment = await BookingService.getAppointmentById(params.id);
-    
+    const appointment = await SquareBookingService.getAppointmentById(params.id);
+
     if (!appointment) {
       return NextResponse.json(
         { error: 'Appointment not found' },

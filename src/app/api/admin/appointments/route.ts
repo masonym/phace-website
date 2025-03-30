@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from "@/lib/services/squareBookingService";
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const appointments = await BookingService.getStaffAppointments(
+    const appointments = await SquareBookingService.getStaffAppointments(
       staffId,
       startDate,
       endDate

@@ -61,8 +61,8 @@ export default function BookingConfirmedPage() {
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Oops!</h1>
           <p className="text-gray-600 mb-8">{error || 'Something went wrong'}</p>
-          <Link 
-            href="/book" 
+          <Link
+            href="/book"
             className="inline-block bg-accent text-white px-6 py-3 rounded-lg hover:bg-accent/90 transition-colors"
           >
             Book Another Appointment
@@ -129,18 +129,21 @@ export default function BookingConfirmedPage() {
                       hour: 'numeric',
                       minute: '2-digit',
                     })}
+                    {/*
+                      TODO: Uncomment this if we want endTime
                     {' - '}
                     {new Date(appointment.endTime).toLocaleTimeString('en-US', {
                       hour: 'numeric',
                       minute: '2-digit',
                     })}
+                    */}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Total Price</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    ${typeof appointment.totalPrice === 'number' 
-                      ? appointment.totalPrice.toFixed(2) 
+                    ${typeof appointment.totalPrice === 'number'
+                      ? appointment.totalPrice.toFixed(2)
                       : Number(appointment.totalPrice).toFixed(2)}
                   </dd>
                 </div>

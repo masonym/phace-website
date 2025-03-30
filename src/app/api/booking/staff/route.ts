@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SquareBookingService } from '@/lib/services/squareBookingService';
+import { SquareBookingService } from "@/lib/services/squareBookingService";
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 
 // Create a verifier that expects valid ID tokens
