@@ -2,13 +2,13 @@ TODO:
 
 ## Booking Flow Square Integration 
 
-- [ ] 1. Fix addons not showing in flow 
+- [x] 1. Fix addons not showing in flow 
 - [x] 2. Fix labels to account for new step
 - [ ] 3. Make sure staff member selection only shows applicable members
 - [x] 4. Stop querying staff availabilities for dates in the past.
 - [x] 5. Finalize booking creation and sending to Square
 - [ ] 6. Figure out CC info??
-- [ ] 7. Boatload of errors to fix
+- [x] 7. Boatload of errors to fix
 - [ ] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc)
 - [ ] 9. Figure out how to deal with in-person payments (if that is even something I need to do on my end)
 - [ ] 10. Unavailabile dates aren't working properly (Sunday/Wednesday for Dawn)
