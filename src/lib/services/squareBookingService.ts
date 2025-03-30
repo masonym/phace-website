@@ -326,19 +326,24 @@ export class SquareBookingService {
                 this.servicesByCategory[categoryId] = { services: [], timestamp: now };
                 return [];
             }
-
             // Map Square catalog items to our Service format
-            const services = result.items.map(item => {
+            const services = result.items!.flatMap(item => {
                 try {
                     console.log('Processing item:', this.safeStringify(item));
-
+                    if (item.type !== 'ITEM') {
+                        console.log(`Item ${item.id} is not an ITEM, skipping`);
+                        return [];
+                    }
                     // Find the first variation that has appointment data
-                    const variations = item.itemData?.variations || [];
+                    const variations = item.itemData!.variations;
+                    const validVariations = variations!.filter(v => v.type === 'ITEM_VARIATION');
                     console.log('Variations:', this.safeStringify(variations));
+                    const variation = validVariations!.find(v => {
+                        return v.type === 'ITEM_VARIATION' &&
+                            v.itemVariationData?.serviceDuration !== undefined;
+                    }
 
-                    const variation = variations.find(v =>
-                        v.itemVariationData?.serviceDuration !== undefined
-                    ) || variations[0];
+                    );
 
                     console.log('Selected variation:', this.safeStringify(variation));
 
@@ -350,16 +355,16 @@ export class SquareBookingService {
                         id: item.id!,
                         categoryId,
                         name: item.itemData?.name || 'Unnamed Service',
-                        description: item.itemData?.description,
+                        description: item.itemData?.description || '',
                         price: this.safeNumber(price),
                         duration: this.safeNumber(duration),
-                        imageUrl: item.itemData?.imageUrl,
+                        //imageUrl: item.itemData?.imageUrl,
                         isActive: true,
                         updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined,
                         variationId: variation?.id || '',
-                        variations: variations.map(v => ({
+                        variations: validVariations.map(v => ({
                             id: v.id,
-                            version: this.safeNumber(v.version),
+                            version: this.safeNumber(v.version!),
                             name: v.itemVariationData?.name || 'Unnamed Variation',
                             price: this.safeNumber(v.itemVariationData?.priceMoney?.amount || 0),
                             duration: this.safeNumber(v.itemVariationData?.serviceDuration || 0),
