@@ -1245,7 +1245,7 @@ export class SquareBookingService {
             console.log(`Availability request for service: ${serviceId}, variation: ${params.variationId}, staff: ${params.staffId}, date: ${params.date}, addons: ${params.addonIds?.join(', ') || 'none'}`);
 
             // Get the service details to get the variation ID and duration
-            const service = await this.getServiceById(serviceId);
+            const service = await this.getServiceById(serviceId!);
             if (!service) {
                 console.error(`Service not found: ${serviceId}`);
                 return [];
@@ -1328,7 +1328,7 @@ export class SquareBookingService {
             });
 
             // Try to get availability with the specified variation ID
-            let availabilities = [];
+            let availabilities: any = [];
             let error = null;
 
             try {
@@ -1338,7 +1338,7 @@ export class SquareBookingService {
                 const result = await client.bookings.searchAvailability(requestBody);
                 console.log('Response from bookingsApi.searchAvailability:', this.safeStringify(result));
 
-                availabilities = result?.availabilities || [];
+                availabilities = result?.availabilities! || [];
                 console.log(`Retrieved ${availabilities.length} available slots from Square using variation ID ${bookableVariationId}`);
             } catch (err) {
                 error = err;
@@ -1348,7 +1348,7 @@ export class SquareBookingService {
                 // If we get a "Service variation not found" error and we have a service ID,
                 // try using the service's default variation ID as a fallback
                 if (err.body?.errors &&
-                    err.body.errors.some(e => e.detail?.includes('Service variation not found')) &&
+                    err.body.errors.some((e: { detail: string | string[]; }) => e.detail?.includes('Service variation not found')) &&
                     service.variationId &&
                     bookableVariationId !== service.variationId) {
 
@@ -1357,7 +1357,7 @@ export class SquareBookingService {
                     try {
                         const fallbackRequestBody = createSearchRequest(service.variationId);
                         const fallbackResult = await client.bookings.searchAvailability(fallbackRequestBody);
-                        availabilities = fallbackResult?.availabilities || [];
+                        availabilities = fallbackResult?.availabilities! || [];
                         console.log(`Retrieved ${availabilities.length} available slots using fallback variation ID`);
                     } catch (fallbackErr) {
                         console.error('Error with fallback variation ID:', fallbackErr);
@@ -1370,7 +1370,7 @@ export class SquareBookingService {
             if (availabilities.length === 0 && error) {
                 if (error.body?.errors) {
                     const errors = error.body.errors;
-                    const serviceVariationError = errors.find(e =>
+                    const serviceVariationError = errors.find((e: { field: string | string[]; detail: string | string[]; }) =>
                         e.field?.includes('service_variation_id') && e.detail?.includes('not bookable')
                     );
 
@@ -1583,215 +1583,6 @@ export class SquareBookingService {
         } catch (error) {
             console.error('Error fetching appointment by ID from Square:', error);
             return null;
-        }
-    }
-    /**
-     * Get appointments for a client
-     */
-    static async getClientAppointments(clientEmail: string): Promise<Appointment[]> {
-        try {
-            // Find customer by email
-            const customerResult = await client.customers.search({
-                query: {
-                    filter: {
-                        emailAddress: {
-                            exact: clientEmail
-                        }
-                    }
-                }
-            });
-
-            if (!customerResult.customers || customerResult.customers.length === 0) {
-                return [];
-            }
-
-            const customerId = customerResult.customers[0].id;
-
-            // Get bookings for this customer
-            const result = await client.bookings.list({
-                customerId
-            });
-
-            if (!result.bookings) {
-                return [];
-            }
-
-            // Map Square bookings to our Appointment format
-            const appointments: Appointment[] = await Promise.all(
-                result.bookings.map(async booking => {
-                    const segment = booking.appointmentSegments?.[0];
-                    if (!segment) {
-                        throw new Error(`Booking ${booking.id} has no appointment segments`);
-                    }
-
-                    // Get service details
-                    const service = await this.getServiceById(segment.serviceVariationId!);
-
-                    // Get staff details
-                    const staff = await this.getStaffById(segment.teamMemberId!);
-
-                    return {
-                        id: booking.id!,
-                        clientEmail: customerResult.customers![0].emailAddress!,
-                        clientName: `${customerResult.customers![0].givenName || ''} ${customerResult.customers![0].familyName || ''}`.trim(),
-                        clientPhone: customerResult.customers![0].phoneNumber || '',
-                        serviceId: segment.serviceVariationId!,
-                        variationVersion: segment.serviceVariationVersion!,
-                        serviceName: service?.name || 'Unknown Service',
-                        staffId: segment.teamMemberId!,
-                        staffName: staff?.name || 'Unknown Staff',
-                        startTime: booking.startAt!,
-                        endTime: booking.endAt!,
-                        status: this.mapFromSquareBookingStatus(booking.status!),
-                        totalPrice: service?.price || 0,
-                        totalDuration: segment.durationMinutes ? parseInt(segment.durationMinutes) : 0,
-                        notes: booking.sellerNote,
-                        consentFormResponses: booking.customerNote ? JSON.parse(booking.customerNote) : [],
-                        createdAt: new Date(booking.createdAt!).toISOString(),
-                        updatedAt: booking.updatedAt ? new Date(booking.updatedAt).toISOString() : undefined
-                    };
-                })
-            );
-
-            return appointments;
-        } catch (error) {
-            console.error('Error fetching client appointments from Square:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Get appointments for a staff member
-     */
-    static async getStaffAppointments(
-        staffId: string,
-        startDate: string,
-        endDate: string
-    ): Promise<Appointment[]> {
-        try {
-            const locationId = await this.getLocationId();
-
-            // Get bookings for this staff member in the date range
-            const result = await client.bookings.list({
-                startAt: {
-                    startAt: startDate,
-                    endAt: endDate
-                },
-                locationId,
-                teamMemberId: staffId
-            });
-
-            if (!result.bookings) {
-                return [];
-            }
-
-            // Map Square bookings to our Appointment format
-            const appointments: Appointment[] = await Promise.all(
-                result.bookings.map(async booking => {
-                    const segment = booking.appointmentSegments?.[0];
-                    if (!segment) {
-                        throw new Error(`Booking ${booking.id} has no appointment segments`);
-                    }
-
-                    // Get service details
-                    const service = await this.getServiceById(segment.serviceVariationId!);
-
-                    // Get customer details
-                    const customerResult = await client.customers.retrieve(booking.customerId!);
-                    const customer = customerResult.customer;
-
-                    return {
-                        id: booking.id!,
-                        clientEmail: customer?.emailAddress || '',
-                        clientName: `${customer?.givenName || ''} ${customer?.familyName || ''}`.trim(),
-                        clientPhone: customer?.phoneNumber || '',
-                        serviceId: segment.serviceVariationId!,
-                        variationVersion: segment.serviceVariationVersion!,
-                        serviceName: service?.name || 'Unknown Service',
-                        staffId: segment.teamMemberId!,
-                        staffName: (await this.getStaffById(segment.teamMemberId!))?.name || 'Unknown Staff',
-                        startTime: booking.startAt!,
-                        endTime: booking.endAt!,
-                        status: this.mapFromSquareBookingStatus(booking.status!),
-                        totalPrice: service?.price || 0,
-                        totalDuration: segment.durationMinutes ? parseInt(segment.durationMinutes) : 0,
-                        notes: booking.sellerNote,
-                        consentFormResponses: booking.customerNote ? JSON.parse(booking.customerNote) : [],
-                        createdAt: new Date(booking.createdAt!).toISOString(),
-                        updatedAt: booking.updatedAt ? new Date(booking.updatedAt).toISOString() : undefined
-                    };
-                })
-            );
-
-            return appointments;
-        } catch (error) {
-            console.error('Error fetching staff appointments from Square:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Update appointment status
-     */
-    static async updateAppointmentStatus(appointmentId: string, status: string): Promise<Appointment> {
-        try {
-            // Map our status to Square's status
-            const squareStatus = this.mapToSquareBookingStatus(status);
-
-            // Update booking status
-            const result = await client.bookings.update(appointmentId, {
-                booking: {
-                    status: squareStatus
-                },
-                idempotencyKey: randomUUID()
-            });
-
-            if (!result.booking) {
-                throw new Error('Failed to update booking status in Square');
-            }
-
-            const booking = result.booking;
-
-            // Get the updated booking details
-            const segment = booking.appointmentSegments?.[0];
-
-            if (!segment) {
-                throw new Error(`Booking ${booking.id} has no appointment segments`);
-            }
-
-            // Get service details
-            const service = await this.getServiceById(segment.serviceVariationId!);
-
-            // Get customer details
-            const customerResult = await client.customers.retrieve(booking.customerId!);
-            const customer = customerResult.customer;
-
-            // Get staff details
-            const staff = await this.getStaffById(segment.teamMemberId!);
-
-            // Return the updated appointment
-            return {
-                id: booking.id!,
-                clientEmail: customer?.emailAddress || '',
-                clientName: `${customer?.givenName || ''} ${customer?.familyName || ''}`.trim(),
-                clientPhone: customer?.phoneNumber || '',
-                serviceId: segment.serviceVariationId!,
-                serviceName: service?.name || 'Unknown Service',
-                staffId: segment.teamMemberId!,
-                staffName: staff?.name || 'Unknown Staff',
-                startTime: booking.startAt!,
-                endTime: booking.endAt!,
-                status: this.mapFromSquareBookingStatus(booking.status!),
-                totalPrice: service?.price || 0,
-                totalDuration: segment.durationMinutes ? parseInt(segment.durationMinutes) : 0,
-                notes: booking.sellerNote,
-                consentFormResponses: booking.customerNote ? JSON.parse(booking.customerNote) : [],
-                createdAt: new Date(booking.createdAt!).toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-        } catch (error) {
-            console.error('Error updating appointment status in Square:', error);
-            throw error;
         }
     }
 }
