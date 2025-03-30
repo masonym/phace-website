@@ -159,7 +159,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
 
   // Fetch categories when in category mode
   useEffect(() => {
-    if (mode === 'category' && !categoriesLoaded) {
+    if (mode === 'category' || mode === 'service' && !categoriesLoaded) {
       fetchCategories();
     }
   }, [mode, categoriesLoaded]);
@@ -176,7 +176,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
       if (category) {
         setSelectedCategoryName(category.name);
       } else {
-        setSelectedCategoryName("Selasdasdected Category");
+        setSelectedCategoryName("");
       }
 
       fetchServicesForCategory(categoryId);
@@ -216,16 +216,30 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
         {(mode === 'service' || mode === 'variation') && onBack && (
           <button
             onClick={onBack}
-            className="flex items-center text-gray-600 hover:text-gray-900"
+            className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
           >
-            <span className="mr-2">←</span> Back to {mode === 'service' ? 'Categories' : 'Services'}
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+
+            Back to {mode === 'service' ? 'Categories' : 'Services'}
           </button>
         )}
         <h2 className="text-2xl font-bold mt-2">
           {mode === 'category'
             ? 'Select a Service Category'
             : mode === 'service'
-              ? `Select a ${selectedCategoryName} Service`
+              ? `Select a Service from ${selectedCategoryName}`
               : `Select a ${selectedServiceName} Variation`}
         </h2>
       </div>

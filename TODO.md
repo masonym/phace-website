@@ -3,7 +3,7 @@ TODO:
 ## Booking Flow Square Integration 
 
 - [ ] 1. Fix addons not showing in flow 
-- [ ] 2. Fix labels to account for new step
+- [x] 2. Fix labels to account for new step
 - [ ] 3. Make sure staff member selection only shows applicable members
 - [x] 4. Stop querying staff availabilities for dates in the past.
 - [x] 5. Finalize booking creation and sending to Square
@@ -12,11 +12,12 @@ TODO:
 - [ ] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc)
 - [ ] 9. Figure out how to deal with in-person payments (if that is even something I need to do on my end)
 - [ ] 10. Unavailabile dates aren't working properly (Sunday/Wednesday for Dawn)
+- [ ] 11. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
 
 
 ### FRONTEND:
 
-- [ ] 1. Make sure buttons are consistent between steps (currently they're not!)
+- [x] 1. Make sure buttons are consistent between steps (currently they're not!)
 - [ ] 2. Either remove the images section, or get Dawn to add images via Square
 - [ ] 3. Scroll to top on every new step
 
