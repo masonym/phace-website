@@ -7,7 +7,7 @@ import { jwtDecode } from 'jwt-decode';
 export async function POST(request: Request) {
     try {
         const data = await request.json();
-        
+
         // Get user ID from auth token if available
         let userId = null;
         const cookieStore = cookies();
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
         // Calculate end time
         const startDate = parseISO(startTime);
-        const endTime = addMinutes(startDate, totalDuration);
+        const endTime = addMinutes(startDate, totalDuration / 60000); // total duration is ms
 
         console.log('Appointment times:', {
             startTime,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 
 // Create a verifier that expects valid ID tokens
@@ -12,14 +12,11 @@ const verifier = CognitoJwtVerifier.create({
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const serviceId = searchParams.get('serviceId');
 
         // If serviceId is provided, get addons for that service
         // Otherwise, get all addons
-        const addons = serviceId 
-            ? await BookingService.getServiceAddons(serviceId)
-            : await BookingService.getAllAddons();
-            
+        const addons = await SquareBookingService.getAllAddons();
+
         return NextResponse.json(addons);
     } catch (error: any) {
         console.error('Error fetching addons:', error);
@@ -42,7 +39,7 @@ export async function POST(request: Request) {
                 { status: 401 }
             );
         }
-        
+
         const token = authHeader.replace('Bearer ', '');
         try {
             await verifier.verify(token);
@@ -57,7 +54,7 @@ export async function POST(request: Request) {
 
         const data = await request.json();
         console.log('Request data:', data); // Debug log
-        
+
         // Validate required fields
         if (!data.name || !data.description || !data.duration || !data.price || !data.serviceIds || data.serviceIds.length === 0) {
             return NextResponse.json(
@@ -66,7 +63,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const addon = await BookingService.createServiceAddon(data);
+        const addon = await SquareBookingService.createServiceAddon(data);
         return NextResponse.json(addon);
     } catch (error: any) {
         console.error('Error creating addon:', error);
@@ -87,7 +84,7 @@ export async function PUT(request: Request) {
                 { status: 401 }
             );
         }
-        
+
         const token = authHeader.replace('Bearer ', '');
         try {
             await verifier.verify(token);
@@ -117,7 +114,7 @@ export async function PUT(request: Request) {
             );
         }
 
-        const addon = await BookingService.updateServiceAddon(id, addonData);
+        const addon = await SquareBookingService.updateServiceAddon(id, addonData);
         return NextResponse.json(addon);
     } catch (error: any) {
         console.error('Error updating addon:', error);
@@ -138,7 +135,7 @@ export async function DELETE(request: Request) {
                 { status: 401 }
             );
         }
-        
+
         const token = authHeader.replace('Bearer ', '');
         try {
             await verifier.verify(token);
@@ -160,7 +157,7 @@ export async function DELETE(request: Request) {
             );
         }
 
-        await BookingService.deleteServiceAddon(id);
+        await SquareBookingService.deleteServiceAddon(id);
         return NextResponse.json({ success: true });
     } catch (error: any) {
         console.error('Error deleting addon:', error);

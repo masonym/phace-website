@@ -789,6 +789,50 @@ export class SquareBookingService {
     }
   }
 
+  static async getAllAddons(): Promise<ServiceAddon[]> {
+    try {
+
+      //TODO: IDK IF THIS WORKS
+      //ADDON CATEGORY ID: JLTNITVYIK73RGMQAEE4D5TB
+      const addonCategoryId = await client.catalog.searchItems({
+        textFilter: 'Add-ons',
+        productTypes: ['APPOINTMENTS_SERVICE']
+      });
+      var result = null
+      const locationId = await this.getLocationId();
+      if (addonCategoryId?.items) {
+        result = await client.catalog.searchItems({
+          categoryIds: [addonCategoryId.items[0].id!],
+        });
+      }
+
+      console.log("Result: ", result)
+
+      if (!result?.items) {
+        return [];
+      }
+
+      // Map Square catalog items to our ServiceAddon format
+      return result.items.map(item => {
+        const price = item.itemData?.variations?.[0]?.itemVariationData?.priceMoney?.amount || 0;
+        const duration = item.itemData?.variations?.[0]?.itemVariationData?.serviceDuration || 0;
+
+        return {
+          id: item.id!,
+          name: item.itemData?.name || 'Unnamed Addon',
+          description: item.itemData?.description,
+          price: this.safeNumber(price),
+          duration: this.safeNumber(duration),
+          isActive: true
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching addons from Square:', error);
+      return [];
+    }
+  }
+
+
   /**
    * Get addons by IDs
    */

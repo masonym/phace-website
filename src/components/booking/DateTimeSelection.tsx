@@ -73,9 +73,11 @@ export default function DateTimeSelection({
         // Filter out past dates before making API calls
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Set to beginning of today
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
 
         const datesInRange = eachDayOfInterval({ start: startDate, end: endDate })
-          .filter(date => isAfter(date, today) || isSameDay(date, today));
+          .filter(date => isAfter(date, tomorrow) || isSameDay(date, tomorrow));
 
         console.log(`Checking availability for ${datesInRange.length} dates (filtered out past dates)`);
 
@@ -159,9 +161,11 @@ export default function DateTimeSelection({
   const isDateSelectable = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to beginning of today
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
 
     // Check if date is today or in the future
-    const isNotPast = isAfter(date, today) || isSameDay(date, today);
+    const isNotPast = isAfter(date, tomorrow) || isSameDay(date, tomorrow);
 
     const isCurrentMonth = format(date, 'M') === format(currentMonth, 'M');
     const isInRange = isBefore(date, maxDate); // No need to check isAfter since we already check isNotPast
@@ -244,7 +248,9 @@ export default function DateTimeSelection({
                   // Check if date is in the past
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  const isPast = isBefore(date, today) && !isSameDay(date, today);
+                  const tomorrow = new Date(today);
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  const isPast = isBefore(date, tomorrow) && !isSameDay(date, tomorrow);
 
                   // Check if date is in current month
                   const isCurrentMonthDate = format(date, 'M') === format(currentMonth, 'M');
