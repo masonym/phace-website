@@ -1,5 +1,16 @@
 import { SquareClient } from "square";
 import { randomUUID } from 'crypto';
+import { nanoid } from 'nanoid';
+
+const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
+const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
+
+const SERVICES_TABLE = 'phace-services';
+const APPOINTMENTS_TABLE = 'phace-appointments';
+const STAFF_TABLE = 'phace-staff';
+const CLIENTS_TABLE = 'phace-clients';
+const WAITLIST_TABLE = 'phace-waitlist';
+const FORMS_TABLE = 'phace-forms';
 
 // Initialize Square client
 const client = new SquareClient({
@@ -1584,5 +1595,38 @@ export class SquareBookingService {
             console.error('Error fetching appointment by ID from Square:', error);
             return null;
         }
+    }
+
+    /**
+     * This adds a waitlist to our DynamoDb...
+     */
+
+    static async addToWaitlist(entry: {
+        serviceId: string;
+        clientEmail: string;
+        clientName: string;
+        clientPhone: string;
+        preferredDates: string[];
+        preferredStaffIds: string[];
+    }) {
+        const id = nanoid();
+        const item = {
+            pk: `WAITLIST#${id}`,
+            sk: `WAITLIST#${id}`,
+            GSI1PK: `SERVICE#${entry.serviceId}`,
+            GSI1SK: `STATUS#active`,
+            id,
+            type: 'waitlist',
+            status: 'active',
+            ...entry,
+            createdAt: new Date().toISOString(),
+        };
+
+        await dynamoDb.send(new PutCommand({
+            TableName: WAITLIST_TABLE,
+            Item: item,
+        }));
+
+        return item;
     }
 }

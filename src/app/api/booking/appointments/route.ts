@@ -190,25 +190,25 @@ export async function POST(request: Request) {
 //    }
 //}
 
-export async function PUT(request: Request) {
-    try {
-        const data = await request.json();
-        const { appointmentId, status } = data;
-
-        if (!appointmentId || !status) {
-            return NextResponse.json(
-                { error: 'Appointment ID and status are required' },
-                { status: 400 }
-            );
-        }
-
-        const appointment = await SquareBookingService.updateAppointmentStatus(appointmentId, status);
-        return NextResponse.json(appointment);
-    } catch (error: any) {
-        console.error('Error updating appointment:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to update appointment' },
-            { status: 500 }
-        );
-    }
-}
+//export async function PUT(request: Request) {
+//    try {
+//        const data = await request.json();
+//        const { appointmentId, status } = data;
+//
+//        if (!appointmentId || !status) {
+//            return NextResponse.json(
+//                { error: 'Appointment ID and status are required' },
+//                { status: 400 }
+//            );
+//        }
+//
+//        const appointment = await SquareBookingService.updateAppointmentStatus(appointmentId, status);
+//        return NextResponse.json(appointment);
+//    } catch (error: any) {
+//        console.error('Error updating appointment:', error);
+//        return NextResponse.json(
+//            { error: error.message || 'Failed to update appointment' },
+//            { status: 500 }
+//        );
+//    }
+//}
