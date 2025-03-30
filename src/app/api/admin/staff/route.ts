@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 
 export async function GET() {
   try {
     // For now, we'll get all staff members. In the future, we might want to add pagination
-    const staffMembers = await BookingService.getAllStaffMembers();
+    const staffMembers = await SquareBookingService.getAllStaffMembers();
     return NextResponse.json(staffMembers);
   } catch (error: any) {
     console.error('Error fetching staff members:', error);

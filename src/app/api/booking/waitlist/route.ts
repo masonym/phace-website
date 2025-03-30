@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 
 export async function POST(request: Request) {
     try {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         }
 
         // Add to waitlist
-        await BookingService.addToWaitlist({
+        await SquareBookingService.addToWaitlist({
             serviceId,
             clientName,
             clientEmail,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 
 export async function GET(req: NextRequest) {
     try {
@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
         const status = (searchParams.get('status') || 'active') as 'active' | 'contacted' | 'booked' | 'expired';
 
         const entries = serviceId
-            ? await BookingService.getWaitlistEntriesByService(serviceId, status, staffId || undefined)
-            : await BookingService.getWaitlistEntries(status, staffId || undefined);
+            ? await SquareBookingService.getWaitlistEntriesByService(serviceId, status, staffId || undefined)
+            : await SquareBookingService.getWaitlistEntries(status, staffId || undefined);
 
         return NextResponse.json(entries);
     } catch (error: any) {
@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const updatedEntry = await BookingService.updateWaitlistStatus(id, status, notes);
+        const updatedEntry = await SquareBookingService.updateWaitlistStatus(id, status, notes);
         return NextResponse.json(updatedEntry);
     } catch (error: any) {
         console.error('Error updating waitlist entry:', error);
@@ -44,7 +44,7 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: 'Missing waitlist entry ID' }, { status: 400 });
         }
 
-        await BookingService.deleteWaitlistEntry(id);
+        await SquareBookingService.deleteWaitlistEntry(id);
         return NextResponse.json({ success: true });
     } catch (error: any) {
         console.error('Error deleting waitlist entry:', error);

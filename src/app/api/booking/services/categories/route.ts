@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AdminService } from '@/lib/services/adminService';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 
 export async function DELETE(request: Request) {
   try {
@@ -12,7 +12,7 @@ export async function DELETE(request: Request) {
         { status: 401 }
       );
     }
-    
+
     const token = authHeader.replace('Bearer ', '');
     try {
       await AdminService.verifyToken(token);
@@ -26,7 +26,7 @@ export async function DELETE(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
       return NextResponse.json(
         { error: 'Category ID is required' },
@@ -34,7 +34,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    await BookingService.deleteServiceCategory(id);
+    await SquareBookingService.deleteServiceCategory(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting category:', error);
