@@ -124,6 +124,7 @@ interface CreateAppointmentParams {
     clientEmail: string;
     clientPhone: string;
     serviceId: string;
+    variationVersion: string;
     staffId: string;
     startTime: string;
     endTime: string;
