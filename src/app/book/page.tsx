@@ -22,6 +22,14 @@ type BookingStep =
   | 'consent'
   | 'summary';
 
+interface Addon {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+}
+
 interface ServiceVariation {
   id: string;
   name: string;
@@ -43,7 +51,7 @@ interface Service {
   variations?: ServiceVariation[];
 }
 
-interface BookingData {
+export interface BookingData {
   categoryId?: string;
   serviceId?: string;
   serviceName?: string;
@@ -52,7 +60,7 @@ interface BookingData {
   staffId?: string;
   staffName?: string;
   dateTime?: string;
-  addons?: string[];
+  addons?: Addon[];
   clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
@@ -193,9 +201,9 @@ export default function BookingPage() {
             {currentStep === 'addons' && (
               <AddonSelection
                 serviceId={bookingData.serviceId!}
-                onSelect={(addons) => {
-                  console.log("Selected addons:", addons);
-                  updateBookingData({ addons });
+                onSelect={(selectedAddonsData) => {
+                  console.log("Selected addons:", selectedAddonsData);
+                  updateBookingData({ addons: selectedAddonsData });
                   goToNextStep();
                 }}
                 onBack={goToPreviousStep}
@@ -206,7 +214,7 @@ export default function BookingPage() {
                 serviceId={bookingData.serviceId!}
                 variationId={bookingData.variationId}
                 staffId={bookingData.staffId!}
-                addons={bookingData.addons || []}
+                addons={(bookingData.addons || []).map(addon => addon.id)}
                 onSelect={(dateTime) => {
                   console.log("Selected datetime:", dateTime);
                   updateBookingData({ dateTime });
@@ -303,7 +311,7 @@ export default function BookingPage() {
                       clientEmail: bookingData.clientEmail,
                       clientPhone: bookingData.clientPhone,
                       notes: bookingData.notes,
-                      addons: bookingData.addons || [],
+                      addons: (bookingData.addons || []).map(addon => addon.id),
                       consentFormResponses: bookingData.consentForms?.consentFormResponses || [],
                     };
                     console.log('Sending appointment request:', requestBody);

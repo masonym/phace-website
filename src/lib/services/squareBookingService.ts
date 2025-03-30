@@ -341,9 +341,7 @@ export class SquareBookingService {
                     const variation = validVariations!.find(v => {
                         return v.type === 'ITEM_VARIATION' &&
                             v.itemVariationData?.serviceDuration !== undefined;
-                    }
-
-                    );
+                    });
 
                     console.log('Selected variation:', this.safeStringify(variation));
 
@@ -477,9 +475,12 @@ export class SquareBookingService {
                 const item = result.object;
 
                 // Find the first variation that has appointment data
-                const variation = item.itemData?.variations?.find(v =>
-                    v.itemVariationData?.serviceDuration !== undefined // TODO: I cant figure out why this type error exists
-                );
+                const variations = item.itemData!.variations;
+                const validVariations = variations!.filter(v => v.type === 'ITEM_VARIATION');
+                const variation = validVariations!.find(v => {
+                    return v.type === 'ITEM_VARIATION' &&
+                        v.itemVariationData?.serviceDuration !== undefined;
+                });
 
                 const price = variation?.itemVariationData?.priceMoney?.amount || 0;
                 const duration = variation?.itemVariationData?.serviceDuration || 0;
@@ -496,7 +497,7 @@ export class SquareBookingService {
                     isActive: true,
                     updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined,
                     variationId: variation?.id || '',
-                    variations: item.itemData?.variations?.map(v => ({
+                    variations: validVariations.map(v => ({
                         id: v.id,
                         version: this.safeNumber(v.version!),
                         name: v.itemVariationData?.name || 'Unnamed Variation',
@@ -530,6 +531,10 @@ export class SquareBookingService {
                 const duration = variation.itemVariationData?.serviceDuration || 0;
                 const categoryId = item.itemData?.categoryId || '';
 
+                const variations = item.itemData!.variations;
+                const validVariations = variations!.filter(v => v.type === 'ITEM_VARIATION');
+                console.log('Variations:', this.safeStringify(variations));
+
                 service = {
                     id: item.id!,
                     categoryId,
@@ -541,7 +546,7 @@ export class SquareBookingService {
                     isActive: true,
                     updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined,
                     variationId: variation.id!,
-                    variations: item.itemData?.variations?.map(v => ({
+                    variations: validVariations.map(v => ({
                         id: v.id,
                         version: this.safeNumber(v.version!),
                         name: v.itemVariationData?.name || 'Unnamed Variation',
@@ -783,12 +788,12 @@ export class SquareBookingService {
             const staffMember: StaffMember = {
                 id: profile.teamMemberId!,
                 name: profile.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
-                email: teamMember.emailAddress,
-                phone: teamMember.phoneNumber,
+                email: teamMember.emailAddress!,
+                phone: teamMember.phoneNumber!,
                 bio: profile.description,
-                imageUrl: teamMember.profileImageUrl || '',
+                //imageUrl: teamMember.profileImageUrl || '',
                 defaultAvailability,
-                isActive: profile.isBookable && teamMember.status === 'ACTIVE',
+                isActive: profile.isBookable! && teamMember.status === 'ACTIVE',
                 createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
                 updatedAt: teamMember.updatedAt
                     ? new Date(teamMember.updatedAt).toISOString()
@@ -815,45 +820,127 @@ export class SquareBookingService {
         }
     }
 
+    /**
+     * Get all service add-ons, typically fetched from a specific category.
+     */
     static async getAllAddons(): Promise<ServiceAddon[]> {
         try {
+            const addonCategoryId = process.env.SQUARE_ADDON_CATEGORY_ID;
 
-            //TODO: IDK IF THIS WORKS
-            //ADDON CATEGORY ID: JLTNITVYIK73RGMQAEE4D5TB
-            const addonCategoryId = await client.catalog.searchItems({
-                textFilter: 'Add-ons',
-                productTypes: ['APPOINTMENTS_SERVICE']
-            });
-            var result = null
-            const locationId = await this.getLocationId();
-            if (addonCategoryId?.items) {
-                result = await client.catalog.searchItems({
-                    categoryIds: [addonCategoryId.items[0].id!],
-                });
-            }
-
-            console.log("Result: ", result)
-
-            if (!result?.items) {
+            if (!addonCategoryId) {
+                console.warn('SQUARE_ADDON_CATEGORY_ID environment variable not set. Cannot reliably fetch addons by category. Returning empty array.');
                 return [];
             }
 
-            // Map Square catalog items to our ServiceAddon format
-            return result.items.map(item => {
-                const price = item.itemData?.variations?.[0]?.itemVariationData?.priceMoney?.amount || 0;
-                const duration = item.itemData?.variations?.[0]?.itemVariationData?.serviceDuration || 0;
+            console.log(`Fetching add-on items from category ID: ${addonCategoryId}`);
 
-                return {
-                    id: item.id!,
-                    name: item.itemData?.name || 'Unnamed Addon',
-                    description: item.itemData?.description,
-                    price: this.safeNumber(price),
-                    duration: this.safeNumber(duration),
-                    isActive: true
-                };
+            const result = await client.catalog.search({
+                query: {
+                    exactQuery: {
+                        attributeName: 'category_id',
+                        attributeValue: addonCategoryId
+                    }
+                },
+                objectTypes: ['ITEM']
             });
+
+            // console.log("Raw Add-on search result: ", this.safeStringify(result));
+
+            if (!result?.objects || result.objects.length === 0) {
+                console.log(`No items found in the add-on category (${addonCategoryId}).`);
+                return [];
+            }
+
+            // Map results, potentially creating nulls for invalid items
+            const mappedItems: (ServiceAddon | null)[] = result.objects.map(item => {
+                // Assert itemData exists as we filtered by objectTypes: ['ITEM']
+                // Using 'as any' for simplicity, ensure 'item' is indeed a CatalogObject of type ITEM
+                const itemData = (item as any).itemData;
+
+                if (!itemData) {
+                    console.warn(`CatalogObject ${item.id} unexpectedly missing itemData, skipping.`);
+                    return null;
+                }
+
+                const variation = itemData.variations?.[0];
+
+                if (!variation || variation.type !== 'ITEM_VARIATION' || !variation.itemVariationData) {
+                    console.warn(`Item ${item.id} (${itemData.name || 'Unnamed'}) has no valid first variation. Skipping.`);
+                    return null;
+                }
+
+                const variationData = variation.itemVariationData;
+                const price = variationData.priceMoney?.amount || 0;
+                let durationMs = variationData.serviceDuration || 0;
+
+                if (durationMs === 0) {
+                    const customAttributes = variationData.customAttributeValues || {};
+                    // *** FIX 1: Type 'attr' explicitly ***
+                    // Define a minimal type for the custom attribute value
+                    type CustomAttributeValue = {
+                        name?: string;
+                        numberValue?: string | number | bigint; // Square SDK might use string, number, or bigint
+                        stringValue?: string;
+                        // Add other potential properties if needed
+                    };
+
+                    const durationAttribute = Object.values(customAttributes).find(
+                        // Cast attr to the defined type
+                        (attr): attr is CustomAttributeValue & { name: string } =>
+                            typeof attr === 'object' && attr !== null &&
+                            typeof (attr as CustomAttributeValue).name === 'string' &&
+                            (attr as CustomAttributeValue).name!.toLowerCase() === 'duration'
+                    );
+
+                    // *** FIX 2: Check attribute and numberValue safely ***
+                    if (durationAttribute?.numberValue) {
+                        // Convert safely, handling string, number, or bigint
+                        const numValue = typeof durationAttribute.numberValue === 'string'
+                            ? parseFloat(durationAttribute.numberValue)
+                            : Number(durationAttribute.numberValue); // Handles number/bigint
+
+                        if (!isNaN(numValue)) {
+                            // Assuming the value represents milliseconds
+                            durationMs = numValue;
+                        }
+                    }
+                    // Optional: Add check for stringValue if needed
+                    // else if (durationAttribute?.stringValue) { /* parse string value */ }
+                }
+
+                // *** FIX 3: Ensure mapped object matches ServiceAddon ***
+                const addonObject: ServiceAddon = {
+                    id: item.id!,
+                    name: itemData.name || 'Unnamed Addon',
+                    // Ensure description is optional (undefined if null/undefined)
+                    description: itemData.description ?? undefined,
+                    price: this.safeNumber(price),
+                    duration: this.safeNumber(durationMs),
+                    isActive: !itemData.isArchived
+                };
+                return addonObject;
+
+            }); // End of .map()
+
+            // *** FIX 4: Type predicate and filtering ***
+            // The filter function itself is correct. The issue was the objects inside mappedItems.
+            const addons: ServiceAddon[] = mappedItems.filter(
+                (addon): addon is ServiceAddon => addon !== null
+            );
+            // If the above still gives errors, try letting TS infer the type first:
+            // const filteredAddons = mappedItems.filter((addon): addon is ServiceAddon => addon !== null);
+            // const addons: ServiceAddon[] = filteredAddons; // Then assign
+
+            console.log(`Successfully mapped ${addons.length} add-ons.`);
+            return addons;
+
         } catch (error) {
             console.error('Error fetching addons from Square:', error);
+            if (error instanceof Error && 'body' in error) {
+                console.error('Square API Error Body:', this.safeStringify((error as any).body));
+            } else {
+                console.error('Error details:', error);
+            }
             return [];
         }
     }
@@ -864,46 +951,123 @@ export class SquareBookingService {
      */
     static async getAddonsByIds(addonIds: string[]): Promise<ServiceAddon[]> {
         try {
-            if (addonIds.length === 0) {
+            if (!addonIds || addonIds.length === 0) {
                 return [];
             }
 
-            // Get catalog items by IDs
+            console.log(`Fetching addon details for IDs: ${addonIds.join(', ')}`);
+
+            // Get catalog objects by IDs
             const result = await client.catalog.batchGet({
                 objectIds: addonIds
             });
 
-            if (!result.objects) {
+            // console.log("Raw batchGet result for addons: ", this.safeStringify(result));
+
+            if (!result.objects || result.objects.length === 0) {
+                console.log(`No objects found for addon IDs: ${addonIds.join(', ')}`);
                 return [];
             }
 
+            // --- Define CustomAttributeValue type helper here or globally ---
+            type CustomAttributeValue = {
+                name?: string;
+                numberValue?: string | number | bigint;
+                stringValue?: string;
+            };
+            // --- End type helper ---
+
+
             // Map Square catalog items to our ServiceAddon format
-            return result.objects
+            const mappedAddons: (ServiceAddon | null)[] = result.objects
+                // Ensure we only process objects that are of type ITEM
                 .filter(obj => obj.type === 'ITEM')
                 .map(obj => {
-                    const item = obj.itemData!;
-                    const variation = item.variations?.[0];
-                    const price = variation?.itemVariationData?.priceMoney?.amount || 0;
+                    // Assert itemData exists as we filtered by type: 'ITEM'
+                    const itemData = (obj as any).itemData;
 
-                    // For duration, we might need to use custom attributes
-                    // This is a placeholder - you'd need to define how duration is stored
-                    const customAttributes = variation?.itemVariationData?.customAttributeValues || {};
-                    const durationAttribute = Object.values(customAttributes).find(
-                        attr => attr.name === 'duration'
-                    );
-                    const duration = durationAttribute?.numberValue || 0;
+                    if (!itemData) {
+                        console.warn(`CatalogObject ${obj.id} is ITEM type but missing itemData, skipping.`);
+                        return null;
+                    }
 
-                    return {
+                    // Assume the first variation is the relevant one for the addon
+                    const variation = itemData.variations?.[0];
+
+                    if (!variation || variation.type !== 'ITEM_VARIATION' || !variation.itemVariationData) {
+                        console.warn(`Addon Item ${obj.id} (${itemData.name || 'Unnamed'}) has no valid first variation. Skipping.`);
+                        return null;
+                    }
+
+                    const variationData = variation.itemVariationData;
+
+                    // Extract price
+                    const price = variationData.priceMoney?.amount || 0;
+
+                    // --- Corrected Duration Logic ---
+                    let durationMs: number | bigint = variationData.serviceDuration || 0; // Default to 0 if null/undefined
+
+                    // If serviceDuration is not present or zero, check custom attributes
+                    if (!durationMs || durationMs === 0) {
+                        const customAttributes = variationData.customAttributeValues || {};
+
+                        const durationAttribute = Object.values(customAttributes).find(
+                            // Use type guard for safer access
+                            (attr): attr is CustomAttributeValue & { name: string } =>
+                                typeof attr === 'object' && attr !== null &&
+                                typeof (attr as CustomAttributeValue).name === 'string' &&
+                                (attr as CustomAttributeValue).name!.toLowerCase() === 'duration'
+                        );
+
+                        if (durationAttribute?.numberValue) {
+                            // Convert safely (string/number/bigint) -> number (assuming minutes)
+                            const numValue = typeof durationAttribute.numberValue === 'string'
+                                ? parseFloat(durationAttribute.numberValue)
+                                : Number(durationAttribute.numberValue); // Handles number/bigint
+
+                            if (!isNaN(numValue)) {
+                                durationMs = numValue * 60 * 1000; // Convert minutes to milliseconds
+                                console.log(`Addon ${obj.id}: Used custom attribute 'duration' (${numValue} min -> ${durationMs} ms)`);
+                            } else {
+                                console.warn(`Addon ${obj.id}: Custom attribute 'duration' has non-numeric value '${durationAttribute.numberValue}'. Using 0 duration.`);
+                                durationMs = 0;
+                            }
+                        } else {
+                            // console.log(`Addon ${obj.id}: No serviceDuration or valid custom 'duration' attribute found. Using 0 duration.`);
+                            durationMs = 0; // Ensure it's explicitly 0 if nothing found
+                        }
+                        // Optional: Add check for stringValue if needed
+                        // else if (durationAttribute?.stringValue) { /* parse string value */ }
+                    }
+                    // --- End Duration Logic ---
+
+                    // Create the ServiceAddon object, ensuring structure matches interface
+                    const addonObject: ServiceAddon = {
                         id: obj.id!,
-                        name: item.name || 'Unnamed Addon',
-                        description: item.description,
+                        name: itemData.name || 'Unnamed Addon',
+                        description: itemData.description ?? undefined, // Handle optional description
                         price: this.safeNumber(price),
-                        duration: this.safeNumber(duration),
-                        isActive: true
+                        duration: this.safeNumber(durationMs), // Ensure duration is number
+                        isActive: !itemData.isArchived // Or use variation.presentAtAllLocations etc.
                     };
-                });
+                    return addonObject;
+                }); // End of .map()
+
+            // Filter out any nulls that resulted from mapping errors
+            const addons: ServiceAddon[] = mappedAddons.filter(
+                (addon): addon is ServiceAddon => addon !== null
+            );
+
+            console.log(`Successfully mapped ${addons.length} addons out of ${addonIds.length} requested IDs.`);
+            return addons;
+
         } catch (error) {
             console.error('Error fetching addons by IDs from Square:', error);
+            if (error instanceof Error && 'body' in error) {
+                console.error('Square API Error Body:', this.safeStringify((error as any).body));
+            } else {
+                console.error('Error details:', error);
+            }
             return [];
         }
     }

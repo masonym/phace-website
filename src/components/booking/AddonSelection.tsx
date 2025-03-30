@@ -12,13 +12,13 @@ interface Addon {
 
 interface Props {
   serviceId: string;
-  onSelect: (addons: string[]) => void;
+  onSelect: (selectedAddonsData: Addon[]) => void;
   onBack: () => void;
 }
 
 export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
   const [addons, setAddons] = useState<Addon[]>([]);
-  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -27,7 +27,7 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
       try {
         const response = await fetch(`/api/booking/addons?serviceId=${serviceId}`);
         if (!response.ok) throw new Error('Failed to fetch addons');
-        const data = await response.json();
+        const data: Addon[] = await response.json();
         setAddons(data);
       } catch (err: any) {
         setError(err.message);
@@ -40,7 +40,7 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
   }, [serviceId]);
 
   const toggleAddon = (addonId: string) => {
-    setSelectedAddons(prev => {
+    setSelectedAddonIds(prev => {
       if (prev.includes(addonId)) {
         return prev.filter(id => id !== addonId);
       } else {
@@ -50,7 +50,8 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
   };
 
   const handleContinue = () => {
-    onSelect(selectedAddons);
+    const selectedAddonsData = addons.filter(addon => selectedAddonIds.includes(addon.id));
+    onSelect(selectedAddonsData);
   };
 
   if (loading) {
@@ -68,6 +69,12 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
       </div>
     );
   }
+
+  const formatDuration = (durationMs: number) => {
+    // Convert from milliseconds to minutes if needed
+    const minutes = durationMs >= 1000 ? durationMs / 60000 : durationMs;
+    return `${minutes} min`;
+  };
 
   return (
     <div className="space-y-8">
@@ -113,7 +120,7 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
                 <label className="flex items-start gap-4 flex-1 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={selectedAddons.includes(addon.id)}
+                    checked={selectedAddonIds.includes(addon.id)}
                     onChange={() => toggleAddon(addon.id)}
                     className="mt-1.5 h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
                   />
@@ -121,8 +128,8 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
                     <p className="text-lg font-medium">{addon.name}</p>
                     <p className="text-gray-600 mt-1">{addon.description}</p>
                     <div className="mt-2 space-x-4">
-                      <span className="text-sm text-gray-600">Duration: {addon.duration} minutes</span>
-                      <span className="text-sm text-gray-600">Price: ${addon.price}</span>
+                      <span className="text-sm text-gray-600">Duration: {formatDuration(addon.duration)}</span>
+                      <span className="text-sm text-gray-600">Price: ${(addon.price / 100).toFixed(2)}</span>
                     </div>
                   </div>
                 </label>

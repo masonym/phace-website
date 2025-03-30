@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 
 export async function GET(request: Request) {
     try {
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
             );
         }
 
-        const addons = await BookingService.getAddonsByIds(ids.split(','));
+        const addons = await SquareBookingService.getAddonsByIds(ids.split(','));
         return NextResponse.json(addons);
     } catch (error: any) {
         console.error('Error fetching selected addons:', error);

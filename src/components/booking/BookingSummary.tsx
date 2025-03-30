@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { showToast } from '@/components/ui/Toast';
+import { BookingData } from '@/app/book/page';
 
 interface ServiceVariation {
   id: string;
@@ -23,26 +24,6 @@ interface Service {
   isActive: boolean;
   variationId: string;
   variations?: ServiceVariation[];
-}
-
-interface BookingData {
-  categoryId?: string;
-  serviceId?: string;
-  serviceName?: string;
-  variationId?: string;
-  variationName?: string;
-  staffId?: string;
-  staffName?: string;
-  dateTime?: string;
-  addons?: string[];
-  clientName?: string;
-  clientEmail?: string;
-  clientPhone?: string;
-  notes?: string;
-  consentForms?: Record<string, any>;
-  createAccount?: boolean;
-  service?: Service;
-  variation?: ServiceVariation;
 }
 
 interface Props {
@@ -96,7 +77,7 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-6">
           <h3 className="text-xl font-semibold mb-4">Booking Summary</h3>
-          
+
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -108,49 +89,49 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
                   </p>
                 )}
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-gray-700">Staff</h4>
                 <p className="text-gray-900">{bookingData.staffName || 'Not selected'}</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium text-gray-700">Date</h4>
                 <p className="text-gray-900">{formattedDate}</p>
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-gray-700">Time</h4>
                 <p className="text-gray-900">{formattedTime}</p>
               </div>
             </div>
-            
+
             {bookingData.addons && bookingData.addons.length > 0 && (
               <div>
                 <h4 className="font-medium text-gray-700">Add-ons</h4>
                 <ul className="list-disc list-inside text-gray-900">
                   {bookingData.addons.map((addon, index) => (
-                    <li key={index}>{addon}</li>
+                    <li key={index}>{addon.name}</li>
                   ))}
                 </ul>
               </div>
             )}
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium text-gray-700">Client Name</h4>
                 <p className="text-gray-900">{bookingData.clientName || 'Not provided'}</p>
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-gray-700">Contact Information</h4>
                 <p className="text-gray-900">{bookingData.clientEmail || 'No email provided'}</p>
                 <p className="text-gray-900">{bookingData.clientPhone || 'No phone provided'}</p>
               </div>
             </div>
-            
+
             {bookingData.notes && (
               <div>
                 <h4 className="font-medium text-gray-700">Notes</h4>
@@ -163,7 +144,7 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
               <div className="flex justify-between items-center font-medium">
                 <span>Service Price:</span>
                 <span>
-                  ${bookingData.variation 
+                  ${bookingData.variation
                     ? ((bookingData.variation.price || 0) / 100).toFixed(2)
                     : ((bookingData.service?.price || 0) / 100).toFixed(2)}
                 </span>
@@ -172,14 +153,14 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
               <div className="flex justify-between items-center font-bold text-lg mt-2">
                 <span>Total:</span>
                 <span>
-                  ${bookingData.variation 
+                  ${bookingData.variation
                     ? ((bookingData.variation.price || 0) / 100).toFixed(2)
                     : ((bookingData.service?.price || 0) / 100).toFixed(2)}
                 </span>
               </div>
             </div>
           </div>
-          
+
           <div className="mt-8 flex flex-col md:flex-row gap-4">
             <button
               onClick={onBack}
@@ -190,9 +171,8 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
             <button
               onClick={handleConfirm}
               disabled={isSubmitting}
-              className={`px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex-1 ${
-                isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
+              className={`px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex-1 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
             >
               {isSubmitting ? 'Confirming...' : 'Confirm Booking'}
             </button>
