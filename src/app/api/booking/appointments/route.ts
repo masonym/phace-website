@@ -134,7 +134,7 @@ export async function POST(request: Request) {
             totalDuration,
             consentFormResponses,
             notes,
-            userId,  // Include userId if user is logged in
+            //userId,  // Include userId if user is logged in
         });
 
         console.log('Created appointment with responses:', {
