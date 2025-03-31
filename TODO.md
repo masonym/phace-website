@@ -16,7 +16,7 @@ TODO:
 - [x] 12. Booking confirmation page price is wrong
 - [ ] 13. When booking is created, for some reason it checks eveyr single service ever??
 - [ ] 14. Consent forms are broken
-- [ ] 15. Waitlist doesn't work
+- [ ] 15. Waitlist doesn't work -- can i just link to teh square waitlist form instead of managing it myself?
 
 
 ### FRONTEND:
