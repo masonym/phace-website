@@ -8,7 +8,7 @@ import Link from 'next/link';
 interface AppointmentDetails {
   id: string;
   clientName: string;
-  serviceName: string;
+  serviceNames: string[];
   staffName: string;
   startTime: string;
   endTime: string;
@@ -109,8 +109,13 @@ export default function BookingConfirmedPage() {
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Service</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{appointment.serviceName}</dd>
+                  {appointment.serviceNames.map((serviceName) => (
+                    <dd key={serviceName} className="mt-1 text-sm text-gray-900">
+                      {serviceName}
+                    </dd>
+                  ))}
                 </div>
+
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Staff Member</dt>
                   <dd className="mt-1 text-sm text-gray-900">{appointment.staffName}</dd>

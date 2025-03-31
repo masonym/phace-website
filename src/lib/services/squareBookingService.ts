@@ -117,8 +117,8 @@ interface Appointment {
 interface AppointmentConfirmation {
     id: string;
     orderId?: string;
-    serviceId: string;
-    serviceName: string;
+    serviceIds: string[];
+    serviceNames: string[];
     staffId: string;
     staffName: string;
     startTime: string;
@@ -1580,6 +1580,44 @@ export class SquareBookingService {
     }
 
     /**
+     * Get the price of a service by id
+     * @param serviceId The ID of the service
+     * @returns The price of the service
+     */
+    static async getServicePrice(serviceId: string): Promise<number> {
+        try {
+            const service = await this.getServiceById(serviceId);
+            if (!service) {
+                throw new Error('Service not found');
+            }
+
+            return service.price;
+        } catch (error) {
+            console.error('Error fetching service price from Square:', error);
+            return 0;
+        }
+    }
+
+    /**
+     * Get the name of a service by id
+     * @param serviceId The ID of the service
+     * @returns The name of the service
+     */
+    static async getServiceName(serviceId: string): Promise<string> {
+        try {
+            const service = await this.getServiceById(serviceId);
+            if (!service) {
+                throw new Error('Service not found');
+            }
+
+            return service.name;
+        } catch (error) {
+            console.error('Error fetching service name from Square:', error);
+            return 'Unknown Service';
+        }
+    }
+
+    /**
      * Get an appointment by ID
      * @param appointmentId The ID of the appointment
      * @returns The appointment details
@@ -1596,22 +1634,38 @@ export class SquareBookingService {
 
             const booking = bookingResult.booking;
 
-            // Get service details
-            const service = await this.getServiceById(booking.appointmentSegments![0].serviceVariationId!);
+            const serviceIds = booking.appointmentSegments!.map(segment => segment.serviceVariationId!);
+
+            // write a function that appends service naems to an array
+            let serviceNames = [];
+
+            for (const serviceId of serviceIds) {
+                const service = await this.getServiceById(serviceId);
+                serviceNames.push(service!.name);
+            }
+
+
+            console.log(serviceIds);
+
+            let totalPrice = 0;
+            for (const serviceId of serviceIds) {
+                const price = await this.getServicePrice(serviceId);
+                totalPrice += price;
+            }
 
             // Get staff details
             const staff = await this.getStaffById(booking.appointmentSegments![0].teamMemberId!);
 
             return {
                 id: booking.id!,
-                serviceId: booking.appointmentSegments![0].serviceVariationId!,
-                serviceName: service?.name || 'Unknown Service',
+                serviceIds: serviceIds,
+                serviceNames: serviceNames,
                 staffId: booking.appointmentSegments![0].teamMemberId!,
                 staffName: staff?.name || 'Unknown Staff',
                 startTime: booking.startAt!,
                 status: this.mapFromSquareBookingStatus(booking.status!),
-                totalPrice: service?.price || 0,
-                totalDuration: booking.appointmentSegments![0].durationMinutes || 0,
+                totalPrice: totalPrice,
+                totalDuration: booking.appointmentSegments!.reduce((total, segment) => total + segment.durationMinutes!, 0),
                 notes: booking.sellerNote || '',
                 consentFormResponses: booking.customerNote ? JSON.parse(booking.customerNote) : [],
                 createdAt: new Date(booking.createdAt!).toISOString(),

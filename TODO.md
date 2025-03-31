@@ -13,6 +13,8 @@ TODO:
 - [ ] 9. Figure out how to deal with in-person payments (if that is even something I need to do on my end)
 - [ ] 10. Unavailabile dates aren't working properly (Sunday/Wednesday for Dawn)
 - [ ] 11. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
+- [x] 12. Booking confirmation page price is wrong
+- [ ] 13. When booking is created, for some reason it checks eveyr single service ever??
 
 
 ### FRONTEND:
