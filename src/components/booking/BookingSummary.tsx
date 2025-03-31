@@ -61,6 +61,8 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
     ? format(new Date(bookingData.dateTime), 'h:mm a')
     : 'Not selected';
 
+  console.log(bookingData);
+
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
       <div className="mb-6">
@@ -150,12 +152,25 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
                 </span>
               </div>
               {/* Add add-on prices here if available */}
+              <div className="flex justify-between items-center font-medium">
+                <span>Add-ons Price:</span>
+                <span>
+                  ${bookingData.addons
+                    ? (bookingData.addons.reduce((total, addon) => total + addon.price, 0) / 100).toFixed(2)
+                    : 0}
+                </span>
+              </div>
               <div className="flex justify-between items-center font-bold text-lg mt-2">
                 <span>Total:</span>
                 <span>
-                  ${bookingData.variation
-                    ? ((bookingData.variation.price || 0) / 100).toFixed(2)
-                    : ((bookingData.service?.price || 0) / 100).toFixed(2)}
+                  ${((
+                    (bookingData.variation
+                      ? (bookingData.variation.price || 0)
+                      : (bookingData.service?.price || 0)) +
+                    (bookingData.addons
+                      ? bookingData.addons.reduce((total, addon) => total + addon.price, 0)
+                      : 0)
+                  ) / 100).toFixed(2)}
                 </span>
               </div>
             </div>

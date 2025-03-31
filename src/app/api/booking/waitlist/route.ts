@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SquareBookingService } from '@/lib/services/bookingService';
+import { SquareBookingService } from '@/lib/services/squareBookingService';
 
 export async function POST(request: Request) {
     try {

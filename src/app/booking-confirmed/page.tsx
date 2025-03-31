@@ -143,8 +143,8 @@ export default function BookingConfirmedPage() {
                   <dt className="text-sm font-medium text-gray-500">Total Price</dt>
                   <dd className="mt-1 text-sm text-gray-900">
                     ${typeof appointment.totalPrice === 'number'
-                      ? appointment.totalPrice.toFixed(2)
-                      : Number(appointment.totalPrice).toFixed(2)}
+                      ? (appointment.totalPrice / 100).toFixed(2)
+                      : Number(appointment.totalPrice / 100).toFixed(2)}
                   </dd>
                 </div>
               </dl>

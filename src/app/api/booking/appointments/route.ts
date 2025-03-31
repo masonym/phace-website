@@ -89,7 +89,7 @@ export async function POST(request: Request) {
             const addonDetails = await SquareBookingService.getAddonsByIds(addons);
             const validAddons = addonDetails.filter(addon => addon != null);
             for (const addon of validAddons) {
-                totalDuration += parseInt(addon.duration.toString(), 10);
+                totalDuration += parseInt(addon.duration.toString(), 10) / 60000;
                 totalPrice += parseInt(addon.price.toString(), 10);
             }
         }
@@ -97,6 +97,11 @@ export async function POST(request: Request) {
         // Calculate end time
         const startDate = parseISO(startTime);
         const endTime = addMinutes(startDate, totalDuration);
+        // Round UP endTime to the nearest hour if under 1 hour
+        if (totalDuration < 60) {
+            endTime.setMinutes(0);
+            endTime.setHours(endTime.getHours() + 1);
+        }
 
         console.log('Appointment times:', {
             startTime,
@@ -119,17 +124,18 @@ export async function POST(request: Request) {
         }
 
         // Create the appointment in Square
-        const appointment = await SquareBookingService.createAppointment({
+        const appointment = await SquareBookingService.createAppointmentWithMultipleSegments({
             clientEmail,
             clientName,
             clientPhone,
             staffId,
             serviceId: idToUse,
-            variationVersion,
             serviceName: nameToUse,
+            variationVersion,
+            variationId,
             addons,
             startTime,
-            endTime: endTime.toISOString(),
+            //endTime: endTime.toISOString(),
             totalPrice,
             totalDuration,
             consentFormResponses,
@@ -155,40 +161,23 @@ export async function POST(request: Request) {
     }
 }
 
-//export async function GET(request: Request) {
-//    try {
-//        const { searchParams } = new URL(request.url);
-//        const clientEmail = searchParams.get('clientEmail');
-//        const staffId = searchParams.get('staffId');
-//        const startDate = searchParams.get('startDate');
-//        const endDate = searchParams.get('endDate');
-//
-//        if (clientEmail) {
-//            const appointments = await SquareBookingService.getClientAppointments(clientEmail);
-//            return NextResponse.json(appointments);
-//        }
-//
-//        if (staffId && startDate && endDate) {
-//            const appointments = await SquareBookingService.getStaffAppointments(
-//                staffId,
-//                startDate,
-//                endDate
-//            );
-//            return NextResponse.json(appointments);
-//        }
-//
-//        return NextResponse.json(
-//            { error: 'Invalid query parameters' },
-//            { status: 400 }
-//        );
-//    } catch (error: any) {
-//        console.error('Error fetching appointments:', error);
-//        return NextResponse.json(
-//            { error: error.message || 'Failed to fetch appointments' },
-//            { status: 500 }
-//        );
-//    }
-//}
+export async function GET(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+
+        let bookings;
+
+        bookings = await SquareBookingService.listBookings(); // fetch all if no filters
+
+        return NextResponse.json(SquareBookingService.safeStringify(bookings));
+    } catch (error) {
+        console.error('Error fetching bookings:', error);
+        return NextResponse.json(
+            { error: error.message || 'Failed to fetch bookings' },
+            { status: 500 }
+        );
+    }
+}
 
 //export async function PUT(request: Request) {
 //    try {
