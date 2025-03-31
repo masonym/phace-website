@@ -102,7 +102,7 @@ interface Appointment {
     staffId: string;
     staffName: string;
     startTime: string;
-    endTime: string;
+    //endTime: string;
     status: string;
     totalPrice: number;
     totalDuration: number;
@@ -947,8 +947,9 @@ export class SquareBookingService {
                 const addonObject: ServiceAddon = {
                     id: item.id!,
                     name: itemData.name || 'Unnamed Addon',
-                    // Ensure description is optional (undefined if null/undefined)
                     description: itemData.description ?? undefined,
+                    variationId: variation.id,
+                    version: this.safeNumber(variation.version),
                     price: this.safeNumber(price),
                     duration: this.safeNumber(durationMs),
                     isActive: !itemData.isArchived
@@ -1560,7 +1561,7 @@ export class SquareBookingService {
                 staffId: params.staffId,
                 staffName: staff.name,
                 startTime: params.startTime,
-                endTime: params.endTime,
+                //endTime: params.endTime,
                 status: this.mapFromSquareBookingStatus(booking.status!),
                 totalPrice: params.totalPrice,
                 totalDuration: params.totalDuration,
@@ -1709,245 +1710,6 @@ export class SquareBookingService {
 
         return item;
     }
-    static async createAppointmentWithOrder(params: CreateAppointmentParams): Promise<CreateAppointmentResult> {
-        let orderId: string | undefined = undefined; // Keep track of created order ID for potential rollback
-
-        try {
-            console.log("Starting createAppointmentWithOrder with params:", params);
-            const locationId = await this.getLocationId();
-            const currency = "CAD"; // TODO: Make this configurable or detect from location
-
-            // --- 1. Get Prerequisites ---
-            // Get main service details (needed for price/version, even if name is passed)
-            const service = await this.getServiceById(params.serviceId);
-            if (!service || !service.variations) {
-                throw new Error(`Service or its variations not found for ID: ${params.serviceId}`);
-            }
-            // Find the specific variation being booked to confirm price/version
-            const mainVariation = service.variations.find(v => v.id === params.variationId);
-            if (!mainVariation) {
-                throw new Error(`Specified variation ${params.variationId} not found for service ${params.serviceId}`);
-            }
-            // Use price/version from the fetched variation for accuracy
-            const mainVariationPrice = mainVariation.price;
-            const mainVariationVersion = mainVariation.version;
-            // Ensure version matches param, log warning if not
-            if (mainVariationVersion !== params.variationVersion) {
-                console.warn(`Provided variationVersion (${params.variationVersion}) differs from fetched version (${mainVariationVersion}) for ${params.variationId}. Using fetched version.`);
-            }
-
-
-            // Get Addon details (including their variation IDs and prices)
-            let addonDetails: ServiceAddon[] = [];
-            if (params.addons && params.addons.length > 0) {
-                // Assuming getAddonsByIds returns the enhanced ServiceAddon[] including variationId and price
-                addonDetails = await this.getAddonsByIds(params.addons);
-                if (addonDetails.length !== params.addons.length) {
-                    console.warn("Could not fetch details for all addon IDs.");
-                    // Decide how to handle: throw error or proceed without missing addons?
-                    // Let's throw for now to ensure price accuracy.
-                    throw new Error("Failed to fetch details for all requested addons.");
-                }
-                console.log("Fetched addon details:", addonDetails);
-            }
-
-            // Get Staff details (primarily for booking, but might be needed if staff name wasn't passed)
-            const staff = await this.getStaffById(params.staffId);
-            if (!staff) {
-                throw new Error(`Staff member not found: ${params.staffId}`);
-            }
-            const staffName = params.staffName || staff.name; // Use passed name or fetched name
-
-            // Get or Create Customer
-            console.log(`Searching for customer: ${params.clientEmail}`);
-            const customerResult = await client.customers.search({
-                query: { filter: { emailAddress: { exact: params.clientEmail } } }
-            });
-            let customerId = customerResult.customers?.[0]?.id;
-
-            if (!customerId) {
-                console.log(`Customer not found, creating new customer: ${params.clientEmail}`);
-                const newCustomerResult = await client.customers.create({
-                    idempotencyKey: randomUUID(), // Add idempotency key
-                    givenName: params.clientName.split(' ')[0],
-                    familyName: params.clientName.split(' ').slice(1).join(' '),
-                    emailAddress: params.clientEmail,
-                    phoneNumber: params.clientPhone
-                });
-                customerId = newCustomerResult.customer?.id;
-                if (!customerId) throw new Error('Failed to create customer');
-                console.log(`Created customer with ID: ${customerId}`);
-            } else {
-                console.log(`Found existing customer with ID: ${customerId}`);
-            }
-
-
-            // --- 2. Construct Order Line Items ---
-            const lineItems: any[] = []; // Use 'any' for simplicity or define stricter OrderLineItem type
-
-            // Main Service Line Item
-            lineItems.push({
-                catalogObjectId: params.variationId, // Use the specific variation ID
-                quantity: "1",
-                // basePriceMoney should reflect the price of THIS variation
-                basePriceMoney: {
-                    amount: BigInt(mainVariationPrice), // Use fetched price
-                    currency: currency
-                }
-                // name: params.serviceName, // Optional: can be added but catalogObjectId is key
-            });
-
-            // Addon Line Items
-            addonDetails.forEach(addon => {
-                lineItems.push({
-                    catalogObjectId: addon.variationId, // **Crucial: Use addon's variation ID**
-                    quantity: "1",
-                    basePriceMoney: {
-                        amount: BigInt(addon.price),
-                        currency: currency
-                    }
-                    // name: addon.name, // Optional
-                });
-            });
-
-            console.log("Constructed Order Line Items:", lineItems);
-
-            // --- 3. Create the Square Order ---
-            const orderRequest = {
-                idempotencyKey: randomUUID(),
-                order: {
-                    locationId,
-                    customerId,
-                    lineItems,
-                    // Add reference ID if useful for your system
-                    // referenceId: `booking-ref-${params.userId || nanoid()}`
-                }
-            };
-
-            console.log("Creating Square Order with request:", this.safeStringify(orderRequest));
-            const orderResponse = await client.orders.create(orderRequest);
-
-            if (!orderResponse.order || !orderResponse.order.id) {
-                console.error("Failed Order Response Body:", this.safeStringify(orderResponse));
-                throw new Error('Failed to create Square order: No order returned.');
-            }
-            orderId = orderResponse.order.id; // Store for potential rollback and return value
-            const createdOrder = orderResponse.order;
-            console.log(`Successfully created Square Order with ID: ${orderId}, Version: ${createdOrder.version}`);
-            // Verify total price matches expectation (optional but recommended)
-            const orderTotal = Number(createdOrder.totalMoney?.amount ?? 0);
-            if (orderTotal !== params.totalPrice) {
-                console.warn(`Order total (${orderTotal}) does not match calculated total price (${params.totalPrice}). Check item prices.`);
-                // Decide if this is a critical error or just a warning
-            }
-
-
-            // --- 4. Create the Square Booking ---
-            // Construct the note linking to the order
-            const sellerNote = `Linked Order ID: ${orderId}\n\n${params.notes || ''}`;
-            const customerNote = this.safeStringify(params.consentFormResponses || []); // Keep consent separate
-
-            const bookingRequest = {
-                idempotencyKey: randomUUID(), // Use a *different* idempotency key
-                booking: {
-                    locationId,
-                    startAt: params.startTime,
-                    customerId,
-                    appointmentSegments: [
-                        {
-                            teamMemberId: params.staffId,
-                            serviceVariationId: params.variationId, // Main service variation ID
-                            serviceVariationVersion: BigInt(mainVariationVersion), // Use fetched version
-                            durationMinutes: params.totalDuration // Use total duration in minutes
-                        }
-                    ],
-                    sellerNote: sellerNote,
-                    customerNote: customerNote,
-                    // Consider adding `transitionTimeMinutes: 0` if applicable
-                }
-            };
-
-            console.log("Creating Square Booking with request:", this.safeStringify(bookingRequest));
-            const bookingResult = await client.bookings.create(bookingRequest);
-
-            if (!bookingResult.booking || !bookingResult.booking.id) {
-                console.error("Failed Booking Response Body:", this.safeStringify(bookingResult));
-                // Attempt to cancel the order if booking fails
-                console.error(`Booking creation failed after order ${orderId} was created. Attempting to cancel order.`);
-                try {
-                    await client.orders.update({
-                        orderId: orderId,
-                        order: {
-                            locationId: locationId,
-                            version: createdOrder.version!, // Use the version from the created order
-                            state: 'CANCELED'
-                        },
-                        idempotencyKey: randomUUID()
-                    });
-                    console.log(`Successfully cancelled orphaned order ${orderId}`);
-                } catch (cancelError) {
-                    console.error(`Failed to cancel orphaned order ${orderId}:`, cancelError);
-                    // Log this critical state - booking failed, order might be chargeable
-                }
-                throw new Error('Failed to create Square booking after creating order.');
-            }
-
-            const bookingId = bookingResult.booking.id;
-            const booking = bookingResult.booking;
-            console.log(`Successfully created Square Booking with ID: ${bookingId}`);
-
-            // --- 5. Construct Local Appointment Object ---
-            // Calculate end time based on start time and total duration
-            const startTimeDate = new Date(params.startTime);
-            const endTimeDate = new Date(startTimeDate.getTime() + params.totalDuration * 60000); // duration in minutes
-            const endTimeISO = endTimeDate.toISOString();
-
-            const appointment: Appointment = {
-                id: bookingId, // Use booking ID as the primary ID for the appointment record
-                orderId: orderId, // Link to the order
-                clientName: params.clientName,
-                clientEmail: params.clientEmail,
-                clientPhone: params.clientPhone,
-                serviceId: params.serviceId, // Main service Item ID
-                serviceName: params.serviceName,
-                variationVersion: mainVariationVersion, // Use actual booked version
-                staffId: params.staffId,
-                staffName: staffName,
-                startTime: params.startTime, // ISO string
-                endTime: endTimeISO, // Calculated end time
-                status: this.mapFromSquareBookingStatus(booking.status!),
-                totalPrice: orderTotal, // Use the actual total from the created Square Order
-                totalDuration: params.totalDuration, // In minutes
-                addons: addonDetails, // Store full addon details fetched earlier
-                notes: params.notes, // Original client notes
-                consentFormResponses: params.consentFormResponses,
-                userId: params.userId,
-                createdAt: new Date(booking.createdAt!).toISOString(),
-                updatedAt: booking.updatedAt ? new Date(booking.updatedAt).toISOString() : new Date(booking.createdAt!).toISOString()
-            };
-
-            console.log("Constructed final Appointment object:", appointment);
-
-            // --- 6. Return Result ---
-            return {
-                orderId,
-                bookingId,
-                appointment
-            };
-
-        } catch (error: any) {
-            console.error('Error in createAppointmentWithOrder:', error);
-            // Log Square API error details if available
-            if (error?.body) {
-                console.error('Square API Error Body:', this.safeStringify(error.body));
-            } else if (error instanceof Error) {
-                console.error('Error stack:', error.stack);
-            }
-            // Re-throw the error so the calling API route can handle it
-            throw error;
-        }
-    }
-
     /**
      * List all bookings
      */
@@ -1997,9 +1759,6 @@ export class SquareBookingService {
                 throw new Error(`Specified variation ${params.variationId} not found for service ${params.serviceId}`);
             }
             // Validate passed version matches fetched version (optional but good practice)
-            if (mainVariation.version !== params.variationVersion) {
-                console.warn(`Provided variationVersion (${params.variationVersion}) differs from fetched version (${mainVariation.version}) for ${params.variationId}. Using fetched version.`);
-            }
             const mainVariationVersion = mainVariation.version; // Use fetched version
             const mainVariationDurationMins = Math.ceil(mainVariation.duration / 60000);
             const mainVariationPrice = mainVariation.price;
@@ -2139,7 +1898,7 @@ export class SquareBookingService {
                 staffId: params.staffId,
                 staffName: staffName,
                 startTime: params.startTime,
-                endTime: endTimeISO, // Use calculated end time
+                //endTime: endTimeISO, // Use calculated end time
                 status: this.mapFromSquareBookingStatus(booking.status!),
                 totalPrice: calculatedTotalPrice, // Store calculated total price
                 totalDuration: calculatedTotalDurationMins, // Store calculated total duration

@@ -338,7 +338,7 @@ export default function DateTimeSelection({
       ) : (
         <WaitlistForm
           serviceId={serviceId}
-          variationId={variationId}
+          variationId={variationId!}
           staffId={staffId}
           onBack={() => setShowWaitlist(false)}
           onSuccess={() => {

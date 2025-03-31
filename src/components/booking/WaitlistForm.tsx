@@ -4,6 +4,7 @@ import { format, addDays, parseISO } from 'date-fns';
 import { showToast } from "@/components/ui/Toast";
 
 interface WaitlistFormProps {
+    variationId: string;
     serviceId: string;
     staffId?: string;
     onBack: () => void;
@@ -23,7 +24,7 @@ interface AvailabilityResponse {
     staffAvailable: boolean;
 }
 
-export default function WaitlistForm({ serviceId, staffId, onBack, onSuccess }: WaitlistFormProps) {
+export default function WaitlistForm({ serviceId, variationId, staffId, onBack, onSuccess }: WaitlistFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedDates, setSelectedDates] = useState<string[]>([]);
     const [availableDates, setAvailableDates] = useState<string[]>([]);
@@ -42,7 +43,7 @@ export default function WaitlistForm({ serviceId, staffId, onBack, onSuccess }: 
             while (daysChecked < maxDaysToCheck && validDatesFound < desiredValidDates) {
                 const date = addDays(new Date(), daysChecked);
                 const formattedDate = format(date, 'yyyy-MM-dd');
-                
+
                 try {
                     const params = new URLSearchParams({
                         serviceId,
@@ -61,7 +62,7 @@ export default function WaitlistForm({ serviceId, staffId, onBack, onSuccess }: 
                 } catch (error) {
                     console.error('Error checking date availability:', error);
                 }
-                
+
                 daysChecked++;
             }
 
@@ -219,11 +220,10 @@ export default function WaitlistForm({ serviceId, staffId, onBack, onSuccess }: 
                                             key={dateStr}
                                             type="button"
                                             onClick={() => handleDateSelect(dateStr)}
-                                            className={`p-3 text-sm rounded-md border ${
-                                                isSelected
-                                                    ? 'bg-accent text-white border-accent'
-                                                    : 'border-gray-300 hover:border-accent'
-                                            }`}
+                                            className={`p-3 text-sm rounded-md border ${isSelected
+                                                ? 'bg-accent text-white border-accent'
+                                                : 'border-gray-300 hover:border-accent'
+                                                }`}
                                         >
                                             {format(parseISO(dateStr), 'MMM d, yyyy')}
                                         </button>
