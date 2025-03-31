@@ -32,3 +32,4 @@ TODO:
 - [ ] 3. Figure out CC info??
 - [x] 4. Show products on /store page
 - [x] 5. Product options/variations dont work
+- [ ] 6. Implement api functions from \products\[id]\route.ts
