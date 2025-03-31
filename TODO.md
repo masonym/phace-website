@@ -15,6 +15,7 @@ TODO:
 - [ ] 11. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
 - [x] 12. Booking confirmation page price is wrong
 - [ ] 13. When booking is created, for some reason it checks eveyr single service ever??
+- [ ] 14. Consent forms are broken
 
 
 ### FRONTEND:

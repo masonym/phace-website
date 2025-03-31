@@ -40,13 +40,14 @@ interface ServiceVariation {
 
 interface Service {
   id: string;
+  categoryId: string;
   name: string;
   description?: string;
-  duration: number;
   price: number;
+  duration: number;
   imageUrl?: string;
-  categoryId: string;
   isActive: boolean;
+  updatedAt?: string;
   variationId: string;
   variations?: ServiceVariation[];
 }

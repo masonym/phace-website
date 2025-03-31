@@ -14,7 +14,7 @@ interface ServiceVariation {
 interface Service {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   duration: number;
   price: number;
   imageUrl?: string;
