@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         const idToUse = variationId || serviceId;
 
         // Verify that the service exists and is bookable
-        const service = await SquareBookingService.getServiceById(idToUse);
+        const service = await SquareBookingService.getServiceById(idToUse!);
         if (!service) {
             console.log(`Service not found: ${idToUse}`);
             return NextResponse.json({
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest) {
         // Get available time slots from Square
         const squareAvailability = await SquareBookingService.getAvailableTimeSlots({
             staffId,
-            id: idToUse,
-            variationId: variationId, // Pass the variationId explicitly if provided
+            id: idToUse!,
+            variationId: variationId!, // Pass the variationId explicitly if provided
             date,
             addonIds: addons.length > 0 ? addons : undefined
         });
