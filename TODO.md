@@ -30,3 +30,5 @@ TODO:
 - [ ] 1. Actually implement the Square shop integration
 - [ ] 2. Make sure users can buy things
 - [ ] 3. Figure out CC info??
+- [x] 4. Show products on /store page
+- [x] 5. Product options/variations dont work

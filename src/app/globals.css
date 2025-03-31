@@ -4,7 +4,7 @@
 
 @font-face {
   font-family: 'Spinnaker';
-  src: url('/fonts/Spinnaker-Regular.ttf') format('truetype');
+  /*src: url('/fonts/Spinnaker-Regular.ttf') format('truetype');*/
   font-weight: normal;
   font-style: normal;
 }
