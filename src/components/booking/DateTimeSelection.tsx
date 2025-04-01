@@ -13,6 +13,7 @@ import {
   endOfWeek,
   isAfter,
   isBefore,
+  isSameMonth,
   addDays
 } from 'date-fns';
 import WaitlistForm from './WaitlistForm';
@@ -56,6 +57,7 @@ export default function DateTimeSelection({
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [checkingDates, setCheckingDates] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [checkedMonths, setCheckedMonths] = useState<Set<string>>(new Set());
 
   // Calculate the date range for the calendar
   const monthStart = startOfMonth(currentMonth);
@@ -68,58 +70,88 @@ export default function DateTimeSelection({
   // Fetch available dates for the current month range
   useEffect(() => {
     const checkDateAvailability = async (startDate: Date, endDate: Date) => {
+      const currentMonthStr = format(currentMonth, 'yyyy-MM');
+
+      // Skip if we've already checked this month
+      if (checkedMonths.has(currentMonthStr)) {
+        setCheckingDates(false);
+        return;
+      }
+
       setCheckingDates(true);
       try {
         // Filter out past dates before making API calls
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Set to beginning of today
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
 
         const datesInRange = eachDayOfInterval({ start: startDate, end: endDate })
-          .filter(date => isAfter(date, tomorrow) || isSameDay(date, tomorrow));
+          .filter(date => isAfter(date, today) || isSameDay(date, today));
 
         console.log(`Checking availability for ${datesInRange.length} dates (filtered out past dates)`);
 
-        const datePromises = datesInRange.map(async (date) => {
-          const formattedDate = format(date, 'yyyy-MM-dd');
-          const params = new URLSearchParams({
-            serviceId,
-            ...(variationId && { variationId }),
-            staffId,
-            date: formattedDate,
-            ...(addons.length > 0 && { addons: addons.join(',') }),
+        // Batch API calls by week to reduce number of requests
+        const batchSize = 7; // One week at a time
+        const batches = [];
+
+        for (let i = 0; i < datesInRange.length; i += batchSize) {
+          batches.push(datesInRange.slice(i, i + batchSize));
+        }
+
+        const newAvailableDates = new Set<string>(availableDates);
+        const newFullyBookedDates = new Set<string>(fullyBookedDates);
+
+        // Process each batch sequentially to avoid overwhelming the server
+        for (const batch of batches) {
+          const batchPromises = batch.map(async (date) => {
+            const formattedDate = format(date, 'yyyy-MM-dd');
+            const params = new URLSearchParams({
+              serviceId,
+              ...(variationId && { variationId }),
+              staffId,
+              date: formattedDate,
+              ...(addons.length > 0 && { addons: addons.join(',') }),
+            });
+
+            try {
+              const response = await fetch(`/api/booking/availability?${params}`);
+              if (!response.ok) {
+                console.error(`Failed to fetch availability for ${formattedDate}: ${response.statusText}`);
+                return null;
+              }
+
+              const data: AvailabilityResponse = await response.json();
+              return { date: formattedDate, data };
+            } catch (error) {
+              console.error(`Error fetching availability for ${formattedDate}:`, error);
+              return null;
+            }
           });
 
-          const response = await fetch(`/api/booking/availability?${params}`);
-          if (!response.ok) return;
+          const results = await Promise.all(batchPromises);
 
-          const data: AvailabilityResponse = await response.json();
-          return { date: formattedDate, data };
-        });
+          // Update available and fully booked dates
+          results.forEach(result => {
+            if (!result) return;
 
-        const results = await Promise.all(datePromises);
+            const { date, data } = result;
 
-        // Update available and fully booked dates
-        const newAvailableDates = new Set<string>();
-        const newFullyBookedDates = new Set<string>();
+            if (data.slots.length > 0) {
+              newAvailableDates.add(date);
+            } else if (data.isFullyBooked) {
+              newFullyBookedDates.add(date);
+            }
+          });
 
-        results.forEach(result => {
-          if (!result) return;
-
-          const { date, data } = result;
-
-          if (data.slots.length > 0) {
-            newAvailableDates.add(date);
-          } else if (data.isFullyBooked) {
-            newFullyBookedDates.add(date);
-          }
-        });
+          // Small delay between batches to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
 
         setAvailableDates(newAvailableDates);
         setFullyBookedDates(newFullyBookedDates);
+        setCheckedMonths(prev => new Set([...prev, currentMonthStr]));
       } catch (error) {
         console.error('Error checking date availability:', error);
+        setError('Failed to load availability. Please try again.');
       } finally {
         setCheckingDates(false);
       }
@@ -161,17 +193,17 @@ export default function DateTimeSelection({
   const isDateSelectable = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to beginning of today
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
 
     // Check if date is today or in the future
-    const isNotPast = isAfter(date, tomorrow) || isSameDay(date, tomorrow);
+    const isNotPast = isAfter(date, today) || isSameDay(date, today);
 
-    const isCurrentMonth = format(date, 'M') === format(currentMonth, 'M');
+    // Check if the date is in the current calendar view
+    const isInCurrentView = isSameMonth(date, currentMonth);
+
     const isInRange = isBefore(date, maxDate); // No need to check isAfter since we already check isNotPast
     const dateStr = format(date, 'yyyy-MM-dd');
 
-    return isNotPast && isCurrentMonth && isInRange && (availableDates.has(dateStr) || fullyBookedDates.has(dateStr));
+    return isNotPast && isInCurrentView && isInRange && (availableDates.has(dateStr) || fullyBookedDates.has(dateStr));
   };
 
   const isDateFullyBooked = (date: Date) => {
@@ -248,12 +280,10 @@ export default function DateTimeSelection({
                   // Check if date is in the past
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  const tomorrow = new Date(today);
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  const isPast = isBefore(date, tomorrow) && !isSameDay(date, tomorrow);
+                  const isPast = isBefore(date, today) && !isSameDay(date, today);
 
-                  // Check if date is in current month
-                  const isCurrentMonthDate = format(date, 'M') === format(currentMonth, 'M');
+                  // Check if date is in current month view
+                  const isInCurrentView = isSameMonth(date, currentMonth);
 
                   return (
                     <button
@@ -264,7 +294,7 @@ export default function DateTimeSelection({
                         py-2 rounded-full text-sm
                         ${isSelected ? 'bg-accent text-white' : ''}
                         ${isBooked ? 'bg-orange-100 text-orange-900 hover:bg-orange-200' : ''}
-                        ${!isCurrentMonthDate
+                        ${!isInCurrentView
                           ? 'text-gray-300 opacity-0 cursor-default'
                           : isPast
                             ? 'text-gray-300 line-through cursor-not-allowed'
@@ -286,6 +316,11 @@ export default function DateTimeSelection({
                   <div className="w-4 h-4 bg-orange-100 rounded-full"></div>
                   <span>Fully Booked - Waitlist Available</span>
                 </div>
+                {error && (
+                  <div className="mt-2 p-2 bg-red-50 text-red-600 rounded">
+                    {error}
+                  </div>
+                )}
               </div>
             </div>
 
