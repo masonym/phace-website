@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceSelection from '@/components/booking/ServiceSelection';
 import StaffSelection from '@/components/booking/StaffSelection';
@@ -96,6 +96,13 @@ export default function BookingPage() {
   const updateBookingData = (data: Partial<BookingData>) => {
     setBookingData(prev => ({ ...prev, ...data }));
   };
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, [currentStep]);
 
   return (
     <main className="min-h-screen bg-[#FFFBF0] pt-24">
