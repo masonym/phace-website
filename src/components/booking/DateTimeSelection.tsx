@@ -14,6 +14,7 @@ import {
   isAfter,
   isBefore,
   isSameMonth,
+  startOfDay,
   addDays
 } from 'date-fns';
 import WaitlistForm from './WaitlistForm';
@@ -56,7 +57,17 @@ export default function DateTimeSelection({
   const [fullyBookedDates, setFullyBookedDates] = useState<Set<string>>(new Set());
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [checkingDates, setCheckingDates] = useState(true);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const today = new Date();
+    const lastDayOfMonth = endOfMonth(today);
+
+    // If today is the last day of the month, show next month
+    if (isSameDay(today, lastDayOfMonth)) {
+      return addMonths(startOfMonth(today), 1);
+    }
+
+    return startOfMonth(today);
+  });
   const [checkedMonths, setCheckedMonths] = useState<Set<string>>(new Set());
 
   // Calculate the date range for the calendar
@@ -65,7 +76,7 @@ export default function DateTimeSelection({
   const calendarStart = startOfWeek(monthStart);
   const calendarEnd = endOfWeek(monthEnd);
   const dates = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  const maxDate = addMonths(new Date(), 2);
+  const maxDate = addMonths(startOfDay(new Date()), 2);
 
   // Fetch available dates for the current month range
   useEffect(() => {
@@ -81,8 +92,7 @@ export default function DateTimeSelection({
       setCheckingDates(true);
       try {
         // Filter out past dates before making API calls
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Set to beginning of today
+        const today = startOfDay(new Date());
 
         const datesInRange = eachDayOfInterval({ start: startDate, end: endDate })
           .filter(date => isAfter(date, today) || isSameDay(date, today));
@@ -191,8 +201,7 @@ export default function DateTimeSelection({
   }, [selectedDate]);
 
   const isDateSelectable = (date: Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to beginning of today
+    const today = startOfDay(new Date());
 
     // Check if date is today or in the future
     const isNotPast = isAfter(date, today) || isSameDay(date, today);
@@ -278,8 +287,7 @@ export default function DateTimeSelection({
                   const isBooked = isDateFullyBooked(date);
 
                   // Check if date is in the past
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
+                  const today = startOfDay(new Date());
                   const isPast = isBefore(date, today) && !isSameDay(date, today);
 
                   // Check if date is in current month view
