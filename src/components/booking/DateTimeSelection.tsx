@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   format,
   parseISO,
@@ -40,6 +41,12 @@ interface DateTimeSelectionProps {
   onSelect: (dateTime: string) => void;
   onBack: () => void;
 }
+
+const loadingVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 }
+};
 
 export default function DateTimeSelection({
   serviceId,
@@ -254,7 +261,24 @@ export default function DateTimeSelection({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Calendar */}
-            <div className="bg-white rounded-xl p-6 shadow-sm h-fit">
+            <div className="bg-white rounded-xl p-6 shadow-sm h-fit relative">
+              <AnimatePresence>
+                {checkingDates && (
+                  <motion.div
+                    variants={loadingVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0 bg-gray-100/70 rounded-xl flex items-center justify-center z-10"
+                  >
+                    <div className="text-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent mb-2"></div>
+                      <p className="text-gray-600">Loading availability...</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className="mb-4 flex justify-between items-center">
                 <h2 className="text-lg font-medium">
                   {format(currentMonth, 'MMMM yyyy')}
