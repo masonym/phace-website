@@ -1,16 +1,9 @@
 import { SquareClient } from "square";
+import { Square } from "square";
 
 const client = new SquareClient({
     token: process.env.SQUARE_ACCESS_TOKEN!,
 });
-
-interface Product {
-    id: string;
-    name: string;
-    description?: string;
-    price: number;
-    // imageUrl?: string; // Example optional field
-}
 
 export class ProductService {
 
@@ -41,15 +34,13 @@ export class ProductService {
     /**
      * Fetch a list of products from Square
      */
-    static async listProducts(category?: string): Promise<Product[]> {
+    static async listProducts(category?: string): Promise<Square.CatalogObject[]> {
         try {
             // step 1: get products (ITEMs + ITEM_VARIATIONs)
             const itemsResult = await client.catalog.searchItems({ productTypes: ["REGULAR"] });
             if (!itemsResult.items) throw new Error("Failed to fetch products");
 
             console.log("Fetched items:", itemsResult.items);
-
-
 
             // step 2: get item options using search()
             const optionsResult = await client.catalog.search({
@@ -64,46 +55,90 @@ export class ProductService {
             console.log("Fetched options:", itemOptions);
 
             // step 3: build products with options
-
-            const products = itemsResult.items
-                .filter(obj => obj.type === 'ITEM')
-                .flatMap(item => {
-                    if (!item.itemData?.variations) return [];
-
-                    return item.itemData.variations
-                        .filter(obj => obj.type === 'ITEM_VARIATION')
-                        .map(variation => {
-                            // check if variation has options
-                            const options = (variation.itemVariationData?.itemOptionValues || [])
-                                .reduce((acc, optValue) => {
-                                    const option = itemOptions
-                                        .filter(obj => obj.type === 'ITEM_OPTION')
-                                        .find(opt => opt.id === optValue.itemOptionId);
-                                    //if (option && option.itemOptionData?.name) {
-                                    //    acc[option.itemOptionData.name] = optValue.!; // use the actual value name
-                                    //}
-                                    return acc;
-                                }, {} as Record<string, string>);
-
-                            const variationName = variation.itemVariationData?.name;
-                            const productName = item.itemData?.name || "Unnamed";
-
-                            return {
-                                id: variation.id!,
-                                name: variationName === "Regular" || !variationName ? productName : variationName,
-                                price: this.safeNumber(variation.itemVariationData?.priceMoney?.amount ?? 0),
-                                options
-                            };
-                        });
+            const products: Square.CatalogObject[] = itemsResult.items
+                .filter((item) => item.type === 'ITEM')
+                .map((item) => {
+                    return {
+                        type: item.type,
+                        id: item.id,
+                        version: item.version !== undefined ? BigInt(item.version.toString()) : BigInt(0), // default to BigInt(0) if undefined
+                        item_data: {
+                            name: item.itemData?.name || "",
+                            description: item.itemData?.description || "",
+                            categories: item.itemData?.categories || [],
+                            product_type: item.itemData?.productType || "REGULAR",
+                            tax_ids: item.itemData?.taxIds || [],
+                            variations: item.itemData?.variations || [],
+                        },
+                    };
                 });
 
-            console.log("Products with options:", products);
-            return products;
+            // optionally filter by category if provided
+            // this doesnt work
+            //if (category) {
+            //    return products.filter((product) =>
+            //        product..categories.some((cat) => cat.name === category)
+            //    );
+            //}
 
+            return products;
         } catch (error) {
             console.error("Error fetching products:", error);
             throw error;
         }
     }
 
+    /**
+     * Fetch a single product by ID
+     */
+
+    static async getProductById(productId: string): Promise<Square.Product | null> {
+        try {
+            const itemResult = await client.catalog.object.get({
+                objectId: productId,
+                includeRelatedObjects: true,
+            });
+
+            if (!itemResult.object) throw new Error("Product not found");
+
+            const item = itemResult.object;
+
+            if (item.type !== 'ITEM') {
+                // This should never happen
+                throw new Error("Catalog object is not a product");
+            }
+
+            const variations = item.itemData?.variations;
+
+            if (!variations || variations.length === 0) {
+                throw new Error("Product has no variations");
+            }
+
+
+            const itemData = { ...item.itemData, variations: variations.map(variation => { }) };
+
+            return itemData;
+
+
+        } catch (error) {
+            console.error("Error fetching product:", error);
+            throw error;
+        }
+    }
+
+    static async getCategories(categoryIds: string[]): Promise<Square.CatalogObject[]> {
+        try {
+            const categories = await client.catalog.batchGet({
+                objectIds: categoryIds,
+                includeRelatedObjects: true,
+            });
+
+            if (!categories.objects) throw new Error("Categories not found");
+
+            return categories.objects;
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+            throw error;
+        }
+    }
 }

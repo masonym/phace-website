@@ -1,10 +1,11 @@
 'use client';
 
+
 import { useState, useEffect } from 'react';
-import { Product } from '@/types/product';
+import { Square } from 'square'
 
 export function useProducts() {
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<Square.CatalogObject[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 

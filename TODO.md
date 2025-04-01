@@ -17,6 +17,7 @@ TODO:
 - [ ] 13. When booking is created, for some reason it checks eveyr single service ever??
 - [ ] 14. Consent forms are broken
 - [ ] 15. Waitlist doesn't work -- can i just link to teh square waitlist form instead of managing it myself?
+- [x] 16. i am almost positive theres a stupid bug with how iphones handle dates
 
 
 ### FRONTEND:
@@ -33,3 +34,5 @@ TODO:
 - [x] 4. Show products on /store page
 - [x] 5. Product options/variations dont work
 - [ ] 6. Implement api functions from \products\[id]\route.ts
+- [ ] 7. Categories are broken: Implement getCategories in productService.ts
+- [ ] 8. Prices of products are showing as NaN sometimes?

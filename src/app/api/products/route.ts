@@ -15,7 +15,9 @@ export async function GET(request: Request) {
         const category = searchParams.get('category');
 
         const products = await ProductService.listProducts(category || undefined);
-        return NextResponse.json(products);
+        const stringified = ProductService.safeStringify(products); // Returns a string; necessary because of bigint
+        const parsedProducts = JSON.parse(stringified); // Convert back to object/array
+        return NextResponse.json(parsedProducts);
     } catch (error) {
         console.error('Error loading products:', error);
         return NextResponse.json(
@@ -24,4 +26,3 @@ export async function GET(request: Request) {
         );
     }
 }
-
