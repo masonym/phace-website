@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
 import { useProducts } from '@/hooks/useProducts';
+import { ProductService } from '@/lib/services/productService';
+import { Square } from 'square';
 
 export default function ProductGrid() {
     const { products, isLoading, error } = useProducts();
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const [categoryNames, setCategoryNames] = useState<Map<string, string>>(new Map());
+    const [categoryNames, setCategoryNames] = useState<Square.CatalogObject[]>([]);
 
     // Fetch category names when products load
     useEffect(() => {
@@ -15,22 +17,17 @@ export default function ProductGrid() {
             if (!Array.isArray(products) || products.length === 0) return;
 
             const categoryIds = new Set<string>();
-            products.forEach(product => {
-                product.item_data.categories?.forEach(cat => {
-                    categoryIds.add(cat.id);
-                });
+            products.forEach((product: Square.CatalogObject) => {
+                if (product.type === "ITEM" && product.itemData) {
+                    product.itemData.categories?.forEach(cat => {
+                        categoryIds.add(cat.id!);
+                    });
+                }
             });
 
             try {
-                const names = new Map<string, string>();
-                for (const id of categoryIds) {
-                    const response = await client.catalog.object.get({
-                        objectId: id,
-                    });
-                    if (response?.result?.object?.categoryData?.name) {
-                        names.set(id, response.result.object.categoryData.name);
-                    }
-                }
+                const names = await ProductService.getCategories(Array.from(categoryIds));
+                console.log(names);
                 setCategoryNames(names);
             } catch (err) {
                 console.error('Error fetching category names:', err);
@@ -46,16 +43,18 @@ export default function ProductGrid() {
     // Get all unique category IDs
     const allCategoryIds = new Set<string>();
     products.forEach(product => {
-        product.item_data.categories?.forEach(cat => {
-            allCategoryIds.add(cat.id);
-        });
+        if (product.type === "ITEM" && product.itemData) {
+            product.itemData.categories?.forEach(cat => {
+                allCategoryIds.add(cat.id!);
+            });
+        }
     });
 
     // Filter products based on selected category
     const filteredProducts = selectedCategory === 'all'
         ? products
         : products.filter(product =>
-            product.item_data.categories?.some(cat => cat.id === selectedCategory)
+            product.type === "ITEM" && product.itemData?.categories?.some(cat => cat.id === selectedCategory)
         );
 
     // Create category options for the filter buttons
@@ -76,7 +75,7 @@ export default function ProductGrid() {
                     >
                         {categoryId === 'all'
                             ? 'All'
-                            : categoryNames.get(categoryId) || 'Loading...'}
+                            : categoryNames.find(cat => cat.id === categoryId)?.type || 'Loading...'}
                     </button>
                 ))}
             </div>
@@ -88,20 +87,32 @@ export default function ProductGrid() {
 
             {/* Product Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {filteredProducts.map((product) => (
-                    <ProductCard
-                        key={product.id}
-                        product={{
-                            id: product.id,
-                            name: product.item_data.name,
-                            description: product.item_data.description,
-                            // Add price from first variation if it exists
-                            price: product.item_data.variations[0]?.itemVariationData?.priceMoney?.amount,
-                            currency: product.item_data.variations[0]?.itemVariationData?.priceMoney?.currency,
-                            categories: product.item_data.categories?.map(cat => cat.id),
-                        }}
-                    />
-                ))}
+                {filteredProducts
+                    .map(product => {
+
+                        if (product.type !== "ITEM" || !product.itemData) return null; // extra safeguard
+                        // Get first variation to get price so that we can get rid of type union issue
+                        const firstVariation = product.itemData.variations
+                            ?.find(v => v.type === "ITEM_VARIATION")
+                        return (
+                            <ProductCard
+                                key={product.id}
+                                product={{
+                                    id: product.id,
+                                    name: product.itemData.name,
+                                    description: product.itemData.description,
+                                    // Add price from first variation if it exists
+                                    price: firstVariation?.itemVariationData?.pricingType === "FIXED_PRICING"
+                                        ? firstVariation.itemVariationData.priceMoney?.amount ?? "0"
+                                        : "0",
+                                    currency: firstVariation?.itemVariationData?.pricingType === "FIXED_PRICING"
+                                        ? firstVariation.itemVariationData.priceMoney?.currency ?? "CAD"
+                                        : "CAD",
+                                    categories: product.itemData.categories?.map(cat => cat.id),
+                                }}
+                            />
+                        )
+                    })}
             </div>
         </div>
     );

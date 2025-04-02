@@ -40,7 +40,7 @@ export class ProductService {
             const itemsResult = await client.catalog.searchItems({ productTypes: ["REGULAR"] });
             if (!itemsResult.items) throw new Error("Failed to fetch products");
 
-            console.log("Fetched items:", itemsResult.items);
+            //console.log("Fetched items:", itemsResult.items);
 
             // step 2: get item options using search()
             const optionsResult = await client.catalog.search({
@@ -52,7 +52,7 @@ export class ProductService {
             });
 
             const itemOptions = optionsResult.objects || [];
-            console.log("Fetched options:", itemOptions);
+            //console.log("Fetched options:", itemOptions);
 
             // step 3: build products with options
             const products: Square.CatalogObject[] = itemsResult.items
