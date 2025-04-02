@@ -62,7 +62,7 @@ export class ProductService {
                         type: item.type,
                         id: item.id,
                         version: item.version !== undefined ? BigInt(item.version.toString()) : BigInt(0), // default to BigInt(0) if undefined
-                        item_data: {
+                        itemData: {
                             name: item.itemData?.name || "",
                             description: item.itemData?.description || "",
                             categories: item.itemData?.categories || [],
@@ -128,6 +128,7 @@ export class ProductService {
 
     static async getCategories(categoryIds: string[]): Promise<Square.CatalogObject[]> {
         try {
+            console.log("Fetching categories:", categoryIds);
             const categories = await client.catalog.batchGet({
                 objectIds: categoryIds,
                 includeRelatedObjects: true,
@@ -135,6 +136,7 @@ export class ProductService {
 
             if (!categories.objects) throw new Error("Categories not found");
 
+            console.log(categories.objects);
             return categories.objects;
         } catch (error) {
             console.error("Error fetching categories:", error);

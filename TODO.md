@@ -36,3 +36,7 @@ TODO:
 - [ ] 6. Implement api functions from \products\[id]\route.ts
 - [ ] 7. Categories are broken: Implement getCategories in productService.ts
 - [ ] 8. Prices of products are showing as NaN sometimes?
+
+
+## EFFICIENCY THINGS; LOWER PRIORITY
+- [ ] 1. I feel like the way im getting products is insanely stupid but im not sure -- check later

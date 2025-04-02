@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
 import { useProducts } from '@/hooks/useProducts';
-import { ProductService } from '@/lib/services/productService';
 import { Square } from 'square';
 
 export default function ProductGrid() {
@@ -25,8 +24,17 @@ export default function ProductGrid() {
                 }
             });
 
+            const searchParams = new URLSearchParams({
+                categoryIds: Array.from(categoryIds).join(','), // Comma-separated string
+            });
+
+            console.log(searchParams.get('categoryIds'));
+
             try {
-                const names = await ProductService.getCategories(Array.from(categoryIds));
+                const response = await fetch(`/api/categories?${searchParams}`);
+                if (!response.ok) throw new Error('Failed to fetch categories');
+
+                const names = await response.json();
                 console.log(names);
                 setCategoryNames(names);
             } catch (err) {
@@ -64,20 +72,23 @@ export default function ProductGrid() {
         <div>
             {/* Category Filter */}
             <div className="mb-8 flex gap-4">
-                {categories.map((categoryId) => (
-                    <button
-                        key={categoryId}
-                        onClick={() => setSelectedCategory(categoryId)}
-                        className={`px-4 py-2 rounded-md capitalize ${selectedCategory === categoryId
-                            ? 'bg-black text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                            }`}
-                    >
-                        {categoryId === 'all'
-                            ? 'All'
-                            : categoryNames.find(cat => cat.id === categoryId)?.type || 'Loading...'}
-                    </button>
-                ))}
+                {categories.map((categoryId) => {
+                    const category = categoryNames.find(cat => cat.id === categoryId);
+                    return (
+                        <button
+                            key={categoryId}
+                            onClick={() => setSelectedCategory(categoryId)}
+                            className={`px-4 py-2 rounded-md capitalize ${selectedCategory === categoryId
+                                ? 'bg-black text-white'
+                                : 'bg-gray-100 hover:bg-gray-200'
+                                }`}
+                        >
+                            {categoryId === 'all'
+                                ? 'All'
+                                : (category?.type === 'CATEGORY' && category.categoryData?.name) || 'Loading...'}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Product Count */}
