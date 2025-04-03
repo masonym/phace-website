@@ -10,11 +10,8 @@ TODO:
 - [ ] 6. Figure out CC info??
 - [x] 7. Boatload of errors to fix
 - [ ] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc) -- i think we can do this with some stuff related to top-level categories
-- [ ] 9. Figure out how to deal with in-person payments (if that is even something I need to do on my end)
 - [ ] 10. Unavailabile dates aren't working properly (Sunday/Wednesday for Dawn)
-- [ ] 11. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
 - [x] 12. Booking confirmation page price is wrong
-- [ ] 13. When booking is created, for some reason it checks eveyr single service ever??
 - [ ] 14. Consent forms are broken
 - [ ] 15. Waitlist doesn't work -- can i just link to teh square waitlist form instead of managing it myself?
 - [x] 16. i am almost positive theres a stupid bug with how iphones handle dates
@@ -43,3 +40,6 @@ TODO:
 ## EFFICIENCY THINGS; LOWER PRIORITY
 - [ ] 1. I feel like the way im getting products is insanely stupid but im not sure -- check later
    why is this stupid? i cant remember i wrote it last night lol. i think i meant CATEGORIES
+- [ ] 2. When booking is created, for some reason it checks eveyr single service ever??
+- [ ] 3. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
+- [ ] 4. change store\[id] to store\[slug] where [slug] is a hyphenated version of the name

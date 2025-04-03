@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
             sourceId: nonce,
             amountMoney: {
                 amount: BigInt(amount), // Amount in cents
-                currency: 'USD',
+                currency: 'CAD',
             },
             idempotencyKey: randomUUID(),
             locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!,

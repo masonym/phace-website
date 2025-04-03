@@ -3,6 +3,7 @@
 import { useCartContext } from '@/components/providers/CartProvider';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Square } from 'square';
 
 interface ProductCardProps {
     product: Product;
