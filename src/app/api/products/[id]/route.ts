@@ -21,7 +21,7 @@ export async function GET(
                 { status: 404 }
             );
         }
-        return NextResponse.json(ProductService.safeStringify(product));
+        return NextResponse.json(JSON.parse(ProductService.safeStringify(product)));
     } catch (error) {
         console.error('Error getting product:', error);
         return NextResponse.json(

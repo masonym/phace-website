@@ -92,7 +92,7 @@ export class ProductService {
      * Fetch a single product by ID
      */
 
-    static async getProductById(productId: string): Promise<Square.CatalogItem> {
+    static async getProductById(productId: string): Promise<Square.CatalogObjectItem> {
         try {
             const itemResult = await client.catalog.object.get({
                 objectId: productId,
@@ -113,17 +113,23 @@ export class ProductService {
                 throw new Error("Product has no variations");
             }
 
-            const itemData = {
-                ...item.itemData,
-                variations: variations
-                    .filter(variation => variation.type === 'ITEM_VARIATION')
-                    .map(variation => ({
-                        ...variation,
-                        itemVariationData: variation.itemVariationData
-                    }))
-            };
-
-            return itemData;
+            return {
+                type: item.type,
+                id: item.id,
+                updatedAt: item.updatedAt,
+                version: item.version,
+                isDeleted: item.isDeleted,
+                presentAtAllLocations: item.presentAtAllLocations,
+                itemData: {
+                    ...item.itemData,
+                    variations: variations
+                        .filter(variation => variation.type === 'ITEM_VARIATION')
+                        .map(variation => ({
+                            ...variation,
+                            itemVariationData: variation.itemVariationData,
+                        })),
+                },
+            } as Square.CatalogObjectItem;
         } catch (error) {
             console.error("Error fetching product:", error);
             throw error;

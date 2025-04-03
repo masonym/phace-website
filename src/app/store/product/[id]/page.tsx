@@ -1,12 +1,10 @@
-import { ProductService } from '@/lib/services/productService';
-import { Square } from 'square';
-import { notFound } from 'next/navigation';
+'use client';
 
-interface ProductPageProps {
-    params: {
-        id: string;
-    };
-}
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCartContext } from '@/components/providers/CartProvider';
+import { Square } from 'square';
+import Image from 'next/image';
 
 // Helper function to format money
 const formatMoney = (amount: number | bigint, currency: string) => {
@@ -16,79 +14,145 @@ const formatMoney = (amount: number | bigint, currency: string) => {
     }).format(Number(amount) / 100); // Convert from cents to dollars
 };
 
-export default async function ProductPage({ params }: ProductPageProps) {
-    // TODO: THIS NEEDS TO BE CHANGED INTO A CLIENT COMPONENT THAT FETCHES FROM AN API TO GET PRODUCTS.
-    // CURRENTLY IT IS A SERVER COMPONENT WHICH IS NOT GOOD
-    let product: Square.CatalogItem;
+interface ProductPageProps {
+    params: {
+        id: string;
+    };
+}
 
-    try {
-        product = await ProductService.getProductById(params.id);
-        if (!product) {
-            notFound();
+export default function ProductPage({ params }: ProductPageProps) {
+    const { addToCart } = useCartContext();
+    const router = useRouter();
+    const [product, setProduct] = useState<Square.CatalogObjectItem | null>(null);
+    const [selectedVariation, setSelectedVariation] = useState<Square.CatalogObjectItemVariation | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchProduct = async () => {
+            try {
+                const response = await fetch(`/api/products/${params.id}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('Product not found');
+                    }
+                    throw new Error('Failed to fetch product');
+                }
+
+                const data = await response.json();
+                console.log(typeof data);
+                setProduct(data);
+
+                console.log("Data:", data.itemData!);
+                // Set default variation if available
+                if (data.variations?.length > 0) {
+                    console.log('Variations:', data.variations);
+                    setSelectedVariation(data.variations.find((v: Square.CatalogObject) => v.type === 'ITEM_VARIATION') || null);
+                }
+            } catch (err: any) {
+                console.error('Error fetching product:', err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProduct();
+    }, [params.id, router]);
+
+    const handleAddToCart = () => {
+        if (product && selectedVariation) {
+            addToCart(product, 1, selectedVariation);
+            // Optionally redirect to cart or show a confirmation
+            // router.push('/cart');
         }
-    } catch (error) {
-        console.error('Failed to fetch product:', error);
-        notFound();
+    };
+
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 py-8 pt-24 text-center">
+                <p>Loading product...</p>
+            </div>
+        );
     }
 
-    // Type guard to ensure itemData exists
-    if (!product || !('name' in product)) {
-        notFound();
+    if (error || !product) {
+        return null; // Redirect happens in useEffect
     }
-    console.log(product)
-    console.log(product.variations)
+
+    console.log(typeof product);
+    console.log('Product data:', product);
+    console.log('iitem data:', product.itemData);
+    console.log(selectedVariation);
 
     return (
         <div className="container mx-auto px-4 py-8 pt-24">
             <div className="max-w-2xl mx-auto">
-                {/* Product Name */}
-                <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
-
-                {/* Product Description */}
-                {product.description && (
-                    <p className="text-gray-600 mb-6">{product.description}</p>
-                )}
-
-                {/* Variations */}
-                {product.variations && product.variations.length > 0 && (
-                    <div className="mb-6">
-                        <h2 className="text-xl font-semibold mb-2">Options</h2>
-                        <div className="space-y-2">
-                            {product.variations
-                                .filter((variation) => variation.type === 'ITEM_VARIATION')
-                                .map((variation) => (
-                                    <div
-                                        key={variation.id}
-                                        className="flex justify-between items-center border-b pb-2"
-                                    >
-                                        <span>{variation.itemVariationData?.name || 'Default'}</span>
-                                        {variation.itemVariationData?.priceMoney && (
-                                            <span className="font-medium">
-                                                {formatMoney(
-                                                    variation.itemVariationData.priceMoney.amount!,
-                                                    variation.itemVariationData.priceMoney.currency!,
-                                                )}
-                                            </span>
-                                        )}
-                                    </div>
-                                ))}
+                <div className="flex flex-col md:flex-row gap-8">
+                    {/* Product Image */}
+                    {product.itemData!.imageIds?.[0] && (
+                        <div className="relative w-full md:w-1/2 h-64 md:h-96">
+                            <Image
+                                src={product.itemData!.imageIds[0] || ''}
+                                alt={product.itemData!.name || 'Product Image'}
+                                fill
+                                className="object-cover rounded-lg"
+                            />
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Add to Cart Button */}
-                <button className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
-                    Add to Cart
-                </button>
+                    {/* Product Details */}
+                    <div className="w-full md:w-1/2">
+                        <h1 className="text-3xl font-bold mb-4">{product.itemData!.name}</h1>
+
+                        {product.itemData!.description && (
+                            <p className="text-gray-600 mb-6">{product.itemData!.description}</p>
+                        )}
+
+                        {product.itemData!.variations && product.itemData!.variations.length > 0 && (
+                            <div className="mb-6">
+                                <h2 className="text-xl font-semibold mb-2">Options</h2>
+                                <div className="space-y-2">
+                                    {product.itemData!.variations
+                                        .filter((variation: Square.CatalogObject) => variation.type === 'ITEM_VARIATION')
+                                        .map((variation: Square.CatalogObjectItemVariation) => (
+                                            <div
+                                                key={variation.id}
+                                                className={`flex justify-between items-center border-b pb-2 cursor-pointer ${selectedVariation?.id === variation.id ? 'bg-gray-100' : ''
+                                                    }`}
+                                                onClick={() => setSelectedVariation(variation)}
+                                            >
+                                                <span>{variation.itemVariationData?.name || 'Default'}</span>
+                                                {variation.itemVariationData?.priceMoney && (
+                                                    <span className="font-medium">
+                                                        {formatMoney(
+                                                            variation.itemVariationData.priceMoney.amount!,
+                                                            variation.itemVariationData.priceMoney.currency!
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleAddToCart}
+                            disabled={!selectedVariation}
+                            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                            Add to Cart
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
-}
-
-// Generate static params if you want to pre-render specific products
-export async function generateStaticParams() {
-    const products = await ProductService.listProducts();
-    return products.map((product) => ({
-        id: product.id,
-    }));
 }
