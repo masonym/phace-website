@@ -44,6 +44,8 @@ TODO:
 - [ ] 14. Looki into implementing afterpay??? interest free payments thingy
 - [ ] 15. Add to Cart vs Buy Now option (what does this do?)
 - [ ] 16. Why we love it/How to use/Ingredients - how can we implement this from square?
+- [ ] 17. There's an ecom_image_uris being sent with the data but I don't know how to use it, need to use that instead of Ids. lots of references to update here.
+
 
 
 ## EFFICIENCY THINGS; LOWER PRIORITY

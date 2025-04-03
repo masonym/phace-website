@@ -26,7 +26,7 @@ interface Props {
 export default function ClientForm({ onSubmit, onBack }: Props) {
   const [wantAccount, setWantAccount] = useState(false);
   const { user, isAuthenticated } = useAuth();
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<ClientFormData>();
+  const { register, handleSubmit, formState: { errors }, setValue, getValues } = useForm<ClientFormData>();
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -214,11 +214,11 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
                 currencyCode: 'CAD',
                 intent: 'STORE',
                 billingContact: {
-                  //addressLine1: register('addressLine1').value,
                   country: 'CA',
-                  givenName: register('name').toString(),
-                  email: register('email').toString(),
-                  phone: register('phone').toString(),
+                  givenName: getValues('name').split(' ')[0],
+                  familyName: getValues('name').split(' ').slice(1).join(' '),
+                  email: getValues('email'),
+                  phone: getValues('phone'),
                 },
               })}
             >

@@ -35,7 +35,8 @@ export async function POST(request: Request) {
             clientPhone,
             notes,
             addons = [],
-            consentFormResponses = []
+            consentFormResponses = [],
+            paymentNonce,
         } = data;
 
         console.log('Raw request data:', data);

@@ -86,16 +86,14 @@ export default function ProductPage({ params }: ProductPageProps) {
         return null; // Redirect happens in useEffect
     }
 
-    console.log(typeof product);
-    console.log('Product data:', product);
-    console.log('iitem data:', product.itemData);
-    console.log(selectedVariation);
-
     return (
         <div className="container mx-auto px-4 py-8 pt-24">
             <div className="max-w-2xl mx-auto">
                 <div className="flex flex-col md:flex-row gap-8">
                     {/* Product Image */}
+                    {/* TODO: There's an ecom_image_uris being sent with the data but idk how to access it*/}
+                    {/* We can use that instead of ID */}
+                    {/* Need to update the rest of the imageIds references too */}
                     {product.itemData!.imageIds?.[0] && (
                         <div className="relative w-full md:w-1/2 h-64 md:h-96">
                             <Image

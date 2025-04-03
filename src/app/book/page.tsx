@@ -70,6 +70,7 @@ export interface BookingData {
   createAccount?: boolean;
   service?: Service;
   variation?: ServiceVariation;
+  paymentNonce?: string;
 }
 
 export default function BookingPage() {
@@ -270,6 +271,7 @@ export default function BookingPage() {
                       clientPhone: clientData.phone,
                       notes: clientData.notes,
                       createAccount: clientData.createAccount,
+                      paymentNonce: clientData.paymentNonce,
                     });
                     goToNextStep();
                   } catch (error: any) {
@@ -321,6 +323,7 @@ export default function BookingPage() {
                       notes: bookingData.notes,
                       addons: (bookingData.addons || []).map(addon => addon.id),
                       consentFormResponses: bookingData.consentForms?.consentFormResponses || [],
+                      paymentNonce: bookingData.paymentNonce,
                     };
                     console.log('Sending appointment request:', requestBody);
 

@@ -151,6 +151,7 @@ interface CreateAppointmentParams {
     notes?: string;
     consentFormResponses?: any[];
     userId?: string;
+    paymentNonce?: string;
 }
 
 interface CreateAppointmentResult {
@@ -1788,8 +1789,40 @@ export class SquareBookingService {
             let customerId = customerResult.customers?.[0]?.id;
             if (!customerId) {
                 console.log(`Customer not found, creating new customer: ${params.clientEmail}`);
-                const newCustomerResult = await client.customers.create({ /* ... customer data ... */ });
+                const newCustomerResult = await client.customers.create({
+                    givenName: params.clientName.split(' ')[0],
+                    familyName: params.clientName.split(' ').slice(1).join(' '),
+                    emailAddress: params.clientEmail,
+                    phoneNumber: params.clientPhone,
+
+                });
                 customerId = newCustomerResult.customer?.id;
+                if (params.paymentNonce && customerId) {
+                    console.log('Saving card on file using nonce:', params.paymentNonce);
+                    try {
+                        const cardResult = await client.cards.create({
+                            idempotencyKey: randomUUID(),
+                            sourceId: params.paymentNonce,
+                            card: {
+                                customerId,
+                                cardholderName: params.clientName,
+                                referenceId: params.userId, // for user system
+                                billingAddress: {
+                                    country: 'CA',
+                                }
+                            }
+                        });
+
+                        if (!cardResult.card?.id) {
+                            console.warn('Card creation did not return a card ID');
+                        } else {
+                            console.log('Saved card on file with ID:', cardResult.card.id);
+                        }
+                    } catch (err) {
+                        console.error('Failed to store card on file:', err);
+                        throw new Error('Failed to store payment method');
+                    }
+                }
                 if (!customerId) throw new Error('Failed to create/retrieve customer');
                 console.log(`Created/found customer ID: ${customerId}`);
             }
