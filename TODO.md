@@ -18,7 +18,7 @@ TODO:
 - [ ] 17. times are wrong on date selection; some timezone funkiness
 
 
-### FRONTEND:
+### FRONTEND: 
 
 - [x] 1. Make sure buttons are consistent between steps (currently they're not!)
 - [x] 2. Either remove the images section, or get Dawn to add images via Square
@@ -35,6 +35,13 @@ TODO:
 - [x] 7. Categories are broken: Implement getCategories in productService.ts
 - [x] 8. Prices of products are showing as NaN sometimes?
 - [ ] 9. Need to figure out how images are handled
+- [ ] 10. Need to figure out how to handle product options
+- [ ] 11. Need to figure out how to handle product variations
+- [ ] 12. Double check that descriptions & such are working
+- [ ] 13. Re-implement cart and add quantity selector; currently it just adds 1 item to the cart
+- [ ] 14. Looki into implementing afterpay??? 
+- [ ] 15. Add to Cart vs Buy Now option (what does this do?)
+- [ ] 16. Why we love it/How to use/Ingredients - how can we implement this from square
 
 
 ## EFFICIENCY THINGS; LOWER PRIORITY
