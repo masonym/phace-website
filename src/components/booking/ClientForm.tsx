@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   PaymentForm,
   CreditCard
-} from 'react-square-web-payments-sdk'; // Correct import
+} from 'react-square-web-payments-sdk';
 
 interface ClientFormData {
   name: string;
@@ -223,17 +223,45 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
               })}
             >
               <CreditCard
-                style={{
-                  input: {
-                    fontSize: '14px',
-                    //padding: '8px',
-                  },
+                buttonProps={{
+                  css: {
+                    backgroundColor: 'transparent',
+                    width: 'auto',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    marginLeft: 'auto',
+                    '&:active': {
+                      backgroundColor: 'transparent',
+                    },
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                    },
+                    '&:focus': {
+                      backgroundColor: 'transparent',
+                    },
+                    '&:disabled': {
+                      backgroundColor: 'transparent',
+                    },
+                    '&:after': {
+                      backgroundColor: 'transparent',
+                    },
+                  }
                 }}
-              />
+              >
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
+                  >
+                    Continue to Consent Forms
+                  </button>
+                </div>
+              </CreditCard>
             </PaymentForm>
             {paymentError && <p className="mt-1 text-sm text-red-600">{paymentError}</p>}
           </div>
-
+          {/*
           <div className="flex justify-end">
             <button
               type="submit"
@@ -242,8 +270,9 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
               Continue to Consent Forms
             </button>
           </div>
+          */}
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 }
