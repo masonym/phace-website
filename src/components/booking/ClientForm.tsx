@@ -205,6 +205,7 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
               cardTokenizeResponseReceived={async (token, verifiedBuyer) => {
                 if (token.status === 'OK') {
                   setValue('paymentNonce', token.token);
+                  handleSubmit(onFormSubmit)();
                 } else {
                   setPaymentError('Card tokenization failed');
                 }
@@ -222,44 +223,39 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
                 },
               })}
             >
+
               <CreditCard
-                buttonProps={{
-                  css: {
-                    backgroundColor: 'transparent',
-                    width: 'auto',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    marginLeft: 'auto',
-                    '&:active': {
-                      backgroundColor: 'transparent',
-                    },
-                    '&:hover': {
-                      backgroundColor: 'transparent',
-                    },
-                    '&:focus': {
-                      backgroundColor: 'transparent',
-                    },
-                    '&:disabled': {
-                      backgroundColor: 'transparent',
-                    },
-                    '&:after': {
-                      backgroundColor: 'transparent',
-                    },
-
-                  }
+                render={(Button: any) => (
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      css={{
+                        backgroundColor: '#B09182',
+                        color: 'white',
+                        padding: '12px 32px',
+                        borderRadius: '9999px',
+                        fontSize: '16px',
+                        fontWeight: 'bold',
+                        '&:after': {
+                          backgroundColor: '#B09182',
+                        },
+                        '&:hover': {
+                          backgroundColor: '#B09182/90',
+                        },
+                        '&:active': {
+                          backgroundColor: '#B09182',
+                        },
+                        marginLeft: 'auto',
+                        width: '40%',
+                      }}
+                    >
+                      Continue to Consent Forms
+                    </Button>
+                  </div>
+                )}
+                callbacks={{
+                  focusClassAdded: (e) => console.log('Card input focused:', e),
                 }}
-              >
-
-                {/*TODO: fix this; shouldnt be nested button */}
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
-                  >
-                    Continue to Consent Forms
-                  </button>
-                </div>
-              </CreditCard>
+              />
             </PaymentForm>
             {paymentError && <p className="mt-1 text-sm text-red-600">{paymentError}</p>}
           </div>
