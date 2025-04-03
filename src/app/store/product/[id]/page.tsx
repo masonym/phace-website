@@ -1,4 +1,3 @@
-// store/product/[id]/page.tsx
 import { ProductService } from '@/lib/services/productService';
 import { Square } from 'square';
 import { notFound } from 'next/navigation';
@@ -18,6 +17,8 @@ const formatMoney = (amount: number | bigint, currency: string) => {
 };
 
 export default async function ProductPage({ params }: ProductPageProps) {
+    // TODO: THIS NEEDS TO BE CHANGED INTO A CLIENT COMPONENT THAT FETCHES FROM AN API TO GET PRODUCTS.
+    // CURRENTLY IT IS A SERVER COMPONENT WHICH IS NOT GOOD
     let product: Square.CatalogItem;
 
     try {

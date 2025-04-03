@@ -1,6 +1,5 @@
 import { PutCommand, QueryCommand, UpdateCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { dynamoDb, TABLES } from "../aws-config";
-import { Product } from "@/types/product";
 
 interface OrderItem {
     productId: string;

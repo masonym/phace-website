@@ -28,20 +28,19 @@ export default function CheckoutPage() {
         city: '',
         state: '',
         zipCode: '',
-        country: '',
+        country: 'CA', // Default to Canada
     });
 
     useEffect(() => {
         if (cart.length === 0) {
             router.push('/store');
         }
-        
-        // Get Square configuration
+
         const fetchSquareConfig = async () => {
             setApplicationId(process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID || '');
             setLocationId(process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || '');
         };
-        
+
         fetchSquareConfig();
     }, [cart, router]);
 
@@ -57,7 +56,6 @@ export default function CheckoutPage() {
         setError('');
 
         try {
-            // Process payment with Square
             const response = await fetch('/api/square-payment', {
                 method: 'POST',
                 headers: {
@@ -65,8 +63,16 @@ export default function CheckoutPage() {
                 },
                 body: JSON.stringify({
                     sourceId: token.token,
-                    amount: getCartTotal(),
-                    items: cart,
+                    amount: getCartTotal() * 100, // Convert to cents for Square
+                    currency: 'CAD',
+                    items: cart.map(item => ({
+                        productId: item.product.id,
+                        variationId: item.selectedVariation?.id || null,
+                        quantity: item.quantity,
+                        name: item.product.itemData!.name,
+                        variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
+                        price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
+                    })),
                     shippingAddress,
                 }),
             });
@@ -76,8 +82,7 @@ export default function CheckoutPage() {
             }
 
             const { payment } = await response.json();
-            
-            // Create order in your system
+
             const orderResponse = await fetch('/api/orders', {
                 method: 'POST',
                 headers: {
@@ -85,7 +90,14 @@ export default function CheckoutPage() {
                     Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
                 },
                 body: JSON.stringify({
-                    items: cart,
+                    items: cart.map(item => ({
+                        productId: item.product.id,
+                        variationId: item.selectedVariation?.id || null,
+                        quantity: item.quantity,
+                        name: item.product.itemData!.name,
+                        variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
+                        price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
+                    })),
                     total: getCartTotal(),
                     shippingAddress,
                     paymentId: payment.id,
@@ -96,7 +108,6 @@ export default function CheckoutPage() {
                 throw new Error('Failed to create order');
             }
 
-            // Clear cart and redirect to success page
             clearCart();
             router.push('/checkout/success');
         } catch (err: any) {
@@ -129,9 +140,7 @@ export default function CheckoutPage() {
                             </div>
                         )}
                         <div className="bg-white p-6 rounded-lg shadow">
-                            <h2 className="text-xl font-semibold mb-4">
-                                Shipping Address
-                            </h2>
+                            <h2 className="text-xl font-semibold mb-4">Shipping Address</h2>
                             <div className="grid grid-cols-1 gap-4">
                                 <input
                                     type="text"
@@ -195,29 +204,27 @@ export default function CheckoutPage() {
                         </div>
 
                         <div className="bg-white p-6 rounded-lg shadow">
-                            <h2 className="text-xl font-semibold mb-4">
-                                Payment Information
-                            </h2>
+                            <h2 className="text-xl font-semibold mb-4">Payment Information</h2>
                             <PaymentForm
                                 applicationId={applicationId}
                                 locationId={locationId}
                                 cardTokenizeResponseReceived={handleCardTokenizeResponseReceived}
                                 createVerificationDetails={() => ({
-                                    amount: String(getCartTotal()),
+                                    amount: String(getCartTotal() * 100), // Convert to cents
                                     currencyCode: 'CAD',
                                     intent: 'CHARGE',
                                     billingContact: {
-                                        familyName: shippingAddress.name.split(' ').slice(1).join(' '),
-                                        givenName: shippingAddress.name.split(' ')[0],
+                                        familyName: shippingAddress.name.split(' ').slice(1).join(' ') || '',
+                                        givenName: shippingAddress.name.split(' ')[0] || '',
                                         email: '',
                                         country: shippingAddress.country,
                                         city: shippingAddress.city,
                                         addressLines: [shippingAddress.street],
                                         postalCode: shippingAddress.zipCode,
-                                    }
+                                    },
                                 })}
                             >
-                                <CreditCard 
+                                <CreditCard
                                     buttonProps={{
                                         isLoading: loading,
                                         css: {
@@ -234,7 +241,7 @@ export default function CheckoutPage() {
                                             padding: '0.75rem',
                                             borderRadius: '0.375rem',
                                             marginTop: '1rem',
-                                        }
+                                        },
                                     }}
                                 />
                             </PaymentForm>
@@ -248,21 +255,31 @@ export default function CheckoutPage() {
                         <div className="space-y-4">
                             {cart.map((item, index) => (
                                 <div
-                                    key={`${item.product.id}-${item.selectedColor?.name}-${index}`}
+                                    key={`${item.product.id}-${item.selectedVariation?.id}-${index}`}
                                     className="flex justify-between items-center"
                                 >
                                     <div className="flex items-center gap-2">
                                         <span>{item.quantity}x</span>
-                                        <span>{item.product.name}</span>
-                                        {item.selectedColor && (
-                                            <div
-                                                className="w-4 h-4 rounded-full border"
-                                                style={{ backgroundColor: item.selectedColor.hex }}
-                                                title={item.selectedColor.name}
+                                        <div className="relative w-8 h-8 flex-shrink-0">
+                                            <Image
+                                                src={item.product.itemData!.imageIds?.[0] || '/placeholder.jpg'}
+                                                alt={item.product.itemData!.name || 'Product Image'}
+                                                fill
+                                                className="object-cover rounded"
                                             />
-                                        )}
+                                        </div>
+                                        <div>
+                                            <span>{item.product.itemData!.name}</span>
+                                            {item.selectedVariation && (
+                                                <span className="text-gray-600 block text-sm">
+                                                    ({item.selectedVariation.itemVariationData?.name || 'Default'})
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <span>C${(item.product.price * item.quantity).toFixed(2)}</span>
+                                    <span>
+                                        C${(Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100 * item.quantity).toFixed(2)}
+                                    </span>
                                 </div>
                             ))}
                             <div className="border-t pt-4">

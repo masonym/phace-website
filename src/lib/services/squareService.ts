@@ -1,6 +1,6 @@
 import { SquareClient } from "square";
 import { randomUUID } from 'crypto';
-import { CartItem } from '@/types/cart';
+import { CartItem } from '@/types/product';
 import { GetPaymentsRequest } from "square/api";
 import { GetCheckoutsRequest } from "square/api/resources/terminal";
 
@@ -79,10 +79,10 @@ export class SquareService {
         order: {
           locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!,
           lineItems: items?.map(item => ({
-            name: item.product.name,
+            name: item.product.itemData!.name,
             quantity: item.quantity.toString(),
             basePriceMoney: {
-              amount: BigInt(item.product.price * 100),
+              amount: BigInt(Number(item.selectedVariation?.itemVariationData!.priceMoney?.amount) * 100),
               currency: "CAD",
             }
           })) || [],

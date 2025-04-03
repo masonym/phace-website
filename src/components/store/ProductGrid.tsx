@@ -109,17 +109,17 @@ export default function ProductGrid() {
                             <ProductCard
                                 key={product.id}
                                 product={{
+                                    type: product.type,
                                     id: product.id,
-                                    name: product.itemData.name,
-                                    description: product.itemData.description,
-                                    // Add price from first variation if it exists
-                                    price: firstVariation?.itemVariationData?.pricingType === "FIXED_PRICING"
-                                        ? firstVariation.itemVariationData.priceMoney?.amount ?? "0"
-                                        : "0",
+                                    name: product.itemData.name ?? "Unnamed Product", // handle undefined/null
+                                    description: product.itemData.description ?? "",
+                                    price: Number(firstVariation?.itemVariationData?.pricingType === "FIXED_PRICING"
+                                        ? firstVariation.itemVariationData.priceMoney?.amount ?? 0
+                                        : 0), // ensure it's always a number
                                     currency: firstVariation?.itemVariationData?.pricingType === "FIXED_PRICING"
                                         ? firstVariation.itemVariationData.priceMoney?.currency ?? "CAD"
                                         : "CAD",
-                                    categories: product.itemData.categories?.map(cat => cat.id),
+                                    categories: product.itemData.categories?.map(cat => cat.id ?? "") ?? [], // ensure it's always an array of strings
                                 }}
                             />
                         )

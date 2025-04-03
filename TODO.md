@@ -7,7 +7,8 @@ TODO:
 - [ ] 3. Make sure staff member selection only shows applicable members
 - [x] 4. Stop querying staff availabilities for dates in the past.
 - [x] 5. Finalize booking creation and sending to Square
-- [ ] 6. Figure out CC info??
+- [x] 6. Figure out CC info??
+- [ ] 6a. Make sure it works? Need to update function in squareBookingService.ts that creates the booking to pass in the given CC info?
 - [x] 7. Boatload of errors to fix
 - [ ] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc) -- i think we can do this with some stuff related to top-level categories
 - [ ] 10. Unavailabile dates aren't working properly (Sunday/Wednesday for Dawn)
@@ -39,9 +40,10 @@ TODO:
 - [ ] 11. Need to figure out how to handle product variations
 - [ ] 12. Double check that descriptions & such are working
 - [ ] 13. Re-implement cart and add quantity selector; currently it just adds 1 item to the cart
-- [ ] 14. Looki into implementing afterpay??? 
+- [ ] 13a. Cart provider is coded; need to make sure it works with the button
+- [ ] 14. Looki into implementing afterpay??? interest free payments thingy
 - [ ] 15. Add to Cart vs Buy Now option (what does this do?)
-- [ ] 16. Why we love it/How to use/Ingredients - how can we implement this from square
+- [ ] 16. Why we love it/How to use/Ingredients - how can we implement this from square?
 
 
 ## EFFICIENCY THINGS; LOWER PRIORITY
@@ -50,3 +52,7 @@ TODO:
 - [ ] 2. When booking is created, for some reason it checks eveyr single service ever??
 - [ ] 3. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
 - [ ] 4. change store\[id] to store\[slug] where [slug] is a hyphenated version of the name
+
+## OTHER WEBSITE THINGS
+- [ ] 1. lightboxes
+- [ ] 2. mailing list

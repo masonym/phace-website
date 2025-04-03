@@ -5,12 +5,25 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Square } from 'square';
 
+
 interface ProductCardProps {
-    product: Product;
+    product: {
+        id: string;
+        name: string;
+        description: string;
+        price: number;
+        currency: string;
+        categories: string[];
+        type: string;
+    };
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCartContext();
+
+    if (product.type !== 'ITEM') {
+        return null;
+    }
 
     return (
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full">
@@ -29,18 +42,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <div className="p-4">
                     <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
                     <p className="text-gray-600 mb-2">C${(product.price / 100).toFixed(2)}</p>
-                    {product.colors && product.colors.length > 0 && (
-                        <div className="flex gap-1 mt-2">
-                            {product.colors.map((color) => (
-                                <div
-                                    key={color.name}
-                                    className="w-4 h-4 rounded-full border border-gray-200"
-                                    style={{ backgroundColor: color.hex }}
-                                    title={color.name}
-                                />
-                            ))}
-                        </div>
-                    )}
+                    {/* TODO: add options? */}
                 </div>
             </Link>
             <div className="p-4 pt-0">

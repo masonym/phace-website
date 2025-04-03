@@ -1,19 +1,14 @@
 "use client";
 
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { Product, ProductColor } from '@/types/product';
-
-interface CartItem {
-    product: Product;
-    quantity: number;
-    selectedColor: ProductColor | null;
-}
+import { Square } from 'square';
+import { CartItem } from '@/types/product';
 
 interface CartContextType {
     cart: CartItem[];
-    addToCart: (product: Product, quantity: number, selectedColor: ProductColor | null) => void;
-    removeFromCart: (productId: string, colorName: string | null) => void;
-    updateQuantity: (productId: string, colorName: string | null, newQuantity: number) => void;
+    addToCart: (product: Square.CatalogObjectItem, quantity: number, selectedVariation: Square.CatalogObjectItemVariation | null) => void;
+    removeFromCart: (productId: string, variationId: string | null) => void;
+    updateQuantity: (productId: string, variationId: string | null, newQuantity: number) => void;
     clearCart: () => void;
     getCartTotal: () => number;
 }
@@ -23,7 +18,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
     const [cart, setCart] = useState<CartItem[]>([]);
 
-    // Load cart from localStorage on initial render
     useEffect(() => {
         const savedCart = localStorage.getItem('cart');
         if (savedCart) {
@@ -36,48 +30,44 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    // Save cart to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem('cart', JSON.stringify(cart));
     }, [cart]);
 
-    const addToCart = (product: Product, quantity: number, selectedColor: ProductColor | null) => {
+    const addToCart = (product: Square.CatalogObjectItem, quantity: number, selectedVariation: Square.CatalogObjectItemVariation | null) => {
         setCart(prevCart => {
-            // Check if item already exists in cart with same color
             const existingItemIndex = prevCart.findIndex(
-                item => item.product.id === product.id && 
-                       item.selectedColor?.name === selectedColor?.name
+                item => item.product.id === product.id &&
+                    item.selectedVariation?.id === selectedVariation?.id
             );
 
             if (existingItemIndex !== -1) {
-                // Update quantity of existing item
                 const newCart = [...prevCart];
                 newCart[existingItemIndex].quantity += quantity;
                 return newCart;
             } else {
-                // Add new item to cart
-                return [...prevCart, { product, quantity, selectedColor }];
+                return [...prevCart, { product, quantity, selectedVariation }];
             }
         });
     };
 
-    const removeFromCart = (productId: string, colorName: string | null) => {
-        setCart(prevCart => 
+    const removeFromCart = (productId: string, variationId: string | null) => {
+        setCart(prevCart =>
             prevCart.filter(
-                item => !(item.product.id === productId && item.selectedColor?.name === colorName)
+                item => !(item.product.id === productId && item.selectedVariation?.id === variationId)
             )
         );
     };
 
-    const updateQuantity = (productId: string, colorName: string | null, newQuantity: number) => {
+    const updateQuantity = (productId: string, variationId: string | null, newQuantity: number) => {
         if (newQuantity < 1) {
-            removeFromCart(productId, colorName);
+            removeFromCart(productId, variationId);
             return;
         }
 
-        setCart(prevCart => 
-            prevCart.map(item => 
-                item.product.id === productId && item.selectedColor?.name === colorName
+        setCart(prevCart =>
+            prevCart.map(item =>
+                item.product.id === productId && item.selectedVariation?.id === variationId
                     ? { ...item, quantity: newQuantity }
                     : item
             )
@@ -89,7 +79,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     const getCartTotal = () => {
-        return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+        return cart.reduce((total, item) => {
+            const price = item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0;
+            return total + (Number(price) / 100 * item.quantity); // Convert cents to dollars
+        }, 0);
     };
 
     const value = {

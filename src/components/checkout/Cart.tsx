@@ -1,16 +1,16 @@
 'use client';
 
-import { useCart } from '@/hooks/useCart';
+import { useCartContext } from '@/components/providers/CartProvider';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function Cart() {
-    const { cart, removeFromCart, updateQuantity } = useCart();
+    const { cart, removeFromCart, updateQuantity } = useCartContext();
     const router = useRouter();
 
-    const handleQuantityChange = (productId: string, colorName: string | null, newQuantity: number) => {
+    const handleQuantityChange = (productId: string, variationId: string | null, newQuantity: number) => {
         if (newQuantity < 1) return;
-        updateQuantity(productId, colorName, newQuantity);
+        updateQuantity(productId, variationId, newQuantity);
     };
 
     const handleCheckout = () => {
@@ -38,27 +38,29 @@ export default function Cart() {
                 <div className="lg:w-2/3">
                     {cart.map((item) => (
                         <div
-                            key={`${item.product.id}-${item.selectedColor?.name ?? 'no-color'}`}
+                            key={`${item.product.id}-${item.selectedVariation?.id ?? 'no-variation'}`}
                             className="flex items-center border-b py-4 space-x-4"
                         >
                             <div className="relative h-24 w-24">
                                 <Image
-                                    src={item.product.images[0] || '/images/placeholder.jpg'}
-                                    alt={item.product.name}
+                                    src={item.product.itemData!.imageIds?.[0] || '/images/placeholder.jpg'}
+                                    alt={item.product.itemData!.name || 'Product Image'}
                                     fill
                                     className="object-cover"
                                 />
                             </div>
                             <div className="flex-grow">
-                                <h3 className="font-semibold">{item.product.name}</h3>
-                                {item.selectedColor && (
-                                    <p className="text-gray-600">Color: {item.selectedColor.name}</p>
+                                <h3 className="font-semibold">{item.product.itemData!.name}</h3>
+                                {item.selectedVariation && (
+                                    <p className="text-gray-600">
+                                        Variation: {item.selectedVariation.itemVariationData?.name || 'Default'}
+                                    </p>
                                 )}
                                 <div className="flex items-center mt-2">
                                     <button
                                         onClick={() => handleQuantityChange(
                                             item.product.id,
-                                            item.selectedColor?.name ?? null,
+                                            item.selectedVariation?.id ?? null,
                                             item.quantity - 1
                                         )}
                                         className="px-2 py-1 border rounded-l"
@@ -71,7 +73,7 @@ export default function Cart() {
                                     <button
                                         onClick={() => handleQuantityChange(
                                             item.product.id,
-                                            item.selectedColor?.name ?? null,
+                                            item.selectedVariation?.id ?? null,
                                             item.quantity + 1
                                         )}
                                         className="px-2 py-1 border rounded-r"
@@ -81,9 +83,11 @@ export default function Cart() {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="font-semibold">${(item.product.price * item.quantity).toFixed(2)}</p>
+                                <p className="font-semibold">
+                                    ${(Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100 * item.quantity).toFixed(2)}
+                                </p>
                                 <button
-                                    onClick={() => removeFromCart(item.product.id, item.selectedColor?.name ?? null)}
+                                    onClick={() => removeFromCart(item.product.id, item.selectedVariation?.id ?? null)}
                                     className="text-red-500 hover:text-red-700"
                                 >
                                     Remove
@@ -98,7 +102,10 @@ export default function Cart() {
                         <div className="flex justify-between mb-4">
                             <span>Total</span>
                             <span className="font-semibold">
-                                ${cart.reduce((total, item) => total + (item.product.price * item.quantity), 0).toFixed(2)}
+                                ${cart.reduce((total, item) =>
+                                    total + (Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100 * item.quantity),
+                                    0
+                                ).toFixed(2)}
                             </span>
                         </div>
                         <button

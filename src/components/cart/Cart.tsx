@@ -19,7 +19,7 @@ export function Cart({ onClose }: { onClose: () => void }) {
 
     const handleCheckout = () => {
         setIsCheckingOut(true);
-        onClose(); // Close cart before navigation
+        onClose();
         router.push('/checkout');
     };
 
@@ -42,35 +42,30 @@ export function Cart({ onClose }: { onClose: () => void }) {
                     <>
                         <div className="space-y-4">
                             {cart.map((item, index) => (
-                                <div key={`${item.product.id}-${item.selectedColor?.name}-${index}`} 
-                                     className="flex items-center gap-4 p-4 border rounded-lg">
+                                <div key={`${item.product.id}-${item.selectedVariation?.id}-${index}`}
+                                    className="flex items-center gap-4 p-4 border rounded-lg">
                                     <div className="relative w-20 h-20 flex-shrink-0">
+                                        {/* TODO: FIX THIS */}
                                         <Image
-                                            src={item.product.images[0]}
-                                            alt={item.product.name}
+                                            src={item.product.itemData?.imageIds?.[0] || '/placeholder.jpg'}
+                                            alt={item.product.itemData?.name || 'Product Image'}
                                             fill
                                             className="object-cover rounded"
                                         />
                                     </div>
                                     <div className="flex-grow">
-                                        <h3 className="font-medium">{item.product.name}</h3>
-                                        {item.selectedColor && (
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <div
-                                                    className="w-4 h-4 rounded-full border"
-                                                    style={{ backgroundColor: item.selectedColor.hex }}
-                                                />
-                                                <span className="text-sm text-gray-600">
-                                                    {item.selectedColor.name}
-                                                </span>
-                                            </div>
+                                        <h3 className="font-medium">{item.product.itemData?.name}</h3>
+                                        {item.selectedVariation && (
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                {item.selectedVariation.itemVariationData?.name || 'Default'}
+                                            </p>
                                         )}
                                         <div className="flex items-center gap-4 mt-2">
                                             <div className="flex items-center border rounded">
                                                 <button
                                                     onClick={() => updateQuantity(
                                                         item.product.id,
-                                                        item.selectedColor?.name || null,
+                                                        item.selectedVariation?.id || null,
                                                         item.quantity - 1
                                                     )}
                                                     className="px-3 py-1 hover:bg-gray-100"
@@ -82,7 +77,7 @@ export function Cart({ onClose }: { onClose: () => void }) {
                                                 <button
                                                     onClick={() => updateQuantity(
                                                         item.product.id,
-                                                        item.selectedColor?.name || null,
+                                                        item.selectedVariation?.id || null,
                                                         item.quantity + 1
                                                     )}
                                                     className="px-3 py-1 hover:bg-gray-100"
@@ -91,7 +86,7 @@ export function Cart({ onClose }: { onClose: () => void }) {
                                                 </button>
                                             </div>
                                             <button
-                                                onClick={() => removeFromCart(item.product.id, item.selectedColor?.name || null)}
+                                                onClick={() => removeFromCart(item.product.id, item.selectedVariation?.id || null)}
                                                 className="text-red-500 hover:text-red-700"
                                             >
                                                 Remove
@@ -99,7 +94,9 @@ export function Cart({ onClose }: { onClose: () => void }) {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-medium">C${(item.product.price * item.quantity).toFixed(2)}</p>
+                                        <p className="font-medium">
+                                            C${(Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100 * item.quantity).toFixed(2)}
+                                        </p>
                                     </div>
                                 </div>
                             ))}
