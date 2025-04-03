@@ -1,7 +1,6 @@
 'use client';
 
 import { useCartContext } from '@/components/providers/CartProvider';
-import { Product } from '@/types/product';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -16,6 +15,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full">
             <Link href={`/store/product/${product.id}`} className="flex-grow">
                 <div className="relative h-64 w-full">
+                    {/* TODO: readd this*/}
                     {/*
                     <Image
                         src={product.images || '/images/placeholder.jpg'}

@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  PaymentForm,
+  CreditCard
+} from 'react-square-web-payments-sdk'; // Correct import
 
 interface ClientFormData {
   name: string;
@@ -11,6 +15,7 @@ interface ClientFormData {
   createAccount: boolean;
   password?: string;
   notes?: string;
+  paymentNonce?: string;
 }
 
 interface Props {
@@ -22,21 +27,28 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
   const [wantAccount, setWantAccount] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<ClientFormData>();
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Auto-populate fields for logged-in users
       setValue('name', user.name || '');
       setValue('email', user.email || '');
       setValue('phone', user.phone || '');
     }
   }, [isAuthenticated, user, setValue]);
 
-  const onFormSubmit = (data: ClientFormData) => {
-    onSubmit({
-      ...data,
-      createAccount: wantAccount,
-    });
+  const onFormSubmit = async (data: ClientFormData) => {
+    try {
+      if (!data.paymentNonce) {
+        throw new Error('Payment information is required');
+      }
+      onSubmit({
+        ...data,
+        createAccount: wantAccount,
+      });
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : 'Failed to process payment');
+    }
   };
 
   return (
@@ -44,33 +56,23 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
       <div>
         <h1 className="text-4xl font-light text-center mb-2">Confirm Your Information</h1>
         <p className="text-center text-gray-600 mb-8">
-          Please fill out the form below to confirm your information, and add any special requests or notes.
+          Please fill out the form below to confirm your information and payment details.
         </p>
       </div>
-      {/* Back Button */}
+
       <button
         onClick={onBack}
         className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
       >
-        <svg
-          className="w-5 h-5 mr-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
+        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         Back to Date & Time Selection
       </button>
 
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
         <div className="bg-white rounded-xl p-6 shadow-sm">
-          {/* Name Field */}
+          {/* Existing form fields */}
           <div className="mb-4">
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
               Full Name
@@ -78,16 +80,13 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
             <input
               type="text"
               id="name"
-              {...register('name', { 
-                required: 'Name is required' 
-              })}
+              {...register('name', { required: 'Name is required' })}
               className="w-full px-4 py-2 border rounded-lg focus:ring-accent focus:border-accent"
-              placeholder="Enter your full name"
             />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-            )}
+            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
           </div>
+
+          {/* ... other existing fields ... */}
 
           {/* Email Field */}
           <div className="mb-4">
@@ -195,13 +194,52 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
             />
           </div>
 
-          {/* Submit Button */}
+          {/* Payment Section */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Payment Information
+            </label>
+            <PaymentForm
+              applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID!}
+              locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}
+              cardTokenizeResponseReceived={async (token, verifiedBuyer) => {
+                if (token.status === 'OK') {
+                  setValue('paymentNonce', token.token);
+                } else {
+                  setPaymentError('Card tokenization failed');
+                }
+              }}
+              createVerificationDetails={() => ({
+                amount: 0, // do not charge the user, just get their card 
+                currencyCode: 'CAD',
+                intent: 'STORE',
+                billingContact: {
+                  //addressLine1: register('addressLine1').value,
+                  country: 'CA',
+                  givenName: register('name').toString(),
+                  email: register('email').toString(),
+                  phone: register('phone').toString(),
+                },
+              })}
+            >
+              <CreditCard
+                style={{
+                  input: {
+                    fontSize: '14px',
+                    //padding: '8px',
+                  },
+                }}
+              />
+            </PaymentForm>
+            {paymentError && <p className="mt-1 text-sm text-red-600">{paymentError}</p>}
+          </div>
+
           <div className="flex justify-end">
             <button
               type="submit"
               className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
             >
-            Continue to Consent Forms
+              Continue to Consent Forms
             </button>
           </div>
         </div>

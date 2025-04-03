@@ -67,61 +67,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
       } else {
         console.error("No services data returned or empty array");
 
-        // Create dummy services for testing if no services are returned
-        if (process.env.NODE_ENV === 'development') {
-          console.log("Creating dummy services for development");
-          setServices([
-            {
-              id: 'dummy-1',
-              categoryId: catId,
-              name: 'Sample Service 1',
-              description: 'This is a sample service for testing',
-              price: 9900,
-              duration: 60,
-              imageUrl: undefined,
-              isActive: true,
-              variationId: 'dummy-var-1',
-              variations: [
-                {
-                  id: 'dummy-var-1',
-                  name: 'Standard',
-                  price: 9900,
-                  duration: 60,
-                  isActive: true
-                },
-                {
-                  id: 'dummy-var-2',
-                  name: 'Premium',
-                  price: 14900,
-                  duration: 90,
-                  isActive: true
-                }
-              ]
-            },
-            {
-              id: 'dummy-2',
-              categoryId: catId,
-              name: 'Sample Service 2',
-              description: 'Another sample service for testing',
-              price: 14900,
-              duration: 90,
-              imageUrl: undefined,
-              isActive: true,
-              variationId: 'dummy-var-3',
-              variations: [
-                {
-                  id: 'dummy-var-3',
-                  name: 'Basic',
-                  price: 14900,
-                  duration: 90,
-                  isActive: true
-                }
-              ]
-            }
-          ]);
-        } else {
-          setServices([]);
-        }
+        setServices([]);
       }
     } catch (err: any) {
       console.error("Error fetching services:", err);
@@ -268,21 +214,6 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                 className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform duration-200 hover:scale-105"
                 onClick={() => onSelect(category)}
               >
-                {category.imageUrl ? (
-                  <div className="h-48 overflow-hidden">
-                    <Image
-                      src={category.imageUrl}
-                      alt={category.name}
-                      width={400}
-                      height={300}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-48 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-500">No Image</span>
-                  </div>
-                )}
                 <div className="p-4">
                   <h3 className="text-xl font-semibold mb-2">{category.name}</h3>
                   {category.description && (
@@ -321,21 +252,6 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                 }}
               >
                 <div className="">
-                  {service.imageUrl ? (
-                    <div className="h-48 overflow-hidden">
-                      <Image
-                        src={service.imageUrl}
-                        alt={service.name}
-                        width={400}
-                        height={300}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-48 bg-gray-200 flex items-center justify-center">
-                      <span className="text-gray-500">No Image</span>
-                    </div>
-                  )}
                   <div className="p-4">
                     <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
                     {service.description && (
