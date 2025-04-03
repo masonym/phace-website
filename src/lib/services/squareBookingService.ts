@@ -1299,27 +1299,27 @@ export class SquareBookingService {
             console.log(`Using variation ID: ${bookableVariationId} for availability search`);
 
             // Check if the service variation is bookable
-            try {
-                // Get the catalog item variation to verify it's bookable
-                const variationResult = await client.catalog.batchGet({
-                    objectIds: [bookableVariationId],
-                    includeRelatedObjects: true,
-                });
-
-                console.log('Variation details:', this.safeStringify(variationResult));
-
-                // Check if the variation is explicitly marked as bookable
-                const isBookable = variationResult.objects && variationResult.objects.length > 0;
-                console.log(`Is variation explicitly marked as bookable: ${isBookable}`);
-
-                if (!isBookable) {
-                    console.error(`Service variation ${bookableVariationId} is not bookable. Please configure this service in the Square Dashboard.`);
-                    return [];
-                }
-            } catch (err) {
-                console.error('Error checking if service variation is bookable:', err);
-                // Continue anyway, as the variation might still be bookable even if we can't check
-            }
+            //try {
+            //    // Get the catalog item variation to verify it's bookable
+            //    const variationResult = await client.catalog.batchGet({
+            //        objectIds: [bookableVariationId],
+            //        includeRelatedObjects: true,
+            //    });
+            //
+            //    console.log('Variation details:', this.safeStringify(variationResult));
+            //
+            //    // Check if the variation is explicitly marked as bookable
+            //    const isBookable = variationResult.objects && variationResult.objects.length > 0;
+            //    console.log(`Is variation explicitly marked as bookable: ${isBookable}`);
+            //
+            //    if (!isBookable) {
+            //        console.error(`Service variation ${bookableVariationId} is not bookable. Please configure this service in the Square Dashboard.`);
+            //        return [];
+            //    }
+            //} catch (err) {
+            //    console.error('Error checking if service variation is bookable:', err);
+            //    // Continue anyway, as the variation might still be bookable even if we can't check
+            //}
 
             // Calculate the total duration including any addons
             let totalDuration = 0;
@@ -1797,31 +1797,39 @@ export class SquareBookingService {
 
                 });
                 customerId = newCustomerResult.customer?.id;
-                if (params.paymentNonce && customerId) {
-                    console.log('Saving card on file using nonce:', params.paymentNonce);
-                    try {
-                        const cardResult = await client.cards.create({
-                            idempotencyKey: randomUUID(),
-                            sourceId: params.paymentNonce,
-                            card: {
-                                customerId,
-                                cardholderName: params.clientName,
-                                referenceId: params.userId, // for user system
-                                billingAddress: {
-                                    country: 'CA',
+                console.log("Payment nonce:", params.paymentNonce);
+                try {
+                    if (params.paymentNonce && customerId) {
+                        console.log('Saving card on file using nonce:', params.paymentNonce);
+                        try {
+                            const cardResult = await client.cards.create({
+                                idempotencyKey: randomUUID(),
+                                sourceId: params.paymentNonce,
+                                card: {
+                                    customerId,
+                                    cardholderName: params.clientName,
+                                    referenceId: params.userId, // for user system
+                                    billingAddress: {
+                                        country: 'CA',
+                                    }
                                 }
-                            }
-                        });
+                            });
 
-                        if (!cardResult.card?.id) {
-                            console.warn('Card creation did not return a card ID');
-                        } else {
-                            console.log('Saved card on file with ID:', cardResult.card.id);
+                            if (!cardResult.card?.id) {
+                                console.warn('Card creation did not return a card ID');
+                            } else {
+                                console.log('Saved card on file with ID:', cardResult.card.id);
+                            }
+                        } catch (err) {
+                            console.error('Failed to store card on file:', err);
+                            throw new Error('Failed to store payment method');
                         }
-                    } catch (err) {
-                        console.error('Failed to store card on file:', err);
-                        throw new Error('Failed to store payment method');
                     }
+
+                }
+                catch (err) {
+                    console.error('Failed to save card on file:', err);
+                    throw new Error('Failed to store payment method');
                 }
                 if (!customerId) throw new Error('Failed to create/retrieve customer');
                 console.log(`Created/found customer ID: ${customerId}`);

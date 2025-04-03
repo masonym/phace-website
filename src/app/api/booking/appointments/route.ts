@@ -142,6 +142,7 @@ export async function POST(request: Request) {
             totalDuration,
             consentFormResponses,
             notes,
+            paymentNonce,
             //userId,  // Include userId if user is logged in
         });
 
