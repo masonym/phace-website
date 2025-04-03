@@ -297,6 +297,8 @@ export default function BookingPage() {
                       ...prevData,
                       consentForms: consentData
                     };
+
+                    console.log("Booking data after client form submission:", bookingData);
                     return newData;
                   });
                   goToNextStep();

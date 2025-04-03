@@ -245,10 +245,12 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
                     '&:after': {
                       backgroundColor: 'transparent',
                     },
+
                   }
                 }}
               >
 
+                {/*TODO: fix this; shouldnt be nested button */}
                 <div className="flex justify-end">
                   <button
                     type="submit"

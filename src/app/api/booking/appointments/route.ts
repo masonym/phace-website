@@ -114,7 +114,8 @@ export async function POST(request: Request) {
         const isAvailable = await SquareBookingService.checkTimeSlotAvailability(
             staffId,
             startTime,
-            endTime.toISOString()
+            endTime.toISOString(),
+            idToUse,
         );
 
         if (!isAvailable) {
