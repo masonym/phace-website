@@ -8,7 +8,7 @@ TODO:
 - [x] 4. Stop querying staff availabilities for dates in the past.
 - [x] 5. Finalize booking creation and sending to Square
 - [x] 6. Figure out CC info??
-- [ ] 6a. Make sure it works? Need to update function in squareBookingService.ts that creates the booking to pass in the given CC info?
+- [x] 6a. Make sure it works? Need to update function in squareBookingService.ts that creates the booking to pass in the given CC info?
 - [x] 7. Boatload of errors to fix
 - [ ] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc) -- i think we can do this with some stuff related to top-level categories
 - [ ] 10. Unavailabile dates aren't working properly (Sunday/Wednesday for Dawn)
@@ -29,13 +29,14 @@ TODO:
 
 - [ ] 1. Actually implement the Square shop integration
 - [ ] 2. Make sure users can buy things
-- [ ] 3. Figure out CC info??
+- [x] 3. Figure out CC info??
+- [ ] 3a. Need to update the checkout stuff to adhere to the new way we're doing things that we learned from ClientForm
 - [x] 4. Show products on /store page
 - [x] 5. Product options/variations dont work
-- [ ] 6. Implement api functions from \products\[id]\route.ts
+- [x] 6. Implement api functions from \products\[id]\route.ts
 - [x] 7. Categories are broken: Implement getCategories in productService.ts
 - [x] 8. Prices of products are showing as NaN sometimes?
-- [ ] 9. Need to figure out how images are handled
+- [x] 9. Need to figure out how images are handled
 - [ ] 10. Need to figure out how to handle product options
 - [ ] 11. Need to figure out how to handle product variations
 - [ ] 12. Double check that descriptions & such are working
@@ -45,16 +46,23 @@ TODO:
 - [ ] 15. Add to Cart vs Buy Now option (what does this do?)
 - [ ] 16. Why we love it/How to use/Ingredients - how can we implement this from square?
 - [ ] 17. There's an ecom_image_uris being sent with the data but I don't know how to use it, need to use that instead of Ids. lots of references to update here.
+- [ ] 18. Need to implement api/orders
+- [ ] 19. Need to implement api/square-payment
+- [ ] 20. Need to implement stock checking
+- [ ] 21. Change "View Details" button on ProductCard.tsx's to "Add to Cart" button
+- [ ] 22. Cart resets on page refresh. Not good
+- [ ] 23. Clicking "Add to cart" once adds 1 item; clicking it a second time adds 2 items. Not good. Clicking 3 times still only adds 2 items. Not good.
 
 
 
 ## EFFICIENCY THINGS; LOWER PRIORITY
 - [ ] 1. I feel like the way im getting products is insanely stupid but im not sure -- check later
    why is this stupid? i cant remember i wrote it last night lol. i think i meant CATEGORIES
-- [ ] 2. When booking is created, for some reason it checks eveyr single service ever??
+- [x] 2. When booking is created, for some reason it checks eveyr single service ever?? // this was due to not passing into serviceId to checkTimeSlotAvailability
 - [ ] 3. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
 - [ ] 4. change store\[id] to store\[slug] where [slug] is a hyphenated version of the name
 
 ## OTHER WEBSITE THINGS
 - [ ] 1. lightboxes
 - [ ] 2. mailing list
+- [ ] 3. privacy policy & tos page

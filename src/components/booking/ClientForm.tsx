@@ -252,9 +252,6 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
                     </Button>
                   </div>
                 )}
-                callbacks={{
-                  focusClassAdded: (e) => console.log('Card input focused:', e),
-                }}
               />
             </PaymentForm>
             {paymentError && <p className="mt-1 text-sm text-red-600">{paymentError}</p>}

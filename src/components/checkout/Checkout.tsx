@@ -1,3 +1,5 @@
+// THIS FILE IS NOT BEING USED AT ALL I THINK
+// MAYBE WE SHOULD USE IT FOR A CHECKOUT POPUP.
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,8 +21,6 @@ export default function Checkout() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [applicationId, setApplicationId] = useState('');
-    const [locationId, setLocationId] = useState('');
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
         name: '',
         street: '',
@@ -29,15 +29,6 @@ export default function Checkout() {
         zipCode: '',
         country: 'CA', // Default to Canada, adjust as needed
     });
-
-    useEffect(() => {
-        const fetchSquareConfig = async () => {
-            setApplicationId(process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID || '');
-            setLocationId(process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || '');
-        };
-
-        fetchSquareConfig();
-    }, []);
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setShippingAddress({
@@ -127,14 +118,6 @@ export default function Checkout() {
         );
     }
 
-    if (!applicationId || !locationId) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <p>Loading payment system...</p>
-            </div>
-        );
-    }
-
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-2xl font-bold mb-8">Checkout</h1>
@@ -180,7 +163,7 @@ export default function Checkout() {
                                     <input
                                         type="text"
                                         name="state"
-                                        placeholder="State/Province"
+                                        placeholder="Province"
                                         required
                                         className="w-full px-3 py-2 border rounded"
                                         value={shippingAddress.state}
@@ -191,7 +174,7 @@ export default function Checkout() {
                                     <input
                                         type="text"
                                         name="zipCode"
-                                        placeholder="ZIP / Postal Code"
+                                        placeholder="Postal Code"
                                         required
                                         className="w-full px-3 py-2 border rounded"
                                         value={shippingAddress.zipCode}
@@ -213,8 +196,8 @@ export default function Checkout() {
                         <div className="bg-white p-6 rounded-lg shadow">
                             <h2 className="text-xl font-semibold mb-4">Payment Information</h2>
                             <PaymentForm
-                                applicationId={applicationId}
-                                locationId={locationId}
+                                applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID!}
+                                locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}
                                 cardTokenizeResponseReceived={handleCardTokenizeResponseReceived}
                                 createVerificationDetails={() => ({
                                     amount: String(getCartTotal() * 100), // Convert to cents
@@ -232,24 +215,33 @@ export default function Checkout() {
                                 })}
                             >
                                 <CreditCard
-                                    buttonProps={{
-                                        isLoading: loading,
-                                        css: {
-                                            backgroundColor: '#000',
-                                            color: '#fff',
-                                            '&:hover': {
-                                                backgroundColor: '#333',
-                                            },
-                                            '&:disabled': {
-                                                opacity: 0.5,
-                                                cursor: 'not-allowed',
-                                            },
-                                            width: '100%',
-                                            padding: '0.75rem',
-                                            borderRadius: '0.375rem',
-                                            marginTop: '1rem',
-                                        },
-                                    }}
+                                    render={(Button: any) => (
+                                        <div className="flex justify-end mt-4">
+                                            <Button
+                                                css={{
+                                                    backgroundColor: '#B09182',
+                                                    color: 'white',
+                                                    padding: '12px 32px',
+                                                    borderRadius: '9999px',
+                                                    fontSize: '16px',
+                                                    fontWeight: 'bold',
+                                                    '&:after': {
+                                                        backgroundColor: '#B09182',
+                                                    },
+                                                    '&:hover': {
+                                                        backgroundColor: '#B09182/90',
+                                                    },
+                                                    '&:active': {
+                                                        backgroundColor: '#B09182',
+                                                    },
+                                                    marginLeft: 'auto',
+                                                    width: '40%',
+                                                }}
+                                            >
+                                                Continue to Consent Forms
+                                            </Button>
+                                        </div>
+                                    )}
                                 />
                             </PaymentForm>
                         </div>

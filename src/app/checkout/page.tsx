@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/components/providers/CartProvider';
 import { PaymentForm, CreditCard } from 'react-square-web-payments-sdk';
@@ -20,29 +20,14 @@ export default function CheckoutPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [applicationId, setApplicationId] = useState('');
-    const [locationId, setLocationId] = useState('');
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
         name: '',
         street: '',
         city: '',
         state: '',
         zipCode: '',
-        country: 'CA', // Default to Canada
+        country: 'Canada',
     });
-
-    useEffect(() => {
-        if (cart.length === 0) {
-            router.push('/store');
-        }
-
-        const fetchSquareConfig = async () => {
-            setApplicationId(process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID || '');
-            setLocationId(process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || '');
-        };
-
-        fetchSquareConfig();
-    }, [cart, router]);
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setShippingAddress({
@@ -50,6 +35,12 @@ export default function CheckoutPage() {
             [e.target.name]: e.target.value,
         });
     };
+
+    useEffect(() => {
+        if (cart.length === 0) {
+            router.push('/store');
+        }
+    }, [cart, router]);
 
     const handleCardTokenizeResponseReceived = async (token: any) => {
         setLoading(true);
@@ -94,7 +85,7 @@ export default function CheckoutPage() {
                         productId: item.product.id,
                         variationId: item.selectedVariation?.id || null,
                         quantity: item.quantity,
-                        name: item.product.itemData!.name,
+                        name: item.product.itemData!.name!,
                         variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
                         price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
                     })),
@@ -117,19 +108,23 @@ export default function CheckoutPage() {
     };
 
     if (cart.length === 0) {
-        return null; // Will redirect in useEffect
-    }
-
-    if (!applicationId || !locationId) {
         return (
-            <div className="container mx-auto px-4 py-8 pt-32">
-                <p>Loading payment system...</p>
+            <div className="container mx-auto px-4 py-8">
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
+                    <button
+                        onClick={() => router.push('/store')}
+                        className="text-black hover:text-gray-700"
+                    >
+                        Continue Shopping
+                    </button>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 pt-32">
+        <div className="container mx-auto px-4 py-8 pt-24">
             <h1 className="text-2xl font-bold mb-8">Checkout</h1>
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="lg:w-2/3">
@@ -173,7 +168,7 @@ export default function CheckoutPage() {
                                     <input
                                         type="text"
                                         name="state"
-                                        placeholder="State/Province"
+                                        placeholder="Province"
                                         required
                                         className="w-full px-3 py-2 border rounded"
                                         value={shippingAddress.state}
@@ -184,7 +179,7 @@ export default function CheckoutPage() {
                                     <input
                                         type="text"
                                         name="zipCode"
-                                        placeholder="ZIP / Postal Code"
+                                        placeholder="Postal Code"
                                         required
                                         className="w-full px-3 py-2 border rounded"
                                         value={shippingAddress.zipCode}
@@ -206,8 +201,8 @@ export default function CheckoutPage() {
                         <div className="bg-white p-6 rounded-lg shadow">
                             <h2 className="text-xl font-semibold mb-4">Payment Information</h2>
                             <PaymentForm
-                                applicationId={applicationId}
-                                locationId={locationId}
+                                applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID!}
+                                locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}
                                 cardTokenizeResponseReceived={handleCardTokenizeResponseReceived}
                                 createVerificationDetails={() => ({
                                     amount: String(getCartTotal() * 100), // Convert to cents
@@ -225,24 +220,33 @@ export default function CheckoutPage() {
                                 })}
                             >
                                 <CreditCard
-                                    buttonProps={{
-                                        isLoading: loading,
-                                        css: {
-                                            backgroundColor: '#000',
-                                            color: '#fff',
-                                            '&:hover': {
-                                                backgroundColor: '#333',
-                                            },
-                                            '&:disabled': {
-                                                opacity: 0.5,
-                                                cursor: 'not-allowed',
-                                            },
-                                            width: '100%',
-                                            padding: '0.75rem',
-                                            borderRadius: '0.375rem',
-                                            marginTop: '1rem',
-                                        },
-                                    }}
+                                    render={(Button: any) => (
+                                        <div className="flex justify-end mt-4">
+                                            <Button
+                                                css={{
+                                                    backgroundColor: '#B09182',
+                                                    color: 'white',
+                                                    padding: '12px 32px',
+                                                    borderRadius: '9999px',
+                                                    fontSize: '16px',
+                                                    fontWeight: 'bold',
+                                                    '&:after': {
+                                                        backgroundColor: '#B09182',
+                                                    },
+                                                    '&:hover': {
+                                                        backgroundColor: '#B09182/90',
+                                                    },
+                                                    '&:active': {
+                                                        backgroundColor: '#B09182',
+                                                    },
+                                                    marginLeft: 'auto',
+                                                    width: '40%',
+                                                }}
+                                            >
+                                                Process Payment
+                                            </Button>
+                                        </div>
+                                    )}
                                 />
                             </PaymentForm>
                         </div>
@@ -250,7 +254,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="lg:w-1/3">
-                    <div className="bg-gray-50 p-6 rounded-lg sticky top-32">
+                    <div className="bg-gray-50 p-6 rounded-lg">
                         <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
                         <div className="space-y-4">
                             {cart.map((item, index) => (
@@ -282,7 +286,7 @@ export default function CheckoutPage() {
                                     </span>
                                 </div>
                             ))}
-                            <div className="border-t pt-4">
+                            <div className="border-t pt-4 mt-4">
                                 <div className="flex justify-between font-semibold">
                                     <span>Total</span>
                                     <span>C${getCartTotal().toFixed(2)}</span>
