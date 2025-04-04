@@ -63,11 +63,7 @@ export class ProductService {
                         id: item.id,
                         version: item.version !== undefined ? BigInt(item.version.toString()) : BigInt(0), // default to BigInt(0) if undefined
                         itemData: {
-                            name: item.itemData?.name || "",
-                            description: item.itemData?.description || "",
-                            categories: item.itemData?.categories || [],
-                            product_type: item.itemData?.productType || "REGULAR",
-                            tax_ids: item.itemData?.taxIds || [],
+                            ...item.itemData,
                             variations: item.itemData?.variations || [],
                         },
                     };

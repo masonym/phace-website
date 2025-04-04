@@ -11,10 +11,11 @@ interface ProductCardProps {
         id: string;
         name: string;
         description: string;
-        price: number;
+        price: number | string;
         currency: string;
         categories: string[];
         type: string;
+        images?: string[];
     };
 }
 
@@ -29,19 +30,20 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full">
             <Link href={`/store/product/${product.id}`} className="flex-grow">
                 <div className="relative h-64 w-full">
-                    {/* TODO: readd this*/}
-                    {/*
                     <Image
-                        src={product.images || '/images/placeholder.jpg'}
+                        src={product.images![0] || '/images/placeholder.png'}
                         alt={product.name}
                         fill
                         className="object-cover"
                     />
-                    */}
                 </div>
                 <div className="p-4">
                     <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
-                    <p className="text-gray-600 mb-2">C${(product.price / 100).toFixed(2)}</p>
+                    <p className="text-gray-600 mb-2">
+                        {typeof product.price === "number" && !isNaN(product.price)
+                            ? `C$${(product.price / 100).toFixed(2)}`
+                            : "Variable"}
+                    </p>
                     {/* TODO: add options? */}
                 </div>
             </Link>

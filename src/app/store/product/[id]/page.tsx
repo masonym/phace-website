@@ -7,6 +7,7 @@ import { showToast } from '@/components/ui/Toast';
 import { Square } from 'square';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import parse from 'html-react-parser';
 
 const formatMoney = (amount: number | bigint, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -14,6 +15,46 @@ const formatMoney = (amount: number | bigint, currency: string) => {
         currency: currency,
     }).format(Number(amount) / 100);
 };
+
+function extractSections(html: string) {
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    const sections: Record<string, string> = {};
+    let currentKey = 'Description';
+    sections[currentKey] = '';
+
+    Array.from(container.childNodes).forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            if (el.tagName === 'P' && el.innerHTML.match(/^<strong>.*<\/strong>$/)) {
+                const title = el.textContent?.replace(':', '').trim() || '';
+                currentKey = title;
+                sections[currentKey] = '';
+            } else {
+                sections[currentKey] += el.outerHTML;
+            }
+        }
+    });
+
+    return sections;
+}
+
+function Section({ title, content }: { title: string; content: string }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="border-t pt-4">
+            <button
+                onClick={() => setOpen(!open)}
+                className="text-left w-full text-lg font-semibold text-gray-800 flex justify-between items-center"
+            >
+                {title}
+                <span className="text-accent">{open ? '-' : '+'}</span>
+            </button>
+            {open && <div className="mt-2 text-gray-700 leading-relaxed [&_ul]:list-disc [&_ul]:pl-6">{parse(content)}</div>}
+        </div>
+    );
+}
 
 interface ProductPageProps {
     params: {
@@ -67,15 +108,17 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     if (error || !product) return null;
 
+    const sections = extractSections(product.itemData!.descriptionHtml!);
+
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-4 py-24">
             <div className="w-full h-[500px] relative mb-10">
                 {product.itemData!.imageIds?.[0] && (
                     <Image
-                        src={product.itemData!.imageIds[0] || ''}
+                        src={(product.itemData as any).ecom_image_uris[0] || ''}
                         alt={product.itemData!.name || 'Product Image'}
                         fill
-                        className="object-cover rounded-2xl shadow-lg"
+                        className="object-contain rounded-2xl shadow-lg"
                     />
                 )}
             </div>
@@ -83,8 +126,8 @@ export default function ProductPage({ params }: ProductPageProps) {
             <div className="max-w-3xl mx-auto space-y-8">
                 <h1 className="text-5xl font-semibold tracking-tight text-gray-900">{product.itemData!.name}</h1>
 
-                {product.itemData!.description && (
-                    <p className="text-lg text-gray-600 leading-relaxed">{product.itemData!.description}</p>
+                {sections['Description'] && (
+                    <div className="text-lg text-gray-600 leading-relaxed">{parse(sections['Description'])}</div>
                 )}
 
                 {product.itemData!.variations && (
@@ -137,6 +180,13 @@ export default function ProductPage({ params }: ProductPageProps) {
                         </button>
                     </div>
                 </div>
+
+                {/* collapsible sections */}
+                {Object.entries(sections)
+                    .filter(([title]) => title !== 'Description')
+                    .map(([title, content]) => (
+                        <Section key={title} title={title} content={content} />
+                    ))}
             </div>
         </motion.div>
     );

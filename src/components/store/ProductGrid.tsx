@@ -115,11 +115,12 @@ export default function ProductGrid() {
                                     description: product.itemData.description ?? "",
                                     price: Number(firstVariation?.itemVariationData?.pricingType === "FIXED_PRICING"
                                         ? firstVariation.itemVariationData.priceMoney?.amount ?? 0
-                                        : 0), // ensure it's always a number
+                                        : "Variable"),
                                     currency: firstVariation?.itemVariationData?.pricingType === "FIXED_PRICING"
                                         ? firstVariation.itemVariationData.priceMoney?.currency ?? "CAD"
                                         : "CAD",
                                     categories: product.itemData.categories?.map(cat => cat.id ?? "") ?? [], // ensure it's always an array of strings
+                                    images: (product.itemData as any).ecom_image_uris ?? [],
                                 }}
                             />
                         )
