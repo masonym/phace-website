@@ -3,15 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/components/providers/CartProvider';
+import { showToast } from '@/components/ui/Toast';
 import { Square } from 'square';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 
-// Helper function to format money
 const formatMoney = (amount: number | bigint, currency: string) => {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currency,
-    }).format(Number(amount) / 100); // Convert from cents to dollars
+    }).format(Number(amount) / 100);
 };
 
 interface ProductPageProps {
@@ -23,6 +24,7 @@ interface ProductPageProps {
 export default function ProductPage({ params }: ProductPageProps) {
     const { addToCart } = useCartContext();
     const router = useRouter();
+    const [quantity, setQuantity] = useState(1);
     const [product, setProduct] = useState<Square.CatalogObjectItem | null>(null);
     const [selectedVariation, setSelectedVariation] = useState<Square.CatalogObjectItemVariation | null>(null);
     const [loading, setLoading] = useState(true);
@@ -31,126 +33,111 @@ export default function ProductPage({ params }: ProductPageProps) {
     useEffect(() => {
         const fetchProduct = async () => {
             try {
-                const response = await fetch(`/api/products/${params.id}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error('Product not found');
-                    }
-                    throw new Error('Failed to fetch product');
-                }
-
+                const response = await fetch(`/api/products/${params.id}`);
+                if (!response.ok) throw new Error('Product not found');
                 const data = await response.json();
-                console.log(typeof data);
                 setProduct(data);
-
-                console.log("Data:", data.itemData!);
-                // Set default variation if available
-                if (data.variations?.length > 0) {
-                    console.log('Variations:', data.variations);
-                    setSelectedVariation(data.variations.find((v: Square.CatalogObject) => v.type === 'ITEM_VARIATION') || null);
+                if (data.itemData.variations) {
+                    setSelectedVariation(
+                        data.itemData.variations.find((v: Square.CatalogObject) => v.type === 'ITEM_VARIATION') || null
+                    );
                 }
             } catch (err: any) {
-                console.error('Error fetching product:', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
             }
         };
-
         fetchProduct();
     }, [params.id, router]);
 
     const handleAddToCart = () => {
-        if (product && selectedVariation) {
-            addToCart(product, 1, selectedVariation);
-            // Optionally redirect to cart or show a confirmation
-            // router.push('/cart');
+        if (!product || !selectedVariation) return;
+        if (quantity < 1) {
+            showToast({ title: 'Invalid Quantity', description: 'Enter a quantity of 1 or more', status: 'error' });
+            return;
         }
+        addToCart(product, quantity, selectedVariation);
+        showToast({ title: 'Added to Cart', description: `${quantity} item(s) added.`, status: 'success' });
     };
 
     if (loading) {
-        return (
-            <div className="container mx-auto px-4 py-8 pt-24 text-center">
-                <p>Loading product...</p>
-            </div>
-        );
+        return <div className="container mx-auto px-4 py-32 text-center text-gray-500">Loading product...</div>;
     }
 
-    if (error || !product) {
-        return null; // Redirect happens in useEffect
-    }
+    if (error || !product) return null;
 
     return (
-        <div className="container mx-auto px-4 py-8 pt-24">
-            <div className="max-w-2xl mx-auto">
-                <div className="flex flex-col md:flex-row gap-8">
-                    {/* Product Image */}
-                    {/* TODO: There's an ecom_image_uris being sent with the data but idk how to access it*/}
-                    {/* We can use that instead of ID */}
-                    {/* Need to update the rest of the imageIds references too */}
-                    {product.itemData!.imageIds?.[0] && (
-                        <div className="relative w-full md:w-1/2 h-64 md:h-96">
-                            <Image
-                                src={product.itemData!.imageIds[0] || ''}
-                                alt={product.itemData!.name || 'Product Image'}
-                                fill
-                                className="object-cover rounded-lg"
-                            />
-                        </div>
-                    )}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-4 py-24">
+            <div className="w-full h-[500px] relative mb-10">
+                {product.itemData!.imageIds?.[0] && (
+                    <Image
+                        src={product.itemData!.imageIds[0] || ''}
+                        alt={product.itemData!.name || 'Product Image'}
+                        fill
+                        className="object-cover rounded-2xl shadow-lg"
+                    />
+                )}
+            </div>
 
-                    {/* Product Details */}
-                    <div className="w-full md:w-1/2">
-                        <h1 className="text-3xl font-bold mb-4">{product.itemData!.name}</h1>
+            <div className="max-w-3xl mx-auto space-y-8">
+                <h1 className="text-5xl font-semibold tracking-tight text-gray-900">{product.itemData!.name}</h1>
 
-                        {product.itemData!.description && (
-                            <p className="text-gray-600 mb-6">{product.itemData!.description}</p>
-                        )}
+                {product.itemData!.description && (
+                    <p className="text-lg text-gray-600 leading-relaxed">{product.itemData!.description}</p>
+                )}
 
-                        {product.itemData!.variations && product.itemData!.variations.length > 0 && (
-                            <div className="mb-6">
-                                <h2 className="text-xl font-semibold mb-2">Options</h2>
-                                <div className="space-y-2">
-                                    {product.itemData!.variations
-                                        .filter((variation: Square.CatalogObject) => variation.type === 'ITEM_VARIATION')
-                                        .map((variation: Square.CatalogObjectItemVariation) => (
-                                            <div
-                                                key={variation.id}
-                                                className={`flex justify-between items-center border-b pb-2 cursor-pointer ${selectedVariation?.id === variation.id ? 'bg-gray-100' : ''
-                                                    }`}
-                                                onClick={() => setSelectedVariation(variation)}
-                                            >
-                                                <span>{variation.itemVariationData?.name || 'Default'}</span>
-                                                {variation.itemVariationData?.priceMoney && (
-                                                    <span className="font-medium">
-                                                        {formatMoney(
-                                                            variation.itemVariationData.priceMoney.amount!,
-                                                            variation.itemVariationData.priceMoney.currency!
-                                                        )}
-                                                    </span>
+                {product.itemData!.variations && (
+                    <div>
+                        <h2 className="text-2xl font-medium text-gray-800 mb-4">Options</h2>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {product.itemData!.variations
+                                .filter((v: Square.CatalogObject) => v.type === 'ITEM_VARIATION')
+                                .map((variation: Square.CatalogObjectItemVariation) => (
+                                    <div
+                                        key={variation.id}
+                                        className={`border rounded-xl p-4 cursor-pointer transition-shadow duration-300 ${selectedVariation?.id === variation.id ? 'border-accent shadow-md bg-accent/10' : 'hover:shadow-sm'
+                                            }`}
+                                        onClick={() => setSelectedVariation(variation)}
+                                    >
+                                        <div className="font-medium">{variation.itemVariationData?.name}</div>
+                                        {variation.itemVariationData?.priceMoney && (
+                                            <div className="text-sm text-gray-700 mt-1">
+                                                {formatMoney(
+                                                    variation.itemVariationData.priceMoney.amount!,
+                                                    variation.itemVariationData.priceMoney.currency!
                                                 )}
                                             </div>
-                                        ))}
-                                </div>
-                            </div>
-                        )}
+                                        )}
+                                    </div>
+                                ))}
+                        </div>
+                    </div>
+                )}
 
+                <div>
+                    <label htmlFor="quantity" className="block text-lg font-medium text-gray-800 mb-2">
+                        Quantity
+                    </label>
+                    <div className="flex items-center gap-4">
+                        <input
+                            id="quantity"
+                            type="number"
+                            min="1"
+                            value={quantity}
+                            onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                            className="border rounded-lg px-4 py-2 w-24 focus:ring-accent focus:border-accent"
+                        />
                         <button
                             onClick={handleAddToCart}
                             disabled={!selectedVariation}
-                            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             Add to Cart
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
