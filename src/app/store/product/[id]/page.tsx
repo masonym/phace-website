@@ -110,6 +110,8 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     const sections = extractSections(product.itemData!.descriptionHtml!);
 
+    console.log(product)
+
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-4 py-24">
             <div className="w-full h-[500px] relative mb-10">
@@ -118,7 +120,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                         src={(product.itemData as any).ecom_image_uris[0] || ''}
                         alt={product.itemData!.name || 'Product Image'}
                         fill
-                        className="object-contain rounded-2xl shadow-lg"
+                        className="object-contain"
                     />
                 )}
             </div>
@@ -163,6 +165,12 @@ export default function ProductPage({ params }: ProductPageProps) {
                         Quantity
                     </label>
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition-all"
+                        >
+
+                            -
+                        </button>
                         <input
                             id="quantity"
                             type="number"
@@ -171,6 +179,12 @@ export default function ProductPage({ params }: ProductPageProps) {
                             onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
                             className="border rounded-lg px-4 py-2 w-24 focus:ring-accent focus:border-accent"
                         />
+                        <button
+                            onClick={() => setQuantity(Math.max(1, quantity + 1))} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition-all"
+                        >
+
+                            +
+                        </button>
                         <button
                             onClick={handleAddToCart}
                             disabled={!selectedVariation}
