@@ -236,7 +236,6 @@ export default function CheckoutPage() {
                                 createVerificationDetails={() => ({
                                     amount: String(getCartTotal() * 100), // Convert to cents
                                     currencyCode: 'CAD',
-                                    autocomplete: false, // TODO: SET TO TRUE LATER? THIS DOESNT WORK LOL
                                     intent: 'CHARGE',
                                     billingContact: {
                                         familyName: shippingAddress.name.split(' ').slice(1).join(' ') || '',

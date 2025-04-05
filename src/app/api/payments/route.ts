@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
         const paymentResponse = await client.payments.create({
             sourceId: nonce,
-            autocomplete: false, // TODO: Set to true if you want to auto-complete the payment
+            autocomplete: true, // TODO: Set to true if you want to auto-complete the payment
             amountMoney: {
                 amount: BigInt(amount), // Amount in cents
                 currency: 'CAD',

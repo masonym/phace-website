@@ -34,7 +34,26 @@ export async function POST(req: NextRequest) {
                         currency,
                     },
                 })),
+                fulfillments: [
+                    {
+                        type: 'SHIPMENT',
+                        state: 'PROPOSED', // other valid states: RESERVED, PREPARED, COMPLETED, CANCELED, FAILED
+                        shipmentDetails: {
+                            recipient: {
+                                displayName: shippingAddress.name,
+                                address: {
+                                    addressLine1: shippingAddress.street,
+                                    locality: shippingAddress.city,
+                                    administrativeDistrictLevel1: shippingAddress.state,
+                                    postalCode: shippingAddress.zipCode,
+                                    country: 'CA',
+                                },
+                            },
+                        },
+                    },
+                ],
             },
+
         });
 
         const orderId = orderResponse.order?.id;
@@ -57,7 +76,7 @@ export async function POST(req: NextRequest) {
                 country: "CA",
             },
             note: `Purchase of ${items.length} item(s)`,
-            autocomplete: false,
+            autocomplete: true,
         });
 
         return NextResponse.json(JSON.parse(ProductService.safeStringify({ payment: paymentResponse.payment })));

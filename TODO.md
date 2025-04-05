@@ -54,6 +54,7 @@ TODO:
 - [ ] 22. Need to check if product is available online (this is a setting in square); necessary for things like AlumierMD // maybe not a square setting; may need to do this with categories or something
 - [ ] 23. Need to figure out how to deal with discounts in Square API
 - [ ] 24. Modify variations on product pages to get options data and transform that into colour buttons using hex codes
+- [ ] 25. NEED FORM  VALIDATION ON CHECKOUT PAGE
 
 
 ## BUGS THAT EXIST ON DEV BUT MAYBE NOT PROD?
