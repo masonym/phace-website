@@ -1,4 +1,4 @@
-import { SquareClient } from "square";
+import { SquareClient, SquareEnvironment } from "square";
 import { randomUUID } from 'crypto';
 import { CartItem } from '@/types/product';
 import { GetPaymentsRequest } from "square/api";
@@ -11,8 +11,13 @@ interface PaymentResult {
 }
 
 // Initialize Square client
+
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN!,
+  environment:
+    process.env.SQUARE_ENVIRONMENT === "production"
+      ? SquareEnvironment.Production
+      : SquareEnvironment.Sandbox,
 });
 
 interface ShippingAddress {

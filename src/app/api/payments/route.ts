@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SquareClient } from 'square';
 import { randomUUID } from 'crypto';
+import { SquareClient, SquareEnvironment } from "square";
 
 const client = new SquareClient({
     token: process.env.SQUARE_ACCESS_TOKEN!,
+    environment:
+        process.env.SQUARE_ENVIRONMENT === "production"
+            ? SquareEnvironment.Production
+            : SquareEnvironment.Sandbox,
 });
 
 export async function POST(req: NextRequest) {
@@ -20,6 +24,7 @@ export async function POST(req: NextRequest) {
 
         const paymentResponse = await client.payments.create({
             sourceId: nonce,
+            autocomplete: false, // TODO: Set to true if you want to auto-complete the payment
             amountMoney: {
                 amount: BigInt(amount), // Amount in cents
                 currency: 'CAD',

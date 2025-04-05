@@ -50,7 +50,7 @@ export default function Checkout() {
                 body: JSON.stringify({
                     sourceId: token.token,
                     amount: getCartTotal() * 100, // Convert to cents for Square
-                    currency: 'CAD', // Adjust based on your needs
+                    currency: 'CAD',
                     items: cart.map(item => ({
                         productId: item.product.id,
                         variationId: item.selectedVariation?.id || null,

@@ -180,7 +180,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                             className="border rounded-lg px-4 py-2 w-24 focus:ring-accent focus:border-accent"
                         />
                         <button
-                            onClick={() => setQuantity(Math.max(1, quantity + 1))} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition-all"
+                            onClick={() => setQuantity(quantity + 1)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition-all"
                         >
 
                             +

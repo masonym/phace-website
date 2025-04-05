@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { Square } from 'square';
 import { CartItem } from '@/types/product';
 
@@ -74,9 +74,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const clearCart = () => {
+    const clearCart = useCallback(() => {
         setCart([]);
-    };
+    }, []);
 
     const getCartTotal = () => {
         return cart.reduce((total, item) => {

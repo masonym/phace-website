@@ -8,6 +8,8 @@ import Image from 'next/image';
 
 interface ShippingAddress {
     name: string;
+    email: string;
+    phone: string;
     street: string;
     city: string;
     state: string;
@@ -22,6 +24,8 @@ export default function CheckoutPage() {
     const [error, setError] = useState('');
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
         name: '',
+        email: '',
+        phone: '',
         street: '',
         city: '',
         state: '',
@@ -65,6 +69,7 @@ export default function CheckoutPage() {
                         price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
                     })),
                     shippingAddress,
+                    locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
                 }),
             });
 
@@ -99,7 +104,6 @@ export default function CheckoutPage() {
                 throw new Error('Failed to create order');
             }
 
-            clearCart();
             router.push('/checkout/success');
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
@@ -146,6 +150,31 @@ export default function CheckoutPage() {
                                     value={shippingAddress.name}
                                     onChange={handleAddressChange}
                                 />
+                                <input
+                                    type="text"
+                                    name="email"
+                                    placeholder="Email Address"
+                                    required
+                                    className="w-full px-3 py-2 border rounded"
+                                    value={shippingAddress.email}
+                                    onChange={handleAddressChange}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <span className="border rounded px-3 py-2 flex items-center gap-1">
+                                        <img src="/images/canada-flag-icon.svg" alt="CA" className="w-5 h-5" />
+                                        +1
+                                    </span>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        placeholder="Phone Number"
+                                        required
+                                        className="w-full px-3 py-2 border rounded"
+                                        value={shippingAddress.phone}
+                                        pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
                                 <input
                                     type="text"
                                     name="street"
@@ -207,12 +236,14 @@ export default function CheckoutPage() {
                                 createVerificationDetails={() => ({
                                     amount: String(getCartTotal() * 100), // Convert to cents
                                     currencyCode: 'CAD',
+                                    autocomplete: false, // TODO: SET TO TRUE LATER? THIS DOESNT WORK LOL
                                     intent: 'CHARGE',
                                     billingContact: {
                                         familyName: shippingAddress.name.split(' ').slice(1).join(' ') || '',
                                         givenName: shippingAddress.name.split(' ')[0] || '',
-                                        email: '',
-                                        country: shippingAddress.country,
+                                        email: shippingAddress.email,
+                                        phone: shippingAddress.phone,
+                                        countryCode: 'CA',
                                         city: shippingAddress.city,
                                         addressLines: [shippingAddress.street],
                                         postalCode: shippingAddress.zipCode,

@@ -1,4 +1,4 @@
-import { SquareClient } from "square";
+import { SquareClient, SquareEnvironment } from "square";
 import { randomUUID } from 'crypto';
 import { nanoid } from 'nanoid';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
@@ -23,8 +23,13 @@ const WAITLIST_TABLE = 'phace-waitlist';
 const FORMS_TABLE = 'phace-forms';
 
 // Initialize Square client
+
 const client = new SquareClient({
     token: process.env.SQUARE_ACCESS_TOKEN!,
+    environment:
+        process.env.SQUARE_ENVIRONMENT === "production"
+            ? SquareEnvironment.Production
+            : SquareEnvironment.Sandbox,
 });
 
 // Types for Square Booking
@@ -334,6 +339,11 @@ export class SquareBookingService {
         try {
             console.log(`getServicesByCategory called for ${categoryId}, forceRefresh: ${forceRefresh}`);
 
+            // fetching location id 
+
+            const res = await client.locations.list();
+
+            console.log("res: ", res)
             // Check if we have a cached version that's less than 5 minutes old
             const now = Date.now();
             const cacheEntry = this.servicesByCategory[categoryId];

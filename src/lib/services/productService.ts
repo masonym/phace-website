@@ -1,8 +1,12 @@
-import { SquareClient } from "square";
 import { Square } from "square";
+import { SquareClient, SquareEnvironment } from "square";
 
 const client = new SquareClient({
     token: process.env.SQUARE_ACCESS_TOKEN!,
+    environment:
+        process.env.SQUARE_ENVIRONMENT === "production"
+            ? SquareEnvironment.Production
+            : SquareEnvironment.Sandbox,
 });
 
 export class ProductService {
@@ -36,6 +40,7 @@ export class ProductService {
      */
     static async listProducts(category?: string): Promise<Square.CatalogObject[]> {
         try {
+
             // step 1: get products (ITEMs + ITEM_VARIATIONs)
             const itemsResult = await client.catalog.searchItems({ productTypes: ["REGULAR"] });
             if (!itemsResult.items) throw new Error("Failed to fetch products");
