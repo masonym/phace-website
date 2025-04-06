@@ -66,6 +66,15 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
         );
     }
 
+    let buttonLabel = 'Add to Cart';
+    if (!selectedVariation) {
+        buttonLabel = 'Select an option';
+    } else if (selectedVariation.itemVariationData?.locationOverrides?.some((loc) => loc.soldOut)) {
+        buttonLabel = 'Out of Stock';
+    } else if (!selectedVariation.itemVariationData?.priceMoney?.amount) {
+        buttonLabel = 'Unavailable';
+    }
+
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex justify-center items-center">
             <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-2xl">
@@ -140,13 +149,13 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
                         {/* Add to Cart Button */}
                         <button
                             onClick={handleAdd}
-                            disabled={!selectedVariation}
+                            disabled={buttonLabel !== 'Add to Cart'}
                             className={`w-full py-3 rounded-md text-white mb-2 ${selectedVariation
                                 ? 'bg-[#B09182] hover:bg-[#B09182]/90'
                                 : 'bg-gray-400 cursor-not-allowed'
                                 }`}
                         >
-                            Add to Cart
+                            {buttonLabel}
                         </button>
 
                         {/* View Details Link */}

@@ -110,6 +110,15 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     const sections = extractSections(product.itemData!.descriptionHtml!);
 
+    let buttonLabel = 'Add to Cart';
+    if (!selectedVariation) {
+        buttonLabel = 'Select an option';
+    } else if (selectedVariation.itemVariationData?.locationOverrides?.some((loc) => loc.soldOut)) {
+        buttonLabel = 'Out of Stock';
+    } else if (!selectedVariation.itemVariationData?.priceMoney?.amount) {
+        buttonLabel = 'Unavailable';
+    }
+
     console.log(product)
 
     return (
@@ -187,10 +196,10 @@ export default function ProductPage({ params }: ProductPageProps) {
                         </button>
                         <button
                             onClick={handleAddToCart}
-                            disabled={!selectedVariation}
+                            disabled={buttonLabel !== 'Add to Cart'}
                             className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
-                            Add to Cart
+                            {buttonLabel}
                         </button>
                     </div>
                 </div>
