@@ -48,12 +48,15 @@ export default function CheckoutSuccessPage() {
                     >
                         Continue Shopping
                     </Link>
+                    {/* TODO: fix profile so that this works */}
+                    {/*
                     <Link
                         href="/profile"
                         className="block w-full bg-white text-black border border-black py-3 rounded-md hover:bg-gray-50"
                     >
                         View Order History
                     </Link>
+                    */}
                 </div>
             </div>
         </div>

@@ -46,19 +46,51 @@ export default function CheckoutPage() {
         }
     }, [cart, router]);
 
+    const validateShippingAddress = () => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^[0-9]{10}$/;
+        const canadianPostalCodeRegex = /^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/;
+
+        if (!shippingAddress.name.trim()) return 'Name is required';
+        if (!emailRegex.test(shippingAddress.email)) return 'Invalid email address';
+        if (!phoneRegex.test(shippingAddress.phone)) return 'Invalid phone number (format: 123-456-7890)';
+        if (!shippingAddress.street.trim()) return 'Street is required';
+        if (!shippingAddress.city.trim()) return 'City is required';
+        if (!shippingAddress.state.trim()) return 'Province is required';
+        if (!canadianPostalCodeRegex.test(shippingAddress.zipCode)) return 'Invalid postal code (format: A1A 1A1)';
+        if (!shippingAddress.country.trim()) return 'Country is required';
+
+        return null;
+    };
+
+    function formatPhoneNumber(value: string): string {
+        const digits = value.replace(/\D/g, '').slice(0, 10); // only numbers, max 10
+        const parts = [];
+
+        if (digits.length > 0) parts.push('(' + digits.slice(0, 3));
+        if (digits.length >= 4) parts.push(') ' + digits.slice(3, 6));
+        if (digits.length >= 7) parts.push('-' + digits.slice(6, 10));
+
+        return parts.join('');
+    }
+
     const handleCardTokenizeResponseReceived = async (token: any) => {
+        const validationError = validateShippingAddress();
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+
         setLoading(true);
         setError('');
 
         try {
             const response = await fetch('/api/square-payment', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     sourceId: token.token,
-                    amount: getCartTotal() * 100, // Convert to cents for Square
+                    amount: getCartTotal() * 100,
                     currency: 'CAD',
                     items: cart.map(item => ({
                         productId: item.product.id,
@@ -73,10 +105,7 @@ export default function CheckoutPage() {
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to process payment');
-            }
-
+            if (!response.ok) throw new Error('Failed to process payment');
             const { payment } = await response.json();
 
             const orderResponse = await fetch('/api/orders', {
@@ -100,32 +129,13 @@ export default function CheckoutPage() {
                 }),
             });
 
-            if (!orderResponse.ok) {
-                throw new Error('Failed to create order');
-            }
-
+            if (!orderResponse.ok) throw new Error('Failed to create order');
             router.push('/checkout/success');
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
             setLoading(false);
         }
     };
-
-    if (cart.length === 0) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
-                    <button
-                        onClick={() => router.push('/store')}
-                        className="text-black hover:text-gray-700"
-                    >
-                        Continue Shopping
-                    </button>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="container mx-auto px-4 py-8 pt-24">
@@ -170,9 +180,11 @@ export default function CheckoutPage() {
                                         placeholder="Phone Number"
                                         required
                                         className="w-full px-3 py-2 border rounded"
-                                        value={shippingAddress.phone}
-                                        pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
-                                        onChange={handleAddressChange}
+                                        value={formatPhoneNumber(shippingAddress.phone)}
+                                        onChange={(e) => {
+                                            const raw = e.target.value.replace(/\D/g, ''); // strip non-digits
+                                            setShippingAddress(prev => ({ ...prev, phone: raw }));
+                                        }}
                                     />
                                 </div>
                                 <input
@@ -245,7 +257,7 @@ export default function CheckoutPage() {
                                         countryCode: 'CA',
                                         city: shippingAddress.city,
                                         addressLines: [shippingAddress.street],
-                                        postalCode: shippingAddress.zipCode,
+                                        postalCode: shippingAddress.zipCode.replace(/\s/g, ''),
                                     },
                                 })}
                             >

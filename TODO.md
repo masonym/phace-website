@@ -18,6 +18,7 @@ TODO:
 - [x] 16. i am almost positive theres a stupid bug with how iphones handle dates
 - [ ] 17. times are wrong on date selection; some timezone funkiness
 
+s
 
 ### FRONTEND: 
 
@@ -75,3 +76,4 @@ TODO:
 - [ ] 3. privacy policy & tos page
 - [ ] 4. Looki into implementing afterpay??? interest free payments thingy for storefront
 - [ ] 5. for storefront; accept gift cards (accept_partial_authorization in payment.create) https://developer.squareup.com/reference/square/payments-api/create-payment
+- [ ] 6. add customer creation/checking for checkout
