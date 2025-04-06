@@ -14,7 +14,7 @@ TODO:
 
 - [ ] 3a. Need to update the checkout stuff to adhere to the new way we're doing things that we learned from ClientForm
 - [ ] 15. Add to Cart vs Buy Now option (what does this do?) // ADD TO CART,,, well it adds to cart. BUY NOW immediately takes you to the checkout page with JUST this item; irrespective of cart
-- [ ] 20. Need to implement stock checking
+- [ ] 20. Need to implement stock checking -- this needs the inventory API it seems :|
 - [ ] 21. Change "View Details" button on ProductCard.tsx's to "Add to Cart" button // This should create a modal popup with the product details (NO DESCRIPTION) and an "Add to Cart" button
 - [ ] 22. Need to check if product is available online (this is a setting in square); necessary for things like AlumierMD // maybe not a square setting; may need to do this with categories or something
 - [ ] 23. Need to figure out how to deal with discounts in Square API

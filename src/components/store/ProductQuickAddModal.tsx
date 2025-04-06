@@ -17,7 +17,6 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
     const [selectedVariationId, setSelectedVariationId] = useState<string | null>(null);
     const [quantity, setQuantity] = useState(1);
 
-    // Fetch product effect
     useEffect(() => {
         const fetchProduct = async () => {
             setLoading(true);
@@ -36,11 +35,9 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
         fetchProduct();
     }, [productId]);
 
-    // Variation selection logic
     const variations = product?.itemData?.variations || [];
     const hasMultipleVariations = variations.filter(v => v.type === 'ITEM_VARIATION').length > 1;
 
-    // Set default variation effect
     useEffect(() => {
         if (!loading && product && !hasMultipleVariations && variations[0]?.id) {
             setSelectedVariationId(variations[0].id);
@@ -48,6 +45,10 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
     }, [loading, product, hasMultipleVariations, variations]);
 
     const selectedVariation = product?.itemData?.variations?.find(v => v.id === selectedVariationId) ?? null;
+    if (selectedVariation && selectedVariation.type !== 'ITEM_VARIATION') {
+        return null;
+    }
+    const currentPrice = selectedVariation?.itemVariationData?.priceMoney?.amount ?? 0;
 
     const handleAdd = () => {
         if (!product || !selectedVariation) return;
@@ -55,7 +56,6 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
         onClose();
     };
 
-    // Loading state
     if (loading || !product) {
         return (
             <div className="fixed inset-0 z-50 bg-black/40 flex justify-center items-center">
@@ -66,74 +66,95 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
         );
     }
 
-    // Main render
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex justify-center items-center">
-            <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
-                <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-xl font-semibold">{product.itemData?.name}</h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-black">✕</button>
-                </div>
-
-                <div className="mb-4">
-                    <Image
-                        src={(product.itemData as any).ecom_image_uris?.[0] || '/images/placeholder.png'}
-                        alt={product.itemData?.name || 'Product image'}
-                        width={400}
-                        height={300}
-                        className="object-cover rounded-md w-full h-64"
-                    />
-                </div>
-
-                {hasMultipleVariations ? (
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-1">Select Variation</label>
-                        <select
-                            value={selectedVariationId || ''}
-                            onChange={(e) => setSelectedVariationId(e.target.value)}
-                            className="w-full border px-3 py-2 rounded-md"
-                        >
-                            <option value="" disabled>Select an option</option>
-                            {variations
-                                .filter(variation => variation.type === 'ITEM_VARIATION')
-                                .map(variation => {
-                                    const name = variation.itemVariationData?.name || 'Unnamed';
-                                    const price = variation.itemVariationData?.priceMoney?.amount ?? 0;
-                                    return (
-                                        <option key={variation.id} value={variation.id}>
-                                            {name} – C${(Number(price) / 100).toFixed(2)}
-                                        </option>
-                                    );
-                                })}
-                        </select>
+            <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-2xl">
+                <div className="flex flex-col sm:flex-row gap-6 w-full">
+                    {/* Image Section */}
+                    <div className="w-full sm:w-1/2 flex justify-center">
+                        <Image
+                            src={(product.itemData as any).ecom_image_uris?.[0] || '/images/placeholder.png'}
+                            alt={product.itemData?.name || 'Product image'}
+                            width={200}
+                            height={300}
+                            className="object-contain h-64"
+                        />
                     </div>
-                ) : null}
 
-                <div className="mb-4">
-                    <label className="block text-sm font-medium mb-1">Quantity</label>
-                    <input
-                        type="number"
-                        min={1}
-                        value={quantity}
-                        onChange={(e) => setQuantity(Number(e.target.value))}
-                        className="w-full border px-3 py-2 rounded-md"
-                    />
-                </div>
+                    {/* Details Section */}
+                    <div className="w-full sm:w-1/2 flex flex-col">
+                        <div className="flex justify-between items-start mb-4">
+                            <h2 className="text-xl font-semibold uppercase">{product.itemData?.name}</h2>
+                            <button onClick={onClose} className="text-gray-500 hover:text-black">✕</button>
+                        </div>
 
-                <div className="flex justify-between items-center">
-                    <button
-                        onClick={handleAdd}
-                        disabled={!selectedVariation}
-                        className={`px-4 py-2 rounded-md text-white ${selectedVariation ? 'bg-black hover:bg-gray-800' : 'bg-gray-400 cursor-not-allowed'}`}
-                    >
-                        Add to Cart
-                    </button>
-                    <a
-                        href={`/store/product/${product.id}`}
-                        className="text-sm text-blue-600 underline hover:text-blue-800"
-                    >
-                        View Details
-                    </a>
+                        {/* Price Display */}
+                        <div className="mb-4">
+                            <p className="text-lg font-medium">
+                                C${(Number(currentPrice) / 100).toFixed(2)}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                Excluding Sales Tax | Shipping
+                            </p>
+                        </div>
+
+                        {/* Variation Buttons */}
+                        {hasMultipleVariations && (
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-2">Variation</label>
+                                <div className="flex gap-2">
+                                    {variations
+                                        .filter(variation => variation.type === 'ITEM_VARIATION')
+                                        .map(variation => {
+                                            const name = variation.itemVariationData?.name || 'Unnamed';
+                                            const isSelected = variation.id === selectedVariationId;
+                                            return (
+                                                <button
+                                                    key={variation.id}
+                                                    onClick={() => setSelectedVariationId(variation.id)}
+                                                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs ${isSelected ? 'border-black bg-gray-200' : 'border-gray-300 bg-white'
+                                                        }`}
+                                                >
+                                                    {name.charAt(0)}
+                                                </button>
+                                            );
+                                        })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Quantity Input */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Quantity</label>
+                            <input
+                                type="number"
+                                min={1}
+                                value={quantity}
+                                onChange={(e) => setQuantity(Number(e.target.value))}
+                                className="w-16 border px-2 py-1 rounded-md"
+                            />
+                        </div>
+
+                        {/* Add to Cart Button */}
+                        <button
+                            onClick={handleAdd}
+                            disabled={!selectedVariation}
+                            className={`w-full py-3 rounded-md text-white mb-2 ${selectedVariation
+                                ? 'bg-[#B09182] hover:bg-[#B09182]/90'
+                                : 'bg-gray-400 cursor-not-allowed'
+                                }`}
+                        >
+                            Add to Cart
+                        </button>
+
+                        {/* View Details Link */}
+                        <a
+                            href={`/store/product/${product.id}`}
+                            className="text-sm text-blue-600 underline hover:text-blue-800 text-center block"
+                        >
+                            View More Details
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
