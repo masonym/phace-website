@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
         const orderResponse = await client.orders.create({
             order: {
                 locationId,
+                pricingOptions: {
+                    autoApplyDiscounts: true,
+                    autoApplyTaxes: true,
+                },
                 lineItems: items.map((item: any) => ({
                     name: `${item.name}${item.variationName ? ` (${item.variationName})` : ''}`,
                     quantity: item.quantity.toString(),

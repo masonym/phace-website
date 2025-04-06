@@ -99,6 +99,8 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
                         </div>
 
                         {/* Variation Buttons */}
+                        {/* TODO: Figure out how we can make these coloured buttons */}
+                        {/* Obviously doing it in code is trivial; the quuestion is how we want to manage it on Square's end*/}
                         {hasMultipleVariations && (
                             <div className="mb-4">
                                 <label className="block text-sm font-medium mb-2">Variation</label>

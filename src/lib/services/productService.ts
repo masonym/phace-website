@@ -102,6 +102,18 @@ export class ProductService {
 
             if (!itemResult.object) throw new Error("Product not found");
 
+            let applicableDiscount;
+            for (const discount of discounts) {
+                if (discount.productIds.includes(productId)) {
+                    applicableDiscount = {
+                        discountType: discount.discountType,
+                        amount: discount.amount,
+                        percentage: discount.percentage,
+                    };
+                    break;
+                }
+            }
+
             const item = itemResult.object;
 
             if (item.type !== 'ITEM') {
@@ -151,6 +163,38 @@ export class ProductService {
             return categories.objects;
         } catch (error) {
             console.error("Error fetching categories:", error);
+            throw error;
+        }
+    }
+
+    static async getDiscountData(): Promise<any[]> {
+        try {
+            const discountsResult = await client.catalog.search({
+                objectTypes: ["PRICING_RULE"],
+                includeRelatedObjects: true,
+            });
+
+            if (!discountsResult.relatedObjects) throw new Error("Failed to fetch discounts");
+
+            let productSet = discountsResult.relatedObjects
+                .filter((object) => object.type === 'PRODUCT_SET')
+                .map((object => ({
+                    productIds: object.productSetData?.productIdsAny || [],
+                    id: object.id,
+                })));
+
+            let discountData = discountsResult.relatedObjects
+                .filter((discount) => discount.type === 'DISCOUNT')
+                .map((discount) => ({
+                    id: discount.id,
+                    discountType: discount.discountData?.discountType,
+                    amount: discount.discountData?.amountMoney?.amount,
+                    percentage: discount.discountData?.percentage,
+                }));
+
+            return discountData;
+        } catch (error) {
+            console.error("Error fetching discounts:", error);
             throw error;
         }
     }
