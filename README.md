@@ -1,6 +1,6 @@
 # Phace Medical Aesthetics
 
-> A full-stack booking and e-commerce website for a small business in the medical aesthetics industry, located in Chilliwack, British Columbia. Designed to replace a Wix website and acuity scheduling paltform. Built to extend the limitations of off-the-shelf booking tools by building a fully customized frontend integrated with the Square API.
+> A full-stack booking and e-commerce website for a small business in the medical aesthetics industry, located in Chilliwack, British Columbia. Designed to replace a Wix website and acuity scheduling platform. Built to extend the limitations of off-the-shelf booking tools by building a fully customized frontend integrated with the Square API.
 
 ## Overview
 
