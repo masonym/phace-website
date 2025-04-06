@@ -63,7 +63,7 @@ interface ProductPageProps {
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
-    const { addToCart } = useCartContext();
+    const { addToCart, openCart } = useCartContext();
     const router = useRouter();
     const [quantity, setQuantity] = useState(1);
     const [product, setProduct] = useState<Square.CatalogObjectItem | null>(null);
@@ -99,6 +99,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             return;
         }
         addToCart(product, quantity, selectedVariation);
+        openCart();
         showToast({ title: 'Added to Cart', description: `${quantity} item(s) added.`, status: 'success' });
     };
 

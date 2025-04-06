@@ -5,15 +5,14 @@ import { useCartContext } from '../providers/CartProvider';
 import { Cart } from './Cart';
 
 export function CartButton() {
-    const { cart } = useCartContext();
-    const [isCartOpen, setIsCartOpen] = useState(false);
+    const { cart, isCartOpen, openCart, closeCart } = useCartContext();
 
     const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
     return (
         <>
             <button
-                onClick={() => setIsCartOpen(true)}
+                onClick={openCart}
                 className="relative p-2 hover:bg-gray-100 rounded-full"
                 aria-label="Open cart"
             >
@@ -38,7 +37,7 @@ export function CartButton() {
                 )}
             </button>
 
-            {isCartOpen && <Cart onClose={() => setIsCartOpen(false)} />}
+            {isCartOpen && <Cart onClose={closeCart} />}
         </>
     );
 }

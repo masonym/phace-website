@@ -11,7 +11,7 @@ interface ProductQuickAddModalProps {
 }
 
 export default function ProductQuickAddModal({ productId, onClose }: ProductQuickAddModalProps) {
-    const { addToCart } = useCartContext();
+    const { addToCart, openCart } = useCartContext();
     const [loading, setLoading] = useState(true);
     const [product, setProduct] = useState<Square.CatalogObjectItem | null>(null);
     const [selectedVariationId, setSelectedVariationId] = useState<string | null>(null);
@@ -53,6 +53,7 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
     const handleAdd = () => {
         if (!product || !selectedVariation) return;
         addToCart(product, quantity, selectedVariation as Square.CatalogObjectItemVariation);
+        openCart();
         onClose();
     };
 

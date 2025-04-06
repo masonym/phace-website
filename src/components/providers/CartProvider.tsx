@@ -11,12 +11,18 @@ interface CartContextType {
     updateQuantity: (productId: string, variationId: string | null, newQuantity: number) => void;
     clearCart: () => void;
     getCartTotal: () => number;
+    isCartOpen: boolean;
+    openCart: () => void;
+    closeCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const [cart, setCart] = useState<CartItem[]>([]);
+    const [isCartOpen, setIsCartOpen] = useState(false);
+    const openCart = () => setIsCartOpen(true);
+    const closeCart = () => setIsCartOpen(false);
 
     useEffect(() => {
         const savedCart = localStorage.getItem('cart');
@@ -92,6 +98,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         updateQuantity,
         clearCart,
         getCartTotal,
+        isCartOpen,
+        openCart,
+        closeCart,
     };
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
