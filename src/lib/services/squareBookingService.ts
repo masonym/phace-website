@@ -11,6 +11,7 @@ import {
     DeleteCommand,
     ScanCommand
 } from '@aws-sdk/lib-dynamodb';
+import { startOfDay, addMonths } from "date-fns";
 
 const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
@@ -686,7 +687,7 @@ export class SquareBookingService {
     /**
      * Get staff members with caching
      */
-    static async getStaffMembers(): Promise<StaffMember[]> {
+    static async getStaffMembers(variationId: string): Promise<StaffMember[]> {
         try {
             // Check if we have cached data that's still valid
             if (
@@ -699,19 +700,48 @@ export class SquareBookingService {
 
             console.log('Fetching fresh staff members data from Square');
 
-            // Get team members who can be booked
-            const bookingProfilesResponse = await client.bookings.teamMemberProfiles.list();
+            const today = startOfDay(new Date());
+            const endQuery = addMonths(today, 1);
 
-            if (!bookingProfilesResponse.data) {
-                console.log('No team member booking profiles found');
+            const availabilityResponse = await client.bookings.searchAvailability({
+                query: {
+                    filter: {
+                        segmentFilters: [
+                            {
+                                serviceVariationId: variationId,
+                            },
+                        ],
+                        startAtRange: {
+                            startAt: today.toISOString(),
+                            endAt: endQuery.toISOString(),
+                        },
+                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!,
+                    },
+                },
+            });
+
+
+            const availableStaffIds = new Set<string>();
+            availabilityResponse.availabilities?.forEach(slot => {
+                slot.appointmentSegments?.forEach(seg => {
+                    availableStaffIds.add(seg.teamMemberId);
+                });
+            });
+
+            // Get team members who can be booked
+            const bookingProfilesResponse = await client.bookings.bulkRetrieveTeamMemberBookingProfiles({ teamMemberIds: Array.from(availableStaffIds) });
+
+            const bookingProfilesObj = bookingProfilesResponse.teamMemberBookingProfiles!;
+            const bookingProfiles = Object.entries(bookingProfilesObj)
+                .map(([id, entry]) => entry.teamMemberBookingProfile)
+                .filter(Boolean);
+
+            if (bookingProfiles.length === 0) {
+                console.log('No team member IDs found in booking profiles');
                 return [];
             }
-
-            const bookingProfiles = bookingProfilesResponse.data;
-            console.log(`Found ${bookingProfiles.length} team member booking profiles`);
-
             // Get detailed team member info for all team members
-            const teamMemberIds = bookingProfiles.map(profile => profile.teamMemberId!);
+            const teamMemberIds = bookingProfiles.map(profile => profile!.teamMemberId!);
 
             if (teamMemberIds.length === 0) {
                 console.log('No team member IDs found in booking profiles');
@@ -733,23 +763,23 @@ export class SquareBookingService {
             // Map Square team members to our StaffMember format
             const staffMembers = bookingProfiles.map(profile => {
                 const teamMember = teamMembersResult.teamMembers?.find(
-                    tm => tm.id === profile.teamMemberId
+                    tm => tm.id === profile!.teamMemberId
                 );
 
                 if (!teamMember) {
-                    console.log(`No team member found for profile ${profile.teamMemberId}`);
+                    console.log(`No team member found for profile ${profile!.teamMemberId}`);
                     return null;
                 }
 
                 // Parse availability from the booking profile
 
                 return {
-                    id: profile.teamMemberId!,
-                    name: profile.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
+                    id: profile!.teamMemberId!,
+                    name: profile!.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
                     email: teamMember.emailAddress,
                     phone: teamMember.phoneNumber,
-                    bio: profile.description,
-                    isActive: profile.isBookable && teamMember.status === 'ACTIVE',
+                    bio: profile!.description,
+                    isActive: profile!.isBookable && teamMember.status === 'ACTIVE',
                     createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
                     updatedAt: teamMember.updatedAt
                         ? new Date(teamMember.updatedAt).toISOString()

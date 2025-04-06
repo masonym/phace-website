@@ -24,6 +24,8 @@ function extractSections(html: string) {
     let currentKey = 'Description';
     sections[currentKey] = '';
 
+    // TODO: This is a bit hacky, but it works for now. We should improve this later.
+    // As long as a line isn't ONLY a <strong> tag we're fine 
     Array.from(container.childNodes).forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
             const el = node as HTMLElement;

@@ -14,8 +14,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const serviceId = searchParams.get('serviceId');
 
+    if (!serviceId) {
+      return NextResponse.json({ error: 'Service ID is required' }, { status: 400 });
+    }
+
     // Get all staff members from Square
-    const staffMembers = await SquareBookingService.getStaffMembers();
+    const staffMembers = await SquareBookingService.getStaffMembers(serviceId);
 
     // Filter staff by service if serviceId is provided
     let filteredStaff = staffMembers;

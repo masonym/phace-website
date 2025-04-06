@@ -13,8 +13,6 @@ TODO:
 ## Square Shop Integration
 
 - [ ] 15. Add to Cart vs Buy Now option (what does this do?) // ADD TO CART,,, well it adds to cart. BUY NOW immediately takes you to the checkout page with JUST this item; irrespective of cart
-- [ ] 20. Need to implement stock checking -- this needs the inventory API it seems :|
-- [ ] 22. Need to check if product is available online (this is a setting in square); necessary for things like AlumierMD // maybe not a square setting; may need to do this with categories or something
 - [ ] 23. Need to figure out how to deal with discounts in Square API
 - [ ] 24. Modify variations on product pages to get options data and transform that into colour buttons using hex codes
 - [ ] 26. are we doing this in a stupid way? in square-payment we're passing in line items via strings rather than object IDs.
@@ -80,8 +78,10 @@ TODO:
 - [x] 17. There's an ecom_image_uris being sent with the data but I don't know how to use it, need to use that instead of Ids. lots of references to update here.
 - [x] 18. Need to implement api/orders
 - [x] 19. Need to implement api/square-payment
+- [x] 20. Need to implement stock checking -- this needs the inventory API it seems :|
 -- i just casted the type as any :) eff you square api i know that field exists!!!
 - [x] 21. Change "View Details" button on ProductCard.tsx's to "Add to Cart" button // This should create a modal popup with the product details (NO DESCRIPTION) and an "Add to Cart" button
+- [x] 22. Need to check if product is available online (this is a setting in square); necessary for things like AlumierMD // maybe not a square setting; may need to do this with categories or something
 - [x] 25. NEED FORM  VALIDATION ON CHECKOUT PAGE
 ## EFFICIENCY THINGS; LOWER PRIORITY
 - [x] 2. When booking is created, for some reason it checks eveyr single service ever?? // this was due to not passing into serviceId to checkTimeSlotAvailability

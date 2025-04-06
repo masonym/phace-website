@@ -195,7 +195,7 @@ export default function BookingPage() {
             )}
             {currentStep === 'staff' && (
               <StaffSelection
-                serviceId={bookingData.serviceId!}
+                variationId={bookingData.variationId!}
                 onSelect={(staff) => {
                   console.log("Selected staff:", staff);
                   updateBookingData({

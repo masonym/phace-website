@@ -11,12 +11,12 @@ interface Staff {
 }
 
 interface Props {
-  serviceId: string;
+  variationId: string;
   onSelect: (staff: Staff) => void;
   onBack: () => void;
 }
 
-export default function StaffSelection({ serviceId, onSelect, onBack }: Props) {
+export default function StaffSelection({ variationId, onSelect, onBack }: Props) {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,7 +24,7 @@ export default function StaffSelection({ serviceId, onSelect, onBack }: Props) {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const response = await fetch(`/api/booking/staff?serviceId=${serviceId}`);
+        const response = await fetch(`/api/booking/staff?serviceId=${variationId}`);
         if (!response.ok) throw new Error('Failed to fetch staff');
         const data = await response.json();
         setStaff(data);
@@ -36,7 +36,7 @@ export default function StaffSelection({ serviceId, onSelect, onBack }: Props) {
     };
 
     fetchStaff();
-  }, [serviceId]);
+  }, [variationId]);
 
   if (loading) {
     return (
