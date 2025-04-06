@@ -4,6 +4,8 @@ import { useCartContext } from '@/components/providers/CartProvider';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Square } from 'square';
+import { useState } from 'react';
+import ProductQuickAddModal from './ProductQuickAddModal';
 
 
 interface ProductCardProps {
@@ -20,6 +22,8 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const { addToCart } = useCartContext();
 
     if (product.type !== 'ITEM') {
@@ -48,13 +52,19 @@ export default function ProductCard({ product }: ProductCardProps) {
                 </div>
             </Link>
             <div className="p-4 pt-0">
-                <Link
-                    href={`/store/product/${product.id}`}
+                <button
+                    onClick={() => setIsModalOpen(true)}
                     className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition-colors block text-center"
                 >
-                    View Details
-                </Link>
+                    Add to Cart
+                </button>
             </div>
+            {isModalOpen && (
+                <ProductQuickAddModal
+                    productId={product.id}
+                    onClose={() => setIsModalOpen(false)}
+                />
+            )}
         </div>
     );
 }
