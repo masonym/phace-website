@@ -102,18 +102,6 @@ export class ProductService {
 
             if (!itemResult.object) throw new Error("Product not found");
 
-            let applicableDiscount;
-            for (const discount of discounts) {
-                if (discount.productIds.includes(productId)) {
-                    applicableDiscount = {
-                        discountType: discount.discountType,
-                        amount: discount.amount,
-                        percentage: discount.percentage,
-                    };
-                    break;
-                }
-            }
-
             const item = itemResult.object;
 
             if (item.type !== 'ITEM') {
