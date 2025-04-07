@@ -1380,7 +1380,6 @@ export class SquareBookingService {
             // Square API requires at least a 24-hour time range for availability searches
             const startDateTime = `${params.date}T00:00:00`;
             const endDate = new Date(params.date);
-            endDate.setDate(endDate.getDate() + 1);
             const endDateTime = `${endDate.toISOString().split('T')[0]}T23:59:59`;
 
             console.log(`Getting available time slots for staff ${params.staffId}, service ${serviceId}, variation ${bookableVariationId} from ${startDateTime} to ${endDateTime}`);
@@ -1489,6 +1488,84 @@ export class SquareBookingService {
             return timeSlots;
         } catch (error) {
             console.error('Error getting available time slots:', error);
+            return [];
+        }
+    }
+
+
+    static async getAvailableTimeSlotsInRange(params: {
+        staffId: string;
+        serviceId?: string;
+        id?: string;
+        variationId?: string;
+        startDate: string; // yyyy-MM-dd
+        endDate: string;   // yyyy-MM-dd
+        addonIds?: string[];
+    }): Promise<TimeSlot[]> {
+        const {
+            staffId,
+            serviceId: svcId,
+            id,
+            variationId,
+            startDate,
+            endDate,
+            addonIds = [],
+        } = params;
+
+        const sid = id || svcId;
+        if (!sid) throw new Error("No service ID provided");
+
+        const service = await this.getServiceById(sid);
+        if (!service) return [];
+
+        const vid = variationId || service.variationId;
+        const duration = await SquareBookingService.calculateTotalDuration(service.duration, addonIds);
+
+        const locationId = await this.getLocationId();
+
+        // NOTE: We assume no bookable appointments occur between 11pm–1am PT.
+        // This lets us safely hardcode the UTC day boundaries without handling DST.
+        // 07:00Z = 00:00 PT during daylight time, 23:00 PT during standard time
+
+        const searchRequest = {
+            query: {
+                filter: {
+                    startAtRange: {
+                        startAt: `${startDate}T07:00:00Z`,
+                        endAt: `${endDate}T06:59:59Z`
+                    },
+                    locationId,
+                    segmentFilters: [
+                        {
+                            serviceVariationId: vid,
+                            teamMemberIdFilter: { any: [staffId] }
+                        }
+                    ]
+                }
+            }
+        };
+
+        try {
+            const result = await client.bookings.searchAvailability(searchRequest);
+            const availabilities = result?.availabilities || [];
+
+            return availabilities.map(a => {
+                const start = new Date(a.startAt!);
+                const end = new Date(start);
+
+                const segment = a.appointmentSegments?.[0];
+                const segDuration = segment?.durationMinutes ?? duration;
+
+                end.setMinutes(end.getMinutes() + segDuration);
+
+                return {
+                    startTime: start.toISOString(),
+                    endTime: end.toISOString(),
+                    available: true
+                };
+            });
+        } catch (err) {
+            console.error('Availability fetch failed:', err);
             return [];
         }
     }

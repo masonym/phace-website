@@ -16,7 +16,9 @@ import {
   isBefore,
   isSameMonth,
   startOfDay,
-  addDays
+  endOfDay,
+  addDays,
+  startOfTomorrow,
 } from 'date-fns';
 import WaitlistForm from './WaitlistForm';
 import { showToast } from "@/components/ui/Toast";
@@ -99,10 +101,10 @@ export default function DateTimeSelection({
       setCheckingDates(true);
       try {
         // Filter out past dates before making API calls
-        const today = startOfDay(new Date());
+        const tomorrow = startOfTomorrow();
 
         const datesInRange = eachDayOfInterval({ start: startDate, end: endDate })
-          .filter(date => isAfter(date, today) || isSameDay(date, today));
+          .filter(date => isAfter(date, tomorrow) || isSameDay(date, tomorrow));
 
         console.log(`Checking availability for ${datesInRange.length} dates (filtered out past dates)`);
 
@@ -119,48 +121,38 @@ export default function DateTimeSelection({
 
         // Process each batch sequentially to avoid overwhelming the server
         for (const batch of batches) {
-          const batchPromises = batch.map(async (date) => {
-            const formattedDate = format(date, 'yyyy-MM-dd');
-            const params = new URLSearchParams({
-              serviceId,
-              ...(variationId && { variationId }),
-              staffId,
-              date: formattedDate,
-              ...(addons.length > 0 && { addons: addons.join(',') }),
-            });
+          const batchStart = format(batch[0], 'yyyy-MM-dd');
+          const batchEnd = format(batch[batch.length - 1], 'yyyy-MM-dd');
 
-            try {
-              const response = await fetch(`/api/booking/availability?${params}`);
-              if (!response.ok) {
-                console.error(`Failed to fetch availability for ${formattedDate}: ${response.statusText}`);
-                return null;
+          const params = new URLSearchParams({
+            start: batchStart,
+            end: batchEnd,
+            staffId,
+            serviceId,
+            ...(variationId && { variationId }),
+            ...(addons.length > 0 && { addons: addons.join(',') }),
+          });
+
+          try {
+            const res = await fetch(`/api/booking/availability?${params}`);
+            if (!res.ok) throw new Error('Request failed');
+
+            const json = await res.json();
+            const { slotsByDate } = json;
+
+            for (const date in slotsByDate) {
+              if (slotsByDate[date]?.length > 0) {
+                newAvailableDates.add(date);
+              } else {
+                newFullyBookedDates.add(date);
               }
-
-              const data: AvailabilityResponse = await response.json();
-              return { date: formattedDate, data };
-            } catch (error) {
-              console.error(`Error fetching availability for ${formattedDate}:`, error);
-              return null;
             }
-          });
+            console.log(`Batch availability for ${batchStart}–${batchEnd}:`, slotsByDate);
+          } catch (err) {
+            console.error(`Batch availability error for ${batchStart}–${batchEnd}:`, err);
+          }
 
-          const results = await Promise.all(batchPromises);
-
-          // Update available and fully booked dates
-          results.forEach(result => {
-            if (!result) return;
-
-            const { date, data } = result;
-
-            if (data.slots.length > 0) {
-              newAvailableDates.add(date);
-            } else if (data.isFullyBooked) {
-              newFullyBookedDates.add(date);
-            }
-          });
-
-          // Small delay between batches to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(res => setTimeout(res, 100 + Math.random() * 200)); // jitter
         }
 
         setAvailableDates(newAvailableDates);
@@ -180,12 +172,15 @@ export default function DateTimeSelection({
   const fetchTimeSlots = async (date: Date) => {
     setLoading(true);
     setError(null);
+    const start = format(startOfDay(date), 'yyyy-MM-dd');
+    const end = format(addDays(date, 1), 'yyyy-MM-dd');
     try {
       const searchParams = new URLSearchParams({
+        start: start,
+        end: end,
         serviceId,
         ...(variationId && { variationId }),
         staffId,
-        date: format(date, 'yyyy-MM-dd'),
         ...(addons.length > 0 && { addons: addons.join(',') }),
       });
 
@@ -193,7 +188,9 @@ export default function DateTimeSelection({
       if (!response.ok) throw new Error('Failed to fetch time slots');
 
       const data: AvailabilityResponse = await response.json();
+      console.log('Time slots:', data.slots);
       setAvailableTimeSlots(data.slots);
+      console.log(`Available time slots for ${format(date, 'yyyy-MM-dd')}:`, data.slots);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

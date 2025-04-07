@@ -2,12 +2,9 @@ TODO:
 
 ## Booking Flow Square Integration 
 
-- [ ] 3. Make sure staff member selection only shows applicable members
 - [ ] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc) -- i think we can do this with some stuff related to top-level categories
-- [ ] 10. Unavailabile dates aren't working properly (Sunday/Wednesday for Dawn)
 - [ ] 14. Consent forms are broken
 - [ ] 15. Waitlist doesn't work -- can i just link to teh square waitlist form instead of managing it myself?
-- [ ] 17. times are wrong on date selection; some timezone funkiness
 
 
 ## Square Shop Integration
@@ -46,13 +43,16 @@ TODO:
 
 - [x] 1. Fix addons not showing in flow 
 - [x] 2. Fix labels to account for new step
+- [x] 3. Make sure staff member selection only shows applicable members
 - [x] 4. Stop querying staff availabilities for dates in the past.
 - [x] 5. Finalize booking creation and sending to Square
 - [x] 6. Figure out CC info??
 - [x] 6a. Make sure it works? Need to update function in squareBookingService.ts that creates the booking to pass in the given CC info?
 - [x] 7. Boatload of errors to fix
+- [x] 10. Unavailabile dates aren't working properly (Sunday/Wednesday for Dawn)
 - [x] 12. Booking confirmation page price is wrong
 - [x] 16. i am almost positive theres a stupid bug with how iphones handle dates
+- [x] 17. times are wrong on date selection; some timezone funkiness
 ## FRONTEND: 
 - [x] 1. Make sure buttons are consistent between steps (currently they're not!)
 - [x] 2. Either remove the images section, or get Dawn to add images via Square
