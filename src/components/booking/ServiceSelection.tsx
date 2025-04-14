@@ -89,7 +89,11 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
       // Only show active categories if the isActive property exists
       const activeCategories = data.filter((category: any) =>
         category.isActive !== false // Consider undefined or true as active
-      );
+      ).filter((category: any) => {
+      // filter out categories like "Add-ons", "Gift Cards", and "Retail"
+        const excludedCategories = ['Add-ons', 'Add-Ons', 'Gift Cards', 'Retail'];
+        return !excludedCategories.includes(category.name);
+      });
 
       console.log("Active categories:", activeCategories.length);
       console.log("Active categories data:", JSON.stringify(activeCategories));
