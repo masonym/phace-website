@@ -61,7 +61,7 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p>&copy; {new Date().getFullYear()} Phace. All rights reserved.</p>
             <div className="flex space-x-4 mt-4 md:mt-0">
-              <Link href="/privacy-policy" className="hover:text-accent">Privacy Policy</Link>
+              <Link href="/booking-policies" className="hover:text-accent">Booking Policy</Link>
               <Link href="/terms" className="hover:text-accent">Terms of Service</Link>
             </div>
           </div>
