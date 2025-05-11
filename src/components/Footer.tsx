@@ -12,7 +12,7 @@ export function Footer() {
               <li><Link href="/" className="hover:text-accent">HOME</Link></li>
               <li><Link href="/about" className="hover:text-accent">ABOUT</Link></li>
               <li><Link href="/treatments" className="hover:text-accent">TREATMENTS</Link></li>
-              <li><Link href="/shop" className="hover:text-accent">SHOP</Link></li>
+              <li><Link href="/store" className="hover:text-accent">SHOP</Link></li>
             </ul>
           </div>
 
@@ -61,8 +61,8 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p>&copy; {new Date().getFullYear()} Phace. All rights reserved.</p>
             <div className="flex space-x-4 mt-4 md:mt-0">
-              <Link href="/booking-policies" className="hover:text-accent">Booking Policy</Link>
-              <Link href="/terms" className="hover:text-accent">Terms of Service</Link>
+              <Link href="/booking-policy" className="hover:text-accent">Booking Policy</Link>
+              <Link href="/shipping-policy" className="hover:text-accent">Shipping Policy</Link>
             </div>
           </div>
         </div>
