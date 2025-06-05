@@ -84,37 +84,64 @@ export default function StaffSelection({ variationId, onSelect, onBack }: Props)
         Back to Services
       </button>
 
+      {/* No Staff Available Message */}
+      {staff.length === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+          <h3 className="text-xl font-medium mb-3 text-amber-800">No Providers Available</h3>
+          <p className="text-amber-700 mb-4">
+            We don't have any providers available for this service at the moment.
+            Please select a different service or contact us to inquire about availability.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-4">
+            <button
+              onClick={onBack}
+              className="px-6 py-2 bg-accent text-white rounded-md hover:bg-accent/90 transition-colors"
+            >
+              Choose Another Service
+            </button>
+            <a
+              href="/contact"
+              className="px-6 py-2 border border-accent text-accent rounded-md hover:bg-accent/10 transition-colors"
+            >
+              Contact Us
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Staff Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {staff.map((member) => (
-          <button
-            key={member.id}
-            onClick={() => onSelect(member)}
-            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-left group"
-          >
-            <div className="flex items-center space-x-4">
-              {member.image && (
-                <div className="relative h-20 w-20 rounded-full overflow-hidden flex-shrink-0">
-                  <Image
-                    src={member.image}
-                    alt={member.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-              )}
-              <div>
-                <h3 className="text-xl font-medium mb-2 text-gray-900">
-                  {member.name}
-                </h3>
-                {member.bio && (
-                  <p className="text-gray-600 line-clamp-2">{member.bio}</p>
+      {staff.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {staff.map((member) => (
+            <button
+              key={member.id}
+              onClick={() => onSelect(member)}
+              className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-left group"
+            >
+              <div className="flex items-center space-x-4">
+                {member.image && (
+                  <div className="relative h-20 w-20 rounded-full overflow-hidden flex-shrink-0">
+                    <Image
+                      src={member.image}
+                      alt={member.name}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
                 )}
+                <div>
+                  <h3 className="text-xl font-medium mb-2 text-gray-900">
+                    {member.name}
+                  </h3>
+                  {member.bio && (
+                    <p className="text-gray-600 line-clamp-2">{member.bio}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          </button>
-        ))}
-      </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
