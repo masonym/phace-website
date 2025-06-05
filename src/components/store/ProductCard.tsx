@@ -25,6 +25,12 @@ export default function ProductCard({ product }: ProductCardProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const { addToCart } = useCartContext();
+    
+    const isAlumierProduct = product.name.includes('AlumierMD');
+
+    const handleAlumierRedirect = () => {
+        window.open('https://ca.alumiermd.com/account/register?code=E2BVZCUK', '_blank');
+    };
 
     if (product.type !== 'ITEM') {
         return null;
@@ -52,14 +58,23 @@ export default function ProductCard({ product }: ProductCardProps) {
                 </div>
             </Link>
             <div className="p-4 pt-0">
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition-colors block text-center"
-                >
-                    Add to Cart
-                </button>
+                {isAlumierProduct ? (
+                    <button
+                        onClick={handleAlumierRedirect}
+                        className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition-colors block text-center"
+                    >
+                        Shop with AlumierMD
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition-colors block text-center"
+                    >
+                        Add to Cart
+                    </button>
+                )}
             </div>
-            {isModalOpen && (
+            {!isAlumierProduct && isModalOpen && (
                 <ProductQuickAddModal
                     productId={product.id}
                     onClose={() => setIsModalOpen(false)}

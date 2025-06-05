@@ -2,7 +2,7 @@ TODO:
 
 ## Booking Flow Square Integration 
 
-- [ ] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc) -- i think we can do this with some stuff related to top-level categories
+- [x] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc) -- i think we can do this with some stuff related to top-level categories
 - [ ] 14. Consent forms are broken
 - [ ] 15. Waitlist doesn't work -- can i just link to teh square waitlist form instead of managing it myself?
 
@@ -13,6 +13,7 @@ TODO:
 - [ ] 23. Need to figure out how to deal with discounts in Square API
 - [ ] 24. Modify variations on product pages to get options data and transform that into colour buttons using hex codes
 - [ ] 26. are we doing this in a stupid way? in square-payment we're passing in line items via strings rather than object IDs.
+- [ ] 27. alumiermd custom link
 
 
 
@@ -26,11 +27,13 @@ TODO:
 ## OTHER WEBSITE THINGS
 - [ ] 1. lightboxes
 - [ ] 2. mailing list
-- [ ] 3. privacy policy & tos page
+- [x] 3. privacy policy & tos page
 - [ ] 4. Looki into implementing afterpay??? interest free payments thingy for storefront
 - [ ] 5. for storefront; accept gift cards (accept_partial_authorization in payment.create) https://developer.squareup.com/reference/square/payments-api/create-payment
 - [ ] 6. add customer creation/checking for checkout
 
+## non website things 
+- [ ] 1. mom needs to set up sub-categories; then we need to show sub-categories on /store page 
 
 
 

@@ -8,6 +8,8 @@ import { Square } from 'square';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import parse from 'html-react-parser';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 const formatMoney = (amount: number | bigint, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -94,6 +96,8 @@ export default function ProductPage({ params }: ProductPageProps) {
         fetchProduct();
     }, [params.id, router]);
 
+    const isAlumierProduct = product?.itemData?.name?.includes('AlumierMD') || false;
+
     const handleAddToCart = () => {
         if (!product || !selectedVariation) return;
         if (quantity < 1) {
@@ -104,6 +108,15 @@ export default function ProductPage({ params }: ProductPageProps) {
         openCart();
         showToast({ title: 'Added to Cart', description: `${quantity} item(s) added.`, status: 'success' });
     };
+    
+    const handleAlumierRedirect = () => {
+        window.open('https://ca.alumiermd.com/account/register?code=E2BVZCUK', '_blank');
+        showToast({ 
+            title: 'AlumierMD Registration', 
+            description: 'You are being redirected to register with our AlumierMD code', 
+            status: 'info' 
+        });
+    };
 
     if (loading) {
         return <div className="container mx-auto px-4 py-32 text-center text-gray-500">Loading product...</div>;
@@ -113,7 +126,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     const sections = extractSections(product.itemData!.descriptionHtml!);
 
-    let buttonLabel = 'Add to Cart';
+    let buttonLabel = isAlumierProduct ? 'Shop with AlumierMD' : 'Add to Cart';
     if (!selectedVariation) {
         buttonLabel = 'Select an option';
     } else if (selectedVariation.itemVariationData?.locationOverrides?.some((loc) => loc.soldOut)) {
@@ -126,6 +139,12 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-4 py-24">
+            <div className="mb-8">
+                <Link href="/store" className="inline-flex items-center text-accent hover:text-accent-dark transition-colors gap-2 font-medium">
+                    <ArrowLeft size={18} />
+                    Back to Store
+                </Link>
+            </div>
             <div className="w-full h-[500px] relative mb-10">
                 {product.itemData!.imageIds?.[0] && (
                     <Image
@@ -197,13 +216,22 @@ export default function ProductPage({ params }: ProductPageProps) {
 
                             +
                         </button>
-                        <button
-                            onClick={handleAddToCart}
-                            disabled={buttonLabel !== 'Add to Cart'}
-                            className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        >
-                            {buttonLabel}
-                        </button>
+                        {isAlumierProduct ? (
+                            <button
+                                onClick={handleAlumierRedirect}
+                                className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all"
+                            >
+                                {buttonLabel}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleAddToCart}
+                                disabled={buttonLabel !== 'Add to Cart'}
+                                className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                                {buttonLabel}
+                            </button>
+                        )}
                     </div>
                 </div>
 
