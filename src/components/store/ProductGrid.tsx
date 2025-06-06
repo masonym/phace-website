@@ -66,29 +66,33 @@ export default function ProductGrid() {
         );
 
     // Create category options for the filter buttons
-    const categories = ['all', ...Array.from(allCategoryIds)];
+    // Filter out the "Retail" category from the filter buttons
+    const categories = ['all', ...Array.from(allCategoryIds).filter(categoryId => {
+        const category = categoryNames.find(cat => cat.id === categoryId);
+        return !(category?.type === 'CATEGORY' && category.categoryData?.isTopLevel);
+    })];
 
     return (
         <div>
             {/* Category Filter */}
             <div className="mb-8 flex gap-4">
                 {categories.map((categoryId) => {
-                    const category = categoryNames.find(cat => cat.id === categoryId);
-                    return (
-                        <button
-                            key={categoryId}
-                            onClick={() => setSelectedCategory(categoryId)}
-                            className={`px-4 py-2 rounded-md capitalize ${selectedCategory === categoryId
-                                ? 'bg-black text-white'
-                                : 'bg-gray-100 hover:bg-gray-200'
-                                }`}
-                        >
-                            {categoryId === 'all'
-                                ? 'All'
-                                : (category?.type === 'CATEGORY' && category.categoryData?.name) || 'Loading...'}
-                        </button>
-                    );
-                })}
+                        const category = categoryNames.find(cat => cat.id === categoryId);
+                        return (
+                            <button
+                                key={categoryId}
+                                onClick={() => setSelectedCategory(categoryId)}
+                                className={`px-4 py-2 rounded-md capitalize ${selectedCategory === categoryId
+                                    ? 'bg-black text-white'
+                                    : 'bg-gray-100 hover:bg-gray-200'
+                                    }`}
+                            >
+                                {categoryId === 'all'
+                                    ? 'All'
+                                    : (category?.type === 'CATEGORY' && category.categoryData?.name) || 'Loading...'}
+                            </button>
+                        );
+                    })}
             </div>
 
             {/* Product Count */}
