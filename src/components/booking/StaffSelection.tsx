@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { BookingCache } from '@/lib/cache/bookingCache';
 
 interface Staff {
   id: string;
@@ -24,10 +25,14 @@ export default function StaffSelection({ variationId, onSelect, onBack }: Props)
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const response = await fetch(`/api/booking/staff?serviceId=${variationId}`);
-        if (!response.ok) throw new Error('Failed to fetch staff');
-        const data = await response.json();
-        setStaff(data);
+        // Use the BookingCache to get staff (either from cache or fresh)
+        const staffMembers = await BookingCache.getStaffForService(variationId, async () => {
+          const response = await fetch(`/api/booking/staff?serviceId=${variationId}`);
+          if (!response.ok) throw new Error('Failed to fetch staff');
+          return await response.json();
+        });
+        
+        setStaff(staffMembers);
       } catch (err: any) {
         setError(err.message);
       } finally {

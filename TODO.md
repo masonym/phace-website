@@ -13,7 +13,7 @@ TODO:
 - [ ] 23. Need to figure out how to deal with discounts in Square API
 - [ ] 24. Modify variations on product pages to get options data and transform that into colour buttons using hex codes
 - [ ] 26. are we doing this in a stupid way? in square-payment we're passing in line items via strings rather than object IDs.
-- [ ] 27. alumiermd custom link
+- [x] 27. alumiermd custom link
 
 
 

@@ -22,6 +22,7 @@ import {
 } from 'date-fns';
 import WaitlistForm from './WaitlistForm';
 import { showToast } from "@/components/ui/Toast";
+import { BookingCache } from '@/lib/cache/bookingCache';
 
 interface TimeSlot {
   startTime: string;
@@ -175,19 +176,27 @@ export default function DateTimeSelection({
     const start = format(startOfDay(date), 'yyyy-MM-dd');
     const end = format(addDays(date, 1), 'yyyy-MM-dd');
     try {
-      const searchParams = new URLSearchParams({
-        start: start,
-        end: end,
-        serviceId,
-        ...(variationId && { variationId }),
+      // Use the BookingCache to get availability data (either from cache or fresh)
+      const data: AvailabilityResponse = await BookingCache.getAvailability(
         staffId,
-        ...(addons.length > 0 && { addons: addons.join(',') }),
-      });
+        serviceId,
+        start,
+        async () => {
+          const searchParams = new URLSearchParams({
+            start: start,
+            end: end,
+            serviceId,
+            ...(variationId && { variationId }),
+            staffId,
+            ...(addons.length > 0 && { addons: addons.join(',') }),
+          });
 
-      const response = await fetch(`/api/booking/availability?${searchParams}`);
-      if (!response.ok) throw new Error('Failed to fetch time slots');
-
-      const data: AvailabilityResponse = await response.json();
+          const response = await fetch(`/api/booking/availability?${searchParams}`);
+          if (!response.ok) throw new Error('Failed to fetch time slots');
+          return await response.json();
+        }
+      );
+      
       console.log('Time slots:', data.slots);
       setAvailableTimeSlots(data.slots);
       console.log(`Available time slots for ${format(date, 'yyyy-MM-dd')}:`, data.slots);

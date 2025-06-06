@@ -10,6 +10,9 @@ import ClientForm from '@/components/booking/ClientForm';
 import ConsentForms from '@/components/booking/ConsentForms';
 import BookingSummary from '@/components/booking/BookingSummary';
 import { showToast } from '@/components/ui/Toast';
+import { BookingCacheProvider } from '@/lib/cache/BookingCacheContext';
+import { useAuth } from '@/lib/hooks/useAuth';
+import CacheControls from '@/components/booking/CacheControls';
 
 type BookingStep =
   | 'category'
@@ -73,7 +76,8 @@ export interface BookingData {
   paymentNonce?: string;
 }
 
-export default function BookingPage() {
+// Wrapper component that provides the BookingCacheContext
+function BookingPageContent() {
   const [currentStep, setCurrentStep] = useState<BookingStep>('category');
   const [bookingData, setBookingData] = useState<BookingData>({});
 
@@ -106,6 +110,9 @@ export default function BookingPage() {
   }, [currentStep]);
 
   return (
+    <>
+      {/* Cache Controls for admin users */}
+      <CacheControls />
     <main className="min-h-screen bg-[#FFFBF0] pt-24">
       {/* Progress Bar */}
       <div className="max-w-4xl mx-auto px-4 mb-8">
@@ -356,5 +363,15 @@ export default function BookingPage() {
         </AnimatePresence>
       </div>
     </main>
+    </>
+  );
+}
+
+// Main export that wraps everything with the BookingCacheProvider
+export default function BookingPage() {
+  return (
+    <BookingCacheProvider>
+      <BookingPageContent />
+    </BookingCacheProvider>
   );
 }

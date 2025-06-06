@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { BookingCache } from '@/lib/cache/bookingCache';
 
 interface ServiceVariation {
   id: string;
@@ -55,20 +56,21 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
     try {
       setLoading(true);
       console.log("Fetching services for category:", catId);
-      const response = await fetch(`/api/booking/services?categoryId=${encodeURIComponent(catId)}`);
-      if (!response.ok) throw new Error('Failed to fetch services');
-      const data = await response.json();
-      console.log("Services data:", data);
-
-      if (data && data.length > 0 && Array.isArray(data[0].services)) {
-        console.log("Setting services:", data[0].services.length);
-        console.log("Service details:", JSON.stringify(data[0].services));
-        setServices(data[0].services);
-      } else {
-        console.error("No services data returned or empty array");
-
-        setServices([]);
-      }
+      
+      // Use the BookingCache to get services (either from cache or fresh)
+      const services = await BookingCache.getServicesByCategory(catId, async () => {
+        const response = await fetch(`/api/booking/services?categoryId=${encodeURIComponent(catId)}`);
+        if (!response.ok) throw new Error('Failed to fetch services');
+        const data = await response.json();
+        
+        if (data && data.length > 0 && Array.isArray(data[0].services)) {
+          return data[0].services;
+        }
+        return [];
+      });
+      
+      console.log("Services returned:", services.length);
+      setServices(services);
     } catch (err: any) {
       console.error("Error fetching services:", err);
       setError(err.message);
@@ -81,16 +83,19 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
     try {
       setLoading(true);
       console.log("Fetching categories");
-      const response = await fetch('/api/booking/services');
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      const data = await response.json();
-      console.log("Categories data:", data);
-
+      
+      // Use the BookingCache to get categories (either from cache or fresh)
+      const allCategories = await BookingCache.getCategories(async () => {
+        const response = await fetch('/api/booking/services');
+        if (!response.ok) throw new Error('Failed to fetch categories');
+        return await response.json();
+      });
+      
       // Only show active categories if the isActive property exists
-      const activeCategories = data.filter((category: any) =>
+      const activeCategories = allCategories.filter((category: any) =>
         category.isActive !== false // Consider undefined or true as active
       ).filter((category: any) => {
-      // filter out categories like "Add-ons", "Gift Cards", and "Retail"
+        // filter out categories like "Add-ons", "Gift Cards", and "Retail"
         const excludedCategories = ['add-ons', 'add-ons', 'gift cards', 'retail'];
         const categoryNameLower = category.name.toLowerCase().trim();
         const isExcluded = excludedCategories.includes(categoryNameLower);
@@ -99,7 +104,6 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
       });
 
       console.log("Active categories:", activeCategories.length);
-      console.log("Active categories data:", JSON.stringify(activeCategories));
       setCategories(activeCategories);
     } catch (err: any) {
       console.error("Error fetching categories:", err);
