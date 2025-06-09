@@ -22,7 +22,7 @@ TODO:
    why is this stupid? i cant remember i wrote it last night lol. i think i meant CATEGORIES
 - [ ] 3. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
 - [ ] 4. change store\[id] to store\[slug] where [slug] is a hyphenated version of the name
-- [ ] 5. look into different caching strategies for square api calls. 
+- [x] 5. look into different caching strategies for square api calls. 
 
 ## OTHER WEBSITE THINGS
 - [ ] 1. lightboxes
@@ -33,7 +33,7 @@ TODO:
 - [ ] 6. add customer creation/checking for checkout
 
 ## non website things 
-- [ ] 1. mom needs to set up sub-categories; then we need to show sub-categories on /store page 
+- [x] 1. mom needs to set up sub-categories; then we need to show sub-categories on /store page 
 
 
 

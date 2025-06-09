@@ -1,4 +1,5 @@
 import { SquareClient, SquareEnvironment } from "square";
+import { Square } from "square";
 import { randomUUID } from 'crypto';
 import { nanoid } from 'nanoid';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
@@ -288,9 +289,9 @@ export class SquareBookingService {
 
             // Map Square catalog categories to our ServiceCategory format
             return detailedResult.objects
-                .filter(obj => obj.type === 'CATEGORY')
+                .filter(obj => obj.type === 'CATEGORY' && obj.categoryData?.isTopLevel)
                 .map(obj => {
-                    const category = obj.categoryData!;
+                    const category = (obj as Square.CatalogObjectCategory).categoryData!;
 
                     // Look for an image in related objects that might be associated with this category
                     let imageUrl: string | undefined = undefined;
@@ -304,6 +305,7 @@ export class SquareBookingService {
                     //    //  imageUrl = relatedImage.imageData.url;
                     //    //}
                     //}
+                    console.log(category)
 
                     return {
                         id: obj.id!,

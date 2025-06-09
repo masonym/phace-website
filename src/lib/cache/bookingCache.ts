@@ -149,9 +149,9 @@ export class BookingCache {
    * Get availability for a specific date from cache or fetch it
    */
   static async getAvailability(
-    staffId: string, 
-    serviceId: string, 
-    date: string, 
+    staffId: string,
+    serviceId: string,
+    date: string,
     fetchFn: () => Promise<any>
   ): Promise<any> {
     const cacheKey = `availability_${staffId}_${serviceId}_${date}`;

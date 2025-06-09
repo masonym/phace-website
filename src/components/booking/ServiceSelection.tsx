@@ -56,19 +56,19 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
     try {
       setLoading(true);
       console.log("Fetching services for category:", catId);
-      
+
       // Use the BookingCache to get services (either from cache or fresh)
       const services = await BookingCache.getServicesByCategory(catId, async () => {
         const response = await fetch(`/api/booking/services?categoryId=${encodeURIComponent(catId)}`);
         if (!response.ok) throw new Error('Failed to fetch services');
         const data = await response.json();
-        
+
         if (data && data.length > 0 && Array.isArray(data[0].services)) {
           return data[0].services;
         }
         return [];
       });
-      
+
       console.log("Services returned:", services.length);
       setServices(services);
     } catch (err: any) {
@@ -83,14 +83,14 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
     try {
       setLoading(true);
       console.log("Fetching categories");
-      
+
       // Use the BookingCache to get categories (either from cache or fresh)
       const allCategories = await BookingCache.getCategories(async () => {
         const response = await fetch('/api/booking/services');
         if (!response.ok) throw new Error('Failed to fetch categories');
         return await response.json();
       });
-      
+
       // Only show active categories if the isActive property exists
       const activeCategories = allCategories.filter((category: any) =>
         category.isActive !== false // Consider undefined or true as active
@@ -99,7 +99,8 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
         const excludedCategories = ['add-ons', 'add-ons', 'gift cards', 'retail'];
         const categoryNameLower = category.name.toLowerCase().trim();
         const isExcluded = excludedCategories.includes(categoryNameLower);
-        
+
+
         return !isExcluded;
       });
 
