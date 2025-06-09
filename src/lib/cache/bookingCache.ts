@@ -12,12 +12,12 @@ export class BookingCache {
   /**
    * Default cache expiration time in milliseconds (5 minutes)
    */
-  private static DEFAULT_EXPIRATION = 5 * 60 * 1000;
+  private static DEFAULT_EXPIRATION = 0 * 60 * 1000;
 
   /**
    * Categories cache expiration time (15 minutes)
    */
-  private static CATEGORIES_EXPIRATION = 15 * 60 * 1000;
+  private static CATEGORIES_EXPIRATION = 0 * 60 * 1000;
 
   /**
    * Staff cache expiration time (10 minutes)
