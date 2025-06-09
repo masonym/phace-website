@@ -11,7 +11,7 @@ export function Navigation() {
   const { isAuthenticated, user } = useAuth()
 
   return (
-    <nav className="fixed w-full bg-[#FFFBF0]/80 backdrop-blur-sm z-50">
+    <nav className="fixed w-full bg-[#FDECC2]/80 backdrop-blur-sm z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Link href="/" className="flex-shrink-0 text-2xl font-bold">
@@ -23,7 +23,7 @@ export function Navigation() {
               className="object-cover"
             />
           </Link>
-          
+
           {/* Desktop Menu */}
           <div className="hidden md:block">
             <div className="flex items-center space-x-8">
