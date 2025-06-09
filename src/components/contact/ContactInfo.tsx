@@ -13,8 +13,15 @@ export function ContactInfo() {
       <div>
         <h2 className="text-2xl font-light text-[#4A5568] mb-4">Hours</h2>
         <div className="space-y-2 text-gray-600">
-          <p>Monday - Saturday: 10:00 AM - 4:00 PM</p>
-          <p>Sunday: Closed</p>
+          <ul className="space-y-2">
+            <li>Monday: Closed</li>
+            <li>Tuesday: 10 AM - 7 PM</li>
+            <li>Wednesday: 10 AM - 4 PM</li>
+            <li>Thursday: 10 AM - 7 PM</li>
+            <li>Friday: 10 AM - 4 PM</li>
+            <li>Saturday: 10 AM - 2 PM</li>
+            <li>Sunday: Closed</li>
+          </ul>
         </div>
       </div>
 

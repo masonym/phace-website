@@ -35,11 +35,18 @@ export function Location() {
               </a>
             </p>
           </address>
-          
+
           <div className="mt-8">
             <h3 className="text-lg font-medium mb-2">OPEN HOURS</h3>
-            <p>Monday - Saturday: 10am - 4pm</p>
-            <p>Sunday: Closed</p>
+            <ul className="space-y-2">
+              <li>Monday: Closed</li>
+              <li>Tuesday: 10 AM - 7 PM</li>
+              <li>Wednesday: 10 AM - 4 PM</li>
+              <li>Thursday: 10 AM - 7 PM</li>
+              <li>Friday: 10 AM - 4 PM</li>
+              <li>Saturday: 10 AM - 2 PM</li>
+              <li>Sunday: Closed</li>
+            </ul>
           </div>
         </div>
 

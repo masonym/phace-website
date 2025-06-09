@@ -100,7 +100,6 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
         const categoryNameLower = category.name.toLowerCase().trim();
         const isExcluded = excludedCategories.includes(categoryNameLower);
 
-
         return !isExcluded;
       });
 

@@ -27,8 +27,15 @@ export function Footer() {
 
           <div>
             <h3 className="text-lg font-medium mb-4">OPEN HOURS</h3>
-            <p>Mon - Sat: 10am - 4pm</p>
-            <p>Sunday: Closed</p>
+            <ul className="space-y-2">
+              <li>Monday: Closed</li>
+              <li>Tuesday: 10 AM - 7 PM</li>
+              <li>Wednesday: 10 AM - 4 PM</li>
+              <li>Thursday: 10 AM - 7 PM</li>
+              <li>Friday: 10 AM - 4 PM</li>
+              <li>Saturday: 10 AM - 2 PM</li>
+              <li>Sunday: Closed</li>
+            </ul>
             <div className="mt-4">
               <p><a href="tel:+17788640624" className="hover:text-accent">(778) 864-0624</a></p>
               <p><a href="mailto:hello@phace.ca" className="hover:text-accent">hello@phace.ca</a></p>
