@@ -70,3 +70,17 @@ body {
 .back-to-top:hover {
   opacity: 1;
 }
+
+/* Hide scrollbars but keep functionality */
+.hide-scrollbar {
+  /* For Chrome, Safari, and newer versions of Edge */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* For Firefox */
+  scrollbar-width: none;
+  
+  /* For IE and older versions of Edge */
+  -ms-overflow-style: none;
+}

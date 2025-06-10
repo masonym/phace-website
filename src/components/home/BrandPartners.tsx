@@ -3,6 +3,9 @@ import Image from 'next/image'
 import styles from './BrandPartners.module.css'
 
 const partners = [
+  { name: "Aphina", image: "/images/partners/aphina.webp" },
+  { name: "GM Collin", image: "/images/partners/gm-collin.webp" },
+  { name: "Kala", image: "/images/partners/kala.webp" },
   { name: "DMK", image: "/images/partners/dmk.webp" },
   { name: "Elle Hall", image: "/images/partners/elle-hall.webp" },
   { name: "Mifa", image: "/images/partners/mifa.webp" },
