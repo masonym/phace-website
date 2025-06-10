@@ -1,3 +1,4 @@
+"use client"
 import React from 'react'
 import Image from 'next/image'
 import styles from './BrandPartners.module.css'
@@ -40,7 +41,7 @@ export function BrandPartners() {
         <div className={styles.scrollContainer}>
           <div className={styles.scrollContent}>
             {/* Duplicate the partners array to create seamless scrolling */}
-            {[...partners, ...partners].map((partner, index) => (
+            {[...partners, ...partners, ...partners].map((partner, index) => (
               <div
                 key={`${partner.name}-${index}`}
                 className={styles.partnerImage}
