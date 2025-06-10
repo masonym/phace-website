@@ -8,14 +8,14 @@ const awards = [
     image: "/images/awards/canadian-choice-2024.webp"
   },
   {
-    title: "2024 Winner",
+    title: "2025 Winner",
     subtitle: "Chilliwack's Best Day Spa",
-    image: "/images/awards/a-list-2024.webp"
+    image: "/images/awards/a-list-2025.webp"
   },
   {
-    title: "2023 Community Votes Winner",
+    title: "2024 Community Votes Winner",
     subtitle: "Platinum, Gold, and Silver",
-    image: "/images/awards/community-votes-2023.webp"
+    image: "/images/awards/community-votes-2024.webp"
   }
 ]
 
