@@ -20,7 +20,7 @@ interface ConsentFormFormProps {
     categories: Category[];
     onSubmit: (formData: ConsentForm) => void;
     onCancel: () => void;
-    initialData?: ConsentForm;
+    initialData?: ConsentForm | null;
 }
 
 export default function ConsentFormForm({ categories, onSubmit, onCancel, initialData }: ConsentFormFormProps) {
@@ -62,7 +62,7 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
         if (!category) return;
 
         const categoryServiceIds = category.services.map(service => service.id);
-        const allCategoryServicesSelected = categoryServiceIds.every(id => 
+        const allCategoryServicesSelected = categoryServiceIds.every(id =>
             formData.serviceIds.includes(id)
         );
 
@@ -77,7 +77,7 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
     const isCategorySelected = (categoryId: string) => {
         const category = categories.find(c => c.id === categoryId);
         if (!category) return false;
-        return category.services.every(service => 
+        return category.services.every(service =>
             formData.serviceIds.includes(service.id)
         );
     };
@@ -121,10 +121,10 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
                         Required for Services
                     </label>
                     <div className="flex space-x-2">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={() => {
-                                const allServiceIds = categories.flatMap(category => 
+                                const allServiceIds = categories.flatMap(category =>
                                     category.services.map(service => service.id)
                                 );
                                 setFormData(prev => ({ ...prev, serviceIds: allServiceIds }));
@@ -133,8 +133,8 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
                         >
                             Select All
                         </button>
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={() => setFormData(prev => ({ ...prev, serviceIds: [] }))}
                             className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
                         >
@@ -145,10 +145,10 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
                 <div className="space-y-4 border rounded-md p-4 bg-gray-50">
                     {categories.map((category) => {
                         const categoryServiceIds = category.services.map(service => service.id);
-                        const selectedServicesCount = categoryServiceIds.filter(id => 
+                        const selectedServicesCount = categoryServiceIds.filter(id =>
                             formData.serviceIds.includes(id)
                         ).length;
-                        
+
                         return (
                             <div key={category.id} className="border rounded-md p-4 bg-white">
                                 <label className="flex items-center justify-between mb-2">
