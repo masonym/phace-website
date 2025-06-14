@@ -111,7 +111,7 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
     const formattedResponses = forms.map(form => {
       const formId = form.id;
       const formTitle = form.title;
-      
+
       if (form.content) {
         const response = {
           formId,
@@ -136,7 +136,7 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
             case 'checkbox':
               if (Array.isArray(value)) {
                 formattedAnswer = value
-                  .map(optionId => 
+                  .map(optionId =>
                     question.options?.find(opt => opt.id === optionId)?.label || optionId
                   )
                   .filter(Boolean)
@@ -176,7 +176,7 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
 
   const formatAnswer = (type: string, value: any, options?: Array<{ id: string, label: string }>) => {
     if (!value) return '';
-    
+
     switch (type) {
       case 'checkbox':
         if (options && Array.isArray(value)) {
@@ -186,14 +186,14 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
             .join(', ');
         }
         return value ? 'Yes' : 'No';
-      
+
       case 'radio':
         if (options) {
           const selectedOption = options.find(opt => opt.id === value);
           return selectedOption?.label || value;
         }
         return value;
-      
+
       default:
         return value;
     }
@@ -233,7 +233,7 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Back to Date & Time Selection
+        Back to Your Information
       </button>
       <form onSubmit={handleFormSubmit} className="space-y-6">
         {forms.map((form) => {
@@ -250,7 +250,7 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
             </div>
           );
         })}
-        
+
         <div className="flex justify-end pt-4">
           <button
             type="submit"

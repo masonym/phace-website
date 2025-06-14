@@ -15,9 +15,10 @@ interface Props {
   variationId: string;
   onSelect: (staff: Staff) => void;
   onBack: () => void;
+  onBackToStart?: () => void;
 }
 
-export default function StaffSelection({ variationId, onSelect, onBack }: Props) {
+export default function StaffSelection({ variationId, onSelect, onBack, onBackToStart }: Props) {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -99,7 +100,7 @@ export default function StaffSelection({ variationId, onSelect, onBack }: Props)
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 mt-4">
             <button
-              onClick={onBack}
+              onClick={onBackToStart || onBack}
               className="px-6 py-2 bg-accent text-white rounded-md hover:bg-accent/90 transition-colors"
             >
               Choose Another Service

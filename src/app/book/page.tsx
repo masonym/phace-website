@@ -212,6 +212,7 @@ function BookingPageContent() {
                   goToNextStep();
                 }}
                 onBack={goToPreviousStep}
+                onBackToStart={() => setCurrentStep('category')}
               />
             )}
             {currentStep === 'addons' && (
