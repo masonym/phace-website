@@ -26,12 +26,11 @@ interface ConsentFormFormProps {
 export default function ConsentFormForm({ categories, onSubmit, onCancel, initialData }: ConsentFormFormProps) {
     const [formData, setFormData] = useState<ConsentForm>({
         id: initialData?.id || '',
-        title: '',
-        serviceIds: [] as string[],
-        isActive: true,
-        version: 1,
-        sections: [],
-        ...(initialData || {}),
+        title: initialData?.title || '',
+        serviceIds: initialData?.serviceIds || [],
+        isActive: initialData?.isActive ?? true,
+        version: initialData?.version || 1,
+        sections: initialData?.sections || [],
     });
 
     useEffect(() => {
@@ -117,39 +116,77 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Required for Services
-                </label>
-                <div className="space-y-4">
-                    {categories.map((category) => (
-                        <div key={category.id} className="border rounded-md p-4">
-                            <label className="flex items-center space-x-2 mb-2">
-                                <input
-                                    type="checkbox"
-                                    checked={isCategorySelected(category.id)}
-                                    onChange={() => handleCategorySelection(category.id)}
-                                    className="rounded border-gray-300 text-accent focus:ring-accent"
-                                />
-                                <span className="text-sm font-medium">{category.name}</span>
-                            </label>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 ml-6">
-                                {category.services.map((service) => (
-                                    <label
-                                        key={service.id}
-                                        className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer"
-                                    >
+                <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                        Required for Services
+                    </label>
+                    <div className="flex space-x-2">
+                        <button 
+                            type="button" 
+                            onClick={() => {
+                                const allServiceIds = categories.flatMap(category => 
+                                    category.services.map(service => service.id)
+                                );
+                                setFormData(prev => ({ ...prev, serviceIds: allServiceIds }));
+                            }}
+                            className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
+                        >
+                            Select All
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => setFormData(prev => ({ ...prev, serviceIds: [] }))}
+                            className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
+                        >
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+                <div className="space-y-4 border rounded-md p-4 bg-gray-50">
+                    {categories.map((category) => {
+                        const categoryServiceIds = category.services.map(service => service.id);
+                        const selectedServicesCount = categoryServiceIds.filter(id => 
+                            formData.serviceIds.includes(id)
+                        ).length;
+                        
+                        return (
+                            <div key={category.id} className="border rounded-md p-4 bg-white">
+                                <label className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center space-x-2">
                                         <input
                                             type="checkbox"
-                                            checked={formData.serviceIds.includes(service.id)}
-                                            onChange={() => handleServiceSelection(service.id)}
+                                            checked={isCategorySelected(category.id)}
+                                            onChange={() => handleCategorySelection(category.id)}
                                             className="rounded border-gray-300 text-accent focus:ring-accent"
                                         />
-                                        <span className="text-sm">{service.name}</span>
-                                    </label>
-                                ))}
+                                        <span className="text-sm font-medium">{category.name}</span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                        {selectedServicesCount} of {categoryServiceIds.length} selected
+                                    </span>
+                                </label>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 ml-6">
+                                    {category.services.map((service) => {
+                                        const isSelected = formData.serviceIds.includes(service.id);
+                                        return (
+                                            <label
+                                                key={service.id}
+                                                className={`flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50 border-blue-200' : ''}`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => handleServiceSelection(service.id)}
+                                                    className="rounded border-gray-300 text-accent focus:ring-accent"
+                                                />
+                                                <span className="text-sm">{service.name}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 

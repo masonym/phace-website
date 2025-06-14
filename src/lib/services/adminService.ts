@@ -3,7 +3,14 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@a
 import { compare, hash } from 'bcryptjs';
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 
-const ddbClient = new DynamoDBClient({ region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-west-2' });
+const ddbClient = new DynamoDBClient({
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    },
+    region: process.env.AWS_REGION!,
+});
+
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 const ADMIN_TABLE = 'phace-admin-users';
 

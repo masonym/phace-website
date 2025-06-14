@@ -135,7 +135,9 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
           </div>
 
           {/* Create Account Option - Only show for non-authenticated users */}
+          {/*
           {!isAuthenticated && (
+
             <div className="mb-4">
               <label className="flex items-center space-x-3">
                 <input
@@ -150,7 +152,7 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
               </label>
             </div>
           )}
-
+          */}
           {/* Password Field - Only show for non-authenticated users who want an account */}
           {!isAuthenticated && wantAccount && (
             <div className="mb-4">

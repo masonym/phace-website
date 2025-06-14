@@ -6,15 +6,23 @@ import { ConsentForm, ConsentFormSection, Question } from '@/types/consentForm';
 
 interface ConsentFormsProps {
   serviceId: string;
+  categoryId?: string; // Add categoryId prop
   onSubmit: (data: Record<string, any>) => void;
   onBack: () => void;
 }
 
-export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFormsProps) {
+export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }: ConsentFormsProps) {
   const [forms, setForms] = useState<ConsentForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
   const [error, setError] = useState<string | null>(null);
+
+  const handleFormChange = (formId: string, responses: Record<string, any>) => {
+    setFormResponses(prev => ({
+      ...prev,
+      [formId]: responses,
+    }));
+  };
 
   useEffect(() => {
     const fetchForms = async () => {
@@ -233,13 +241,10 @@ export default function ConsentForms({ serviceId, onSubmit, onBack }: ConsentFor
             <div key={form.id} className="border rounded-lg p-6 space-y-4">
               <h3 className="text-xl font-semibold">{form.title}</h3>
               <ConsentFormRenderer
+                key={form.id}
                 form={form}
-                onChange={(responses) => {
-                  setFormResponses(prev => ({
-                    ...prev,
-                    [form.id]: responses,
-                  }));
-                }}
+                categoryId={categoryId}
+                onChange={(responses) => handleFormChange(form.id, responses)}
                 responses={formResponses[form.id]}
               />
             </div>

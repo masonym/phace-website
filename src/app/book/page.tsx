@@ -297,6 +297,7 @@ function BookingPageContent() {
             {currentStep === 'consent' && (
               <ConsentForms
                 serviceId={bookingData.serviceId!}
+                categoryId={bookingData.categoryId}
                 onSubmit={(consentData) => {
                   // Using setBookingData directly to ensure state update
                   setBookingData(prevData => {

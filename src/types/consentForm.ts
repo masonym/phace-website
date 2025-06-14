@@ -1,6 +1,6 @@
 export interface QuestionBase {
   id: string;
-  type: 'text' | 'checkbox' | 'radio' | 'markdown';
+  type: 'text' | 'checkbox' | 'radio' | 'markdown' | 'dropdown' | 'yes-no';
   required: boolean;
   label: string;
 }
@@ -8,6 +8,7 @@ export interface QuestionBase {
 export interface TextQuestion extends QuestionBase {
   type: 'text';
   placeholder?: string;
+  content?: string; // Optional markdown content for the question
 }
 
 export interface CheckboxQuestion extends QuestionBase {
@@ -16,6 +17,7 @@ export interface CheckboxQuestion extends QuestionBase {
     id: string;
     label: string;
   }>;
+  content?: string; // Optional markdown content for the question
 }
 
 export interface RadioQuestion extends QuestionBase {
@@ -24,6 +26,7 @@ export interface RadioQuestion extends QuestionBase {
     id: string;
     label: string;
   }>;
+  content?: string; // Optional markdown content for the question
 }
 
 export interface MarkdownQuestion extends QuestionBase {
@@ -31,7 +34,21 @@ export interface MarkdownQuestion extends QuestionBase {
   content: string;
 }
 
-export type Question = TextQuestion | CheckboxQuestion | RadioQuestion | MarkdownQuestion;
+export interface DropdownQuestion extends QuestionBase {
+  type: 'dropdown';
+  options: Array<{
+    id: string;
+    label: string;
+  }>;
+  content?: string; // Optional markdown content for the question
+}
+
+export interface YesNoQuestion extends QuestionBase {
+  type: 'yes-no';
+  content?: string; // Optional markdown content for the question
+}
+
+export type Question = TextQuestion | CheckboxQuestion | RadioQuestion | MarkdownQuestion | DropdownQuestion | YesNoQuestion;
 
 export interface ConsentFormSection {
   id: string;
@@ -48,8 +65,4 @@ export interface ConsentForm {
   sections: ConsentFormSection[];
   // For backward compatibility
   content?: string;
-}
-
-export interface ConsentForm {
-  sections: ConsentFormSection[];
 }
