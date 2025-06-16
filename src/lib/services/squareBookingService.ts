@@ -1597,7 +1597,7 @@ export class SquareBookingService {
         // Process each form
         responses.forEach((form: any) => {
             // Add form title as a header
-            formattedText += `== ${form.formTitle} ==\n`;
+            formattedText += `-- ${form.formTitle} --\n`;
             
             // Process responses for this form
             if (form.responses && Array.isArray(form.responses)) {
