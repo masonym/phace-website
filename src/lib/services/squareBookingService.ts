@@ -1588,7 +1588,7 @@ export class SquareBookingService {
      * @param maxLength The maximum length allowed (default: 4000 characters to stay safely under Square's 4096 limit)
      * @returns A simplified string representation of consent form responses
      */
-    static truncateConsentFormResponses(responses: any[], maxLength: number = 4000): string {
+    static truncateConsentFormResponses(responses: any[], maxLength: number = 16000): string {
         if (!responses || !responses.length) return '';
         
         // Create a more compact representation of the consent forms
@@ -1597,7 +1597,7 @@ export class SquareBookingService {
         // Process each form
         responses.forEach((form: any) => {
             // Add form title as a header
-            formattedText += `-- ${form.formTitle} --\n`;
+            formattedText += `\n${form.formTitle}\n`;
             
             // Process responses for this form
             if (form.responses && Array.isArray(form.responses)) {
@@ -1613,12 +1613,12 @@ export class SquareBookingService {
                     
                     // Only add non-empty questions and answers
                     if (question || answer) {
-                        formattedText += `${question}: ${answer}\n`;
+                        formattedText += `${question}: ${answer}\n\n`;
                     }
                 });
             }
             
-            formattedText += '\n'; // Add spacing between forms
+            formattedText += '\n\n'; // Add spacing between forms
         });
         
         // If the text is still too long, truncate it
@@ -1698,8 +1698,9 @@ export class SquareBookingService {
                         }
                     ],
                     customerId,
-                    sellerNote: params.notes || '',
-                    customerNote: truncatedResponses // Already a string, no need to stringify
+                    // Move consent form responses to sellerNote instead of customerNote
+                    sellerNote: (params.notes ? params.notes + '\n\n' : '') + truncatedResponses,
+                    customerNote: '' // Leave customerNote empty
                 },
                 idempotencyKey: randomUUID()
             });
@@ -2087,8 +2088,9 @@ export class SquareBookingService {
                     startAt: params.startTime, // Start time of the first segment
                     customerId,
                     appointmentSegments, // The array of segments
-                    sellerNote: finalSellerNote, // Crucial note listing all items/prices
-                    customerNote: truncatedResponses // Already a string, no need to stringify
+                    // Combine detailed notes with consent form responses in sellerNote
+                    sellerNote: finalSellerNote + '\n\n---\n\nCONSENT FORMS:\n' + truncatedResponses,
+                    customerNote: '' // Leave customerNote empty
                 }
             };
 
