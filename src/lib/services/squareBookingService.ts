@@ -1588,45 +1588,92 @@ export class SquareBookingService {
      * @param maxLength The maximum length allowed (default: 4000 characters to stay safely under Square's 4096 limit)
      * @returns A simplified string representation of consent form responses
      */
-    static truncateConsentFormResponses(responses: any[], maxLength: number = 16000): string {
+    static truncateConsentFormResponses(responses: any[], maxLength: number = 4000): string {
         if (!responses || !responses.length) return '';
         
         // Create a more compact representation of the consent forms
         let formattedText = '';
+        let currentLength = 0;
+        const maxQuestionLength = 50;
+        const maxAnswerLength = 200;
+        const maxFormTitleLength = 60;
         
         // Process each form
-        responses.forEach((form: any) => {
-            // Add form title as a header
-            formattedText += `\n${form.formTitle}\n`;
+        for (const form of responses) {
+            // Check if we're approaching the limit
+            if (currentLength > maxLength - 200) {
+                formattedText += '\n\n[Additional consent forms truncated due to size limits]';
+                break;
+            }
+            
+            // Add form title as a header (truncate if too long)
+            let formTitle = form.formTitle || 'Consent Form';
+            if (formTitle.length > maxFormTitleLength) {
+                formTitle = formTitle.substring(0, maxFormTitleLength - 3) + '...';
+            }
+            
+            const formTitleText = `\n${formTitle}\n`;
+            formattedText += formTitleText;
+            currentLength += formTitleText.length;
             
             // Process responses for this form
             if (form.responses && Array.isArray(form.responses)) {
-                form.responses.forEach((response: any) => {
+                // Sort responses by importance (put required fields first)
+                const sortedResponses = [...form.responses].sort((a, b) => {
+                    // Put fields with answers first
+                    if (a.answer && !b.answer) return -1;
+                    if (!a.answer && b.answer) return 1;
+                    return 0;
+                });
+                
+                for (const response of sortedResponses) {
                     // Skip empty answers or markdown content with no answer
                     if (!response.answer && response.question !== 'This form is strictly confidential.') {
-                        return;
+                        continue;
                     }
                     
                     // Add question and answer
-                    const question = response.question || '';
-                    const answer = response.answer || '';
+                    let question = response.question || '';
+                    let answer = response.answer || '';
+                    
+                    // Truncate long questions
+                    if (question.length > maxQuestionLength) {
+                        question = question.substring(0, maxQuestionLength - 3) + '...';
+                    }
+                    
+                    // Truncate long answers
+                    if (answer.length > maxAnswerLength) {
+                        answer = answer.substring(0, maxAnswerLength - 3) + '...';
+                    }
                     
                     // Only add non-empty questions and answers
                     if (question || answer) {
-                        formattedText += `${question}: ${answer}\n\n`;
+                        const responseText = `${question}: ${answer}\n\n`;
+                        
+                        // Check if adding this would exceed our limit
+                        if (currentLength + responseText.length > maxLength - 100) {
+                            formattedText += '[Additional responses truncated...]\n';
+                            break;
+                        }
+                        
+                        formattedText += responseText;
+                        currentLength += responseText.length;
                     }
-                });
+                }
             }
             
-            formattedText += '\n\n'; // Add spacing between forms
-        });
+            formattedText += '\n'; // Add spacing between forms
+            currentLength += 1;
+        }
         
-        // If the text is still too long, truncate it
+        // Final safety check - if still too long, truncate it
         if (formattedText.length > maxLength) {
-            formattedText = formattedText.substring(0, maxLength - 100) + 
+            formattedText = formattedText.substring(0, maxLength - 60) + 
                 '\n\n[Note: Some consent form responses were truncated due to size limits]';
         }
         
+        console.log("Truncated consent form responses length:", formattedText.length);
+        console.log("Truncated consent form sample:", formattedText.substring(0, 100) + '...');
         return formattedText;
     }
 
