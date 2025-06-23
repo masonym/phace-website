@@ -196,7 +196,7 @@ export default function DateTimeSelection({
           return await response.json();
         }
       );
-      
+
       console.log('Time slots:', data.slots);
       setAvailableTimeSlots(data.slots);
       console.log(`Available time slots for ${format(date, 'yyyy-MM-dd')}:`, data.slots);
@@ -350,10 +350,6 @@ export default function DateTimeSelection({
               </div>
 
               <div className="mt-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-4 h-4 bg-orange-100 rounded-full"></div>
-                  <span>Fully Booked - Waitlist Available</span>
-                </div>
                 {error && (
                   <div className="mt-2 p-2 bg-red-50 text-red-600 rounded">
                     {error}
