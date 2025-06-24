@@ -1590,14 +1590,14 @@ export class SquareBookingService {
      */
     static truncateConsentFormResponses(responses: any[], maxLength: number = 4000): string {
         if (!responses || !responses.length) return '';
-        
+
         // Create a more compact representation of the consent forms
         let formattedText = '';
         let currentLength = 0;
         const maxQuestionLength = 50;
         const maxAnswerLength = 200;
         const maxFormTitleLength = 60;
-        
+
         // Process each form
         for (const form of responses) {
             // Check if we're approaching the limit
@@ -1605,17 +1605,17 @@ export class SquareBookingService {
                 formattedText += '\n\n[Additional consent forms truncated due to size limits]';
                 break;
             }
-            
+
             // Add form title as a header (truncate if too long)
             let formTitle = form.formTitle || 'Consent Form';
             if (formTitle.length > maxFormTitleLength) {
                 formTitle = formTitle.substring(0, maxFormTitleLength - 3) + '...';
             }
-            
+
             const formTitleText = `\n${formTitle}\n`;
             formattedText += formTitleText;
             currentLength += formTitleText.length;
-            
+
             // Process responses for this form
             if (form.responses && Array.isArray(form.responses)) {
                 // Sort responses by importance (put required fields first)
@@ -1625,53 +1625,53 @@ export class SquareBookingService {
                     if (!a.answer && b.answer) return 1;
                     return 0;
                 });
-                
+
                 for (const response of sortedResponses) {
                     // Skip empty answers or markdown content with no answer
                     if (!response.answer && response.question !== 'This form is strictly confidential.') {
                         continue;
                     }
-                    
+
                     // Add question and answer
                     let question = response.question || '';
                     let answer = response.answer || '';
-                    
+
                     // Truncate long questions
                     if (question.length > maxQuestionLength) {
                         question = question.substring(0, maxQuestionLength - 3) + '...';
                     }
-                    
+
                     // Truncate long answers
                     if (answer.length > maxAnswerLength) {
                         answer = answer.substring(0, maxAnswerLength - 3) + '...';
                     }
-                    
+
                     // Only add non-empty questions and answers
                     if (question || answer) {
                         const responseText = `${question}: ${answer}\n\n`;
-                        
+
                         // Check if adding this would exceed our limit
                         if (currentLength + responseText.length > maxLength - 100) {
                             formattedText += '[Additional responses truncated...]\n';
                             break;
                         }
-                        
+
                         formattedText += responseText;
                         currentLength += responseText.length;
                     }
                 }
             }
-            
+
             formattedText += '\n'; // Add spacing between forms
             currentLength += 1;
         }
-        
+
         // Final safety check - if still too long, truncate it
         if (formattedText.length > maxLength) {
-            formattedText = formattedText.substring(0, maxLength - 60) + 
+            formattedText = formattedText.substring(0, maxLength - 60) +
                 '\n\n[Note: Some consent form responses were truncated due to size limits]';
         }
-        
+
         console.log("Truncated consent form responses length:", formattedText.length);
         console.log("Truncated consent form sample:", formattedText.substring(0, 100) + '...');
         return formattedText;
@@ -1730,7 +1730,7 @@ export class SquareBookingService {
             const truncatedResponses = this.truncateConsentFormResponses(params.consentFormResponses || []);
             console.log("Truncated consent form responses length:", truncatedResponses.length);
             console.log("Truncated consent form sample:", truncatedResponses.substring(0, 100) + '...');
-            
+
             // Create booking
             const bookingResult = await client.bookings.create({
                 booking: {
@@ -1747,7 +1747,10 @@ export class SquareBookingService {
                     customerId,
                     // Move consent form responses to sellerNote instead of customerNote
                     sellerNote: (params.notes ? params.notes + '\n\n' : '') + truncatedResponses,
-                    customerNote: '' // Leave customerNote empty
+                    customerNote: '', // Leave customerNote empty
+                    creatorDetails: {
+                        customerId: customerId
+                    }
                 },
                 idempotencyKey: randomUUID()
             });
@@ -1789,15 +1792,15 @@ export class SquareBookingService {
                 addons: addons as ServiceAddon[] | undefined,
                 notes: params.notes,
                 // Store a simplified version of the consent form responses
-                consentFormResponses: [{ 
-                    formId: 'simplified', 
-                    formTitle: 'Consent Forms Summary', 
-                    responses: [{ 
-                        questionId: 'summary', 
-                        question: 'Consent Form Responses', 
+                consentFormResponses: [{
+                    formId: 'simplified',
+                    formTitle: 'Consent Forms Summary',
+                    responses: [{
+                        questionId: 'summary',
+                        question: 'Consent Form Responses',
                         answer: truncatedResponses,
-                        timestamp: new Date().toISOString() 
-                    }] 
+                        timestamp: new Date().toISOString()
+                    }]
                 }],
                 userId: params.userId,
                 createdAt: new Date().toISOString(),
@@ -2100,7 +2103,7 @@ export class SquareBookingService {
             const truncatedResponses = this.truncateConsentFormResponses(params.consentFormResponses || []);
             console.log("Truncated consent form responses length:", truncatedResponses.length);
             console.log("Truncated consent form sample:", truncatedResponses.substring(0, 100) + '...');
-            
+
             // --- 4. Calculate Totals (for *your* system) ---
             let calculatedTotalPrice = mainVariationPrice;
             let calculatedTotalDurationMins = mainVariationDurationMins;
@@ -2137,7 +2140,10 @@ export class SquareBookingService {
                     appointmentSegments, // The array of segments
                     // Combine detailed notes with consent form responses in sellerNote
                     sellerNote: finalSellerNote + '\n\n---\n\nCONSENT FORMS:\n' + truncatedResponses,
-                    customerNote: '' // Leave customerNote empty
+                    customerNote: '', // Leave customerNote empty
+                    //creatorDetails: {
+                    //    customerId: customerId
+                    //}
                 }
             };
 
@@ -2183,15 +2189,15 @@ export class SquareBookingService {
                 addons: addonDetails, // Store full addon details
                 notes: params.notes, // Original client notes only
                 // Store a simplified version of the consent form responses
-                consentFormResponses: [{ 
-                    formId: 'simplified', 
-                    formTitle: 'Consent Forms Summary', 
-                    responses: [{ 
-                        questionId: 'summary', 
-                        question: 'Consent Form Responses', 
+                consentFormResponses: [{
+                    formId: 'simplified',
+                    formTitle: 'Consent Forms Summary',
+                    responses: [{
+                        questionId: 'summary',
+                        question: 'Consent Form Responses',
                         answer: truncatedResponses,
-                        timestamp: new Date().toISOString() 
-                    }] 
+                        timestamp: new Date().toISOString()
+                    }]
                 }],
                 userId: params.userId,
                 createdAt: new Date(booking.createdAt!).toISOString(),
