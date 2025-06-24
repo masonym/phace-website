@@ -47,7 +47,7 @@ export function Cart({ onClose }: { onClose: () => void }) {
                                     <div className="relative w-20 h-20 flex-shrink-0">
                                         {/* TODO: FIX THIS */}
                                         <Image
-                                            src={(item.product.itemData as any).ecom_image_uris[0] || '/placeholder.jpg'}
+                                            src={item.product.itemData!.imageIds?.[0] || '/images/placeholder.jpg'}
                                             alt={item.product.itemData?.name || 'Product Image'}
                                             fill
                                             className="object-cover rounded"

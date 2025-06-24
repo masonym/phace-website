@@ -14,7 +14,6 @@ const client = new SquareClient({
 export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
-        sourceId,
         currency,
         items,
         shippingAddress,
@@ -22,7 +21,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     try {
-        const orderResponse = await client.orders.create({
+        const calculateOrderRequest = {
             order: {
                 locationId,
                 pricingOptions: {
@@ -39,8 +38,7 @@ export async function POST(req: NextRequest) {
                 })),
                 fulfillments: [
                     {
-                        type: 'SHIPMENT',
-                        state: 'PROPOSED', // other valid states: RESERVED, PREPARED, COMPLETED, CANCELED, FAILED
+                                                                                                type: 'SHIPMENT' as any,
                         shipmentDetails: {
                             recipient: {
                                 displayName: shippingAddress.name,
@@ -49,50 +47,24 @@ export async function POST(req: NextRequest) {
                                     locality: shippingAddress.city,
                                     administrativeDistrictLevel1: shippingAddress.state,
                                     postalCode: shippingAddress.zipCode,
-                                    country: 'CA' as any,
+                                                                                                            country: 'CA' as any,
                                 },
                             },
                         },
                     },
                 ],
             },
+        };
 
-        });
+        const response = await client.orders.calculate(calculateOrderRequest);
 
-        const orderId = orderResponse.order?.id;
-        const totalAmount = orderResponse.order?.totalMoney?.amount;
-
-        if (!orderId || totalAmount === undefined) {
-            throw new Error('Failed to create order with Square or retrieve total amount');
-        }
-
-        const paymentResponse = await client.payments.create({
-            idempotencyKey: crypto.randomUUID(),
-            sourceId,
-            amountMoney: {
-                amount: totalAmount,
-                currency,
-            },
-            locationId,
-            orderId,
-            shippingAddress: {
-                addressLine1: shippingAddress.street,
-                locality: shippingAddress.city,
-                administrativeDistrictLevel1: shippingAddress.state,
-                postalCode: shippingAddress.zipCode,
-                country: 'CA' as any,
-            },
-            note: `Purchase of ${items.length} item(s)`,
-            autocomplete: true,
-        });
-
-        return NextResponse.json(JSON.parse(ProductService.safeStringify({ payment: paymentResponse.payment })));
+        return NextResponse.json(JSON.parse(ProductService.safeStringify({ order: response.order })));
     } catch (error: any) {
         const message =
             error?.body?.errors?.[0]?.detail ||
             error?.message ||
             'An unexpected error occurred';
-        console.error('[Square Payment Error]', message);
+        console.error('[Square Calculate Order Error]', message);
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }

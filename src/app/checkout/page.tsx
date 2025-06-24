@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/components/providers/CartProvider';
 import { PaymentForm, CreditCard } from 'react-square-web-payments-sdk';
@@ -22,6 +22,8 @@ export default function CheckoutPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [calculating, setCalculating] = useState(false);
+    const [calculatedOrder, setCalculatedOrder] = useState<any>(null);
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
         name: '',
         email: '',
@@ -45,6 +47,52 @@ export default function CheckoutPage() {
             router.push('/store');
         }
     }, [cart, router]);
+
+    useEffect(() => {
+        const calculateOrder = async () => {
+            const canadianPostalCodeRegex = /^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/;
+            if (cart.length > 0 && canadianPostalCodeRegex.test(shippingAddress.zipCode)) {
+                try {
+                    setCalculating(true);
+                    const response = await fetch('/api/calculate-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            currency: 'CAD',
+                            items: cart.map(item => ({
+                                name: item.product.itemData!.name,
+                                variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
+                                quantity: item.quantity,
+                                price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
+                            })),
+                            shippingAddress,
+                            locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                        }),
+                    });
+                    if (response.ok) {
+                        const { order } = await response.json();
+                        setCalculatedOrder(order);
+                        setError('');
+                    } else {
+                        const { error } = await response.json();
+                        setError(error || 'Failed to calculate shipping and taxes.');
+                        setCalculatedOrder(null);
+                    }
+                } catch (err: any) {
+                    setError(err.message || 'Failed to calculate totals.');
+                    setCalculatedOrder(null);
+                } finally {
+                    setCalculating(false);
+                }
+            }
+        };
+
+        const debounceTimer = setTimeout(() => {
+            calculateOrder();
+        }, 800);
+
+        return () => clearTimeout(debounceTimer);
+    }, [cart, shippingAddress]);
 
     const validateShippingAddress = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -246,7 +294,7 @@ export default function CheckoutPage() {
                                 locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}
                                 cardTokenizeResponseReceived={handleCardTokenizeResponseReceived}
                                 createVerificationDetails={() => ({
-                                    amount: String(getCartTotal() * 100), // Convert to cents
+                                    amount: String(calculatedOrder ? calculatedOrder.totalMoney.amount : getCartTotal() * 100),
                                     currencyCode: 'CAD',
                                     intent: 'CHARGE',
                                     billingContact: {
@@ -328,10 +376,28 @@ export default function CheckoutPage() {
                                     </span>
                                 </div>
                             ))}
-                            <div className="border-t pt-4 mt-4">
+                            <div className="border-t pt-4 mt-4 space-y-2">
+                                <div className="flex justify-between">
+                                    <span>Subtotal</span>
+                                    <span>C${getCartTotal().toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Tax</span>
+                                    <span>
+                                        {calculating
+                                            ? 'Calculating...'
+                                            : calculatedOrder
+                                                ? `C$${(Number(calculatedOrder.totalTaxMoney.amount) / 100).toFixed(2)}`
+                                                : 'Enter address to calculate'}
+                                    </span>
+                                </div>
                                 <div className="flex justify-between font-semibold">
                                     <span>Total</span>
-                                    <span>C${getCartTotal().toFixed(2)}</span>
+                                    <span>
+                                        {calculatedOrder
+                                            ? `C$${(Number(calculatedOrder.totalMoney.amount) / 100).toFixed(2)}`
+                                            : `C$${getCartTotal().toFixed(2)}`}
+                                    </span>
                                 </div>
                             </div>
                         </div>
