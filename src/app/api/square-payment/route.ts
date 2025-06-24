@@ -19,11 +19,11 @@ export async function POST(req: NextRequest) {
         items,
         shippingAddress,
         locationId,
+        fulfillmentMethod,
     } = body;
 
     try {
-        const orderResponse = await client.orders.create({
-            order: {
+        const order: any = {
                 locationId,
                 pricingOptions: {
                     autoApplyDiscounts: true,
@@ -37,27 +37,54 @@ export async function POST(req: NextRequest) {
                         currency,
                     },
                 })),
-                fulfillments: [
-                    {
-                        type: 'SHIPMENT',
-                        state: 'PROPOSED', // other valid states: RESERVED, PREPARED, COMPLETED, CANCELED, FAILED
-                        shipmentDetails: {
-                            recipient: {
-                                displayName: shippingAddress.name,
-                                address: {
-                                    addressLine1: shippingAddress.street,
-                                    locality: shippingAddress.city,
-                                    administrativeDistrictLevel1: shippingAddress.state,
-                                    postalCode: shippingAddress.zipCode,
-                                    country: 'CA' as any,
-                                },
+        };
+
+        if (fulfillmentMethod === 'shipping') {
+            order.serviceCharges = [
+                {
+                    name: 'Shipping',
+                    amountMoney: {
+                        amount: BigInt(2500),
+                        currency: 'CAD',
+                    },
+                    calculationPhase: 'TOTAL_PHASE',
+                },
+            ];
+            order.fulfillments = [
+                {
+                    type: 'SHIPMENT' as any,
+                    state: 'PROPOSED' as any,
+                    shipmentDetails: {
+                        recipient: {
+                            displayName: shippingAddress.name,
+                            address: {
+                                addressLine1: shippingAddress.street,
+                                locality: shippingAddress.city,
+                                administrativeDistrictLevel1: shippingAddress.state,
+                                postalCode: shippingAddress.zipCode,
+                                country: 'CA' as any,
                             },
                         },
                     },
-                ],
-            },
+                },
+            ];
+        } else { // pickup
+            order.fulfillments = [
+                {
+                    type: 'PICKUP' as any,
+                    state: 'PROPOSED' as any,
+                    recipient: {
+                        displayName: shippingAddress.name,
+                    },
+                    pickupDetails: {
+                        isCurbsidePickup: false,
+                        note: 'Order ready for pickup.',
+                    }
+                },
+            ];
+        }
 
-        });
+        const orderResponse = await client.orders.create({ order });
 
         const orderId = orderResponse.order?.id;
         const totalAmount = orderResponse.order?.totalMoney?.amount;

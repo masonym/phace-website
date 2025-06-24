@@ -24,6 +24,7 @@ export default function CheckoutPage() {
     const [error, setError] = useState('');
     const [calculating, setCalculating] = useState(false);
     const [calculatedOrder, setCalculatedOrder] = useState<any>(null);
+    const [fulfillmentMethod, setFulfillmentMethod] = useState('shipping'); // 'shipping' or 'pickup'
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
         name: '',
         email: '',
@@ -67,6 +68,7 @@ export default function CheckoutPage() {
                             })),
                             shippingAddress,
                             locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                            fulfillmentMethod,
                         }),
                     });
                     if (response.ok) {
@@ -92,7 +94,7 @@ export default function CheckoutPage() {
         }, 800);
 
         return () => clearTimeout(debounceTimer);
-    }, [cart, shippingAddress]);
+    }, [cart, shippingAddress, fulfillmentMethod]);
 
     const validateShippingAddress = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -150,6 +152,7 @@ export default function CheckoutPage() {
                     })),
                     shippingAddress,
                     locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                    fulfillmentMethod,
                 }),
             });
 
@@ -196,6 +199,38 @@ export default function CheckoutPage() {
                                 {error}
                             </div>
                         )}
+                        <div className="bg-white p-6 rounded-lg shadow">
+                            <h2 className="text-xl font-semibold mb-4">Fulfillment Method</h2>
+                            <div className="flex gap-4 mb-4">
+                                <label className="flex items-center gap-2 p-3 border rounded-lg w-1/2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="fulfillment"
+                                        value="shipping"
+                                        checked={fulfillmentMethod === 'shipping'}
+                                        onChange={() => setFulfillmentMethod('shipping')}
+                                    />
+                                    <div>
+                                        <div>Shipping</div>
+                                        <div className="text-sm text-gray-500">$25.00 Flat Rate</div>
+                                    </div>
+                                </label>
+                                <label className="flex items-center gap-2 p-3 border rounded-lg w-1/2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="fulfillment"
+                                        value="pickup"
+                                        checked={fulfillmentMethod === 'pickup'}
+                                        onChange={() => setFulfillmentMethod('pickup')}
+                                    />
+                                    <div>
+                                        <div>Local Pickup</div>
+                                        <div className="text-sm text-gray-500">Free</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
                         <div className="bg-white p-6 rounded-lg shadow">
                             <h2 className="text-xl font-semibold mb-4">Shipping Address</h2>
                             <div className="grid grid-cols-1 gap-4">
@@ -381,6 +416,12 @@ export default function CheckoutPage() {
                                     <span>Subtotal</span>
                                     <span>C${getCartTotal().toFixed(2)}</span>
                                 </div>
+                                {fulfillmentMethod === 'shipping' && (
+                                    <div className="flex justify-between">
+                                        <span>Shipping</span>
+                                        <span>C$25.00</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <span>Tax</span>
                                     <span>
@@ -396,7 +437,7 @@ export default function CheckoutPage() {
                                     <span>
                                         {calculatedOrder
                                             ? `C$${(Number(calculatedOrder.totalMoney.amount) / 100).toFixed(2)}`
-                                            : `C$${getCartTotal().toFixed(2)}`}
+                                            : `C$${(getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0)).toFixed(2)}`}
                                     </span>
                                 </div>
                             </div>

@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { ProductService } from '@/lib/services/productService';
 import { SquareClient, SquareEnvironment } from "square";
@@ -18,45 +17,71 @@ export async function POST(req: NextRequest) {
         items,
         shippingAddress,
         locationId,
+        fulfillmentMethod,
     } = body;
 
     try {
-        const calculateOrderRequest = {
-            order: {
-                locationId,
-                pricingOptions: {
-                    autoApplyDiscounts: true,
-                    autoApplyTaxes: true,
+        const order: any = {
+            locationId,
+            pricingOptions: {
+                autoApplyDiscounts: true,
+                autoApplyTaxes: true,
+            },
+            lineItems: items.map((item: any) => ({
+                name: `${item.name}${item.variationName ? ` (${item.variationName})` : ''}`,
+                quantity: item.quantity.toString(),
+                basePriceMoney: {
+                    amount: BigInt(Math.round(item.price * 100)),
+                    currency,
                 },
-                lineItems: items.map((item: any) => ({
-                    name: `${item.name}${item.variationName ? ` (${item.variationName})` : ''}`,
-                    quantity: item.quantity.toString(),
-                    basePriceMoney: {
-                        amount: BigInt(Math.round(item.price * 100)), // price per unit in cents
-                        currency,
+            })),
+        };
+
+        if (fulfillmentMethod === 'shipping') {
+            order.serviceCharges = [
+                {
+                    name: 'Shipping',
+                    amountMoney: {
+                        amount: BigInt(2500),
+                        currency: 'CAD',
                     },
-                })),
-                fulfillments: [
-                    {
-                                                                                                type: 'SHIPMENT' as any,
-                        shipmentDetails: {
-                            recipient: {
-                                displayName: shippingAddress.name,
-                                address: {
-                                    addressLine1: shippingAddress.street,
-                                    locality: shippingAddress.city,
-                                    administrativeDistrictLevel1: shippingAddress.state,
-                                    postalCode: shippingAddress.zipCode,
-                                                                                                            country: 'CA' as any,
-                                },
+                    calculationPhase: 'TOTAL_PHASE',
+                },
+            ];
+            order.fulfillments = [
+                {
+                    type: 'SHIPMENT' as any,
+                    shipmentDetails: {
+                        recipient: {
+                            displayName: shippingAddress.name,
+                            address: {
+                                addressLine1: shippingAddress.street,
+                                locality: shippingAddress.city,
+                                administrativeDistrictLevel1: shippingAddress.state,
+                                postalCode: shippingAddress.zipCode,
+                                country: 'CA' as any,
                             },
                         },
                     },
-                ],
-            },
-        };
+                },
+            ];
+        } else { // pickup
+            order.fulfillments = [
+                {
+                    type: 'PICKUP' as any,
+                    state: 'PROPOSED' as any,
+                    recipient: {
+                        displayName: shippingAddress.name,
+                    },
+                    pickupDetails: {
+                        isCurbsidePickup: false,
+                        note: 'Order ready for pickup.',
+                    }
+                },
+            ];
+        }
 
-        const response = await client.orders.calculate(calculateOrderRequest);
+        const response = await client.orders.calculate({ order });
 
         return NextResponse.json(JSON.parse(ProductService.safeStringify({ order: response.order })));
     } catch (error: any) {
