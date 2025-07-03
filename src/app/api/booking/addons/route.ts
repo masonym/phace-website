@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SquareBookingService } from "@/lib/services/squareBookingService";
 import { CognitoJwtVerifier } from "aws-jwt-verify";
+import { CATEGORIES_WITHOUT_ADDONS, SERVICE_ADDON_MAP, CATEGORY_ADDON_MAP } from "@/lib/config/addonConfig";
 
 // Create a verifier that expects valid ID tokens
 const verifier = CognitoJwtVerifier.create({
@@ -12,12 +13,47 @@ const verifier = CognitoJwtVerifier.create({
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-
-        // If serviceId is provided, get addons for that service
-        // Otherwise, get all addons
-        const addons = await SquareBookingService.getAllAddons();
-
-        return NextResponse.json(addons);
+        const serviceId = searchParams.get('serviceId');
+        
+        // Get all addons first
+        const allAddons = await SquareBookingService.getAllAddons();
+        
+        // If no serviceId is provided, return all addons
+        if (!serviceId) {
+            return NextResponse.json(allAddons);
+        }
+        
+        // Get service to check its category
+        const service = await SquareBookingService.getServiceById(serviceId);
+        if (!service) {
+            return NextResponse.json(
+                { error: 'Service not found' },
+                { status: 404 }
+            );
+        }
+        
+        // Check if this category should skip addons entirely
+        if (service.categoryId && CATEGORIES_WITHOUT_ADDONS.includes(service.categoryId)) {
+            // Return empty array if category should have no addons
+            return NextResponse.json([]);
+        }
+        
+        // Check if this specific service has defined addons
+        if (SERVICE_ADDON_MAP[serviceId]) {
+            const allowedAddonIds = SERVICE_ADDON_MAP[serviceId];
+            const filteredAddons = allAddons.filter(addon => allowedAddonIds.includes(addon.id));
+            return NextResponse.json(filteredAddons);
+        }
+        
+        // Check if this service's category has defined addons
+        if (service.categoryId && CATEGORY_ADDON_MAP[service.categoryId]) {
+            const allowedAddonIds = CATEGORY_ADDON_MAP[service.categoryId];
+            const filteredAddons = allAddons.filter(addon => allowedAddonIds.includes(addon.id));
+            return NextResponse.json(filteredAddons);
+        }
+        
+        // If no specific configuration, return all addons (default behavior)
+        return NextResponse.json(allAddons);
     } catch (error: any) {
         console.error('Error fetching addons:', error);
         return NextResponse.json(

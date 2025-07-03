@@ -80,8 +80,22 @@ export interface BookingData {
 function BookingPageContent() {
   const [currentStep, setCurrentStep] = useState<BookingStep>('category');
   const [bookingData, setBookingData] = useState<BookingData>({});
+  const [availableAddons, setAvailableAddons] = useState<Addon[]>([]);
+  const [hasLoadedAddons, setHasLoadedAddons] = useState(false);
 
-  const steps: BookingStep[] = ['category', 'service', 'variation', 'staff', 'addons', 'datetime', 'client', 'consent', 'summary'];
+  // Dynamically determine the steps based on whether addons are available
+  const getSteps = () => {
+    // If we've loaded addons and there are none, or we haven't loaded them yet but are past the staff step
+    const shouldSkipAddons = (hasLoadedAddons && availableAddons.length === 0);
+    
+    if (shouldSkipAddons) {
+      return ['category', 'service', 'variation', 'staff', 'datetime', 'client', 'consent', 'summary'] as BookingStep[];
+    } else {
+      return ['category', 'service', 'variation', 'staff', 'addons', 'datetime', 'client', 'consent', 'summary'] as BookingStep[];
+    }
+  };
+
+  const steps = getSteps();
   const currentStepIndex = steps.indexOf(currentStep);
 
   const goToNextStep = () => {
@@ -209,13 +223,41 @@ function BookingPageContent() {
                     staffId: staff.id,
                     staffName: staff.name,
                   });
-                  goToNextStep();
+                  
+                  // Fetch addons for this service to determine if we should show the addons step
+                  if (bookingData.serviceId) {
+                    fetch(`/api/booking/addons?serviceId=${bookingData.serviceId}`)
+                      .then(res => res.json())
+                      .then(data => {
+                        setAvailableAddons(data);
+                        setHasLoadedAddons(true);
+                        // If no addons available, skip the addon step
+                        if (!Array.isArray(data) || data.length === 0) {
+                          // Find next step after 'addons'
+                          const addonIndex = steps.indexOf('addons');
+                          if (addonIndex !== -1 && addonIndex + 1 < steps.length) {
+                            // Skip directly to the step after addons
+                            setCurrentStep(steps[addonIndex + 1]);
+                          } else {
+                            goToNextStep();
+                          }
+                        } else {
+                          goToNextStep();
+                        }
+                      })
+                      .catch(err => {
+                        console.error('Error fetching addons:', err);
+                        goToNextStep();
+                      });
+                  } else {
+                    goToNextStep();
+                  }
                 }}
                 onBack={goToPreviousStep}
                 onBackToStart={() => setCurrentStep('category')}
               />
             )}
-            {currentStep === 'addons' && (
+            {currentStep === 'addons' && availableAddons.length > 0 && (
               <AddonSelection
                 serviceId={bookingData.serviceId!}
                 onSelect={(selectedAddonsData) => {
