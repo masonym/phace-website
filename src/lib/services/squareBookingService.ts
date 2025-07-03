@@ -778,7 +778,9 @@ export class SquareBookingService {
                 .filter(profile => {
                     const staffId = profile!.teamMemberId!;
                     // Check if this staff member has any available slots for this service
-                    const hasAvailability = staffAvailabilityCount.get(staffId) > 0;
+                    // Use nullish coalescing to handle undefined result from Map.get()
+                    const availabilityCount = staffAvailabilityCount.get(staffId) ?? 0;
+                    const hasAvailability = availabilityCount > 0;
                     return hasAvailability && profile!.isBookable;
                 })
                 .map(profile => {
@@ -814,7 +816,7 @@ export class SquareBookingService {
             };
 
             return staffMembers;
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error fetching staff members from Square:', error);
 
             // Return cached data if available, even if expired
@@ -1545,9 +1547,22 @@ export class SquareBookingService {
             
             // Check if the service variation is in the staff member's assigned services
             const profile = profileResponse.teamMemberBookingProfile;
-            const canPerformService = profile.bookableServices?.some(service => 
+            // Add type assertion since the Square types might be incomplete
+            type BookableService = {
+                serviceVariationId?: string;
+                teamMemberBookableServices?: Array<{
+                    serviceVariationId?: string;
+                }>;
+            };
+            
+            // Use type assertion to work with potentially missing properties
+            const extendedProfile = profile as unknown as {
+                bookableServices?: BookableService[];
+            };
+            
+            const canPerformService = extendedProfile.bookableServices?.some((service: BookableService) => 
                 service.serviceVariationId === vid || 
-                service.teamMemberBookableServices?.some(s => s.serviceVariationId === vid)
+                service.teamMemberBookableServices?.some((s: { serviceVariationId?: string }) => s.serviceVariationId === vid)
             );
             
             if (!canPerformService) {
@@ -1643,7 +1658,7 @@ export class SquareBookingService {
                 console.error('Availability search error details:', this.safeStringify(err.errors));
                 
                 // Check specifically for the team member service variation error
-                const teamMemberServiceError = err.errors.find(e => 
+                const teamMemberServiceError = err.errors.find((e: { detail?: string }) => 
                     e.detail?.includes('team member who performs the selected service variation'));
                     
                 if (teamMemberServiceError) {
