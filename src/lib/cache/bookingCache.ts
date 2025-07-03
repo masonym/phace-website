@@ -12,23 +12,23 @@ export class BookingCache {
   /**
    * Default cache expiration time in milliseconds (5 minutes)
    */
-  private static DEFAULT_EXPIRATION = 0;
+  private static DEFAULT_EXPIRATION = 1;
 
   /**
    * Categories cache expiration time (5 minutes)
    */
-  private static CATEGORIES_EXPIRATION = 0;
+  private static CATEGORIES_EXPIRATION = 1;
 
   /**
    * Staff cache expiration time (10 minutes)
    */
-  private static STAFF_EXPIRATION = 0;
+  private static STAFF_EXPIRATION = 1;
 
   /**
    * Availability cache expiration time (2 minutes)
    * Shorter expiration for availability to ensure freshness
    */
-  private static AVAILABILITY_EXPIRATION = 0;
+  private static AVAILABILITY_EXPIRATION = 1;
 
   /**
    * Set an item in the cache

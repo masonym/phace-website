@@ -682,7 +682,7 @@ export class SquareBookingService {
     /**
      * Cache expiration time in milliseconds (5 minutes)
      */
-    private static STAFF_CACHE_EXPIRATION = 5 * 60 * 1000;
+    private static STAFF_CACHE_EXPIRATION = 1;
 
     /**
      * Get staff members with caching
