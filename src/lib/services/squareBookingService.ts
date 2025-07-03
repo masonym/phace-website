@@ -720,16 +720,27 @@ export class SquareBookingService {
                 },
             });
 
-
-            const availableStaffIds = new Set<string>();
+            // Create a map to count available slots per staff member
+            // This helps us determine if a staff member has actual availability for this service
+            const staffAvailabilityCount = new Map<string, number>();
             availabilityResponse.availabilities?.forEach(slot => {
                 slot.appointmentSegments?.forEach(seg => {
-                    availableStaffIds.add(seg.teamMemberId);
+                    const staffId = seg.teamMemberId;
+                    staffAvailabilityCount.set(staffId, (staffAvailabilityCount.get(staffId) || 0) + 1);
                 });
             });
 
+            console.log(`Found availability for ${staffAvailabilityCount.size} staff members`);
+            
+            // Only include staff with at least one available slot
+            const availableStaffIds = Array.from(staffAvailabilityCount.keys());
+            if (availableStaffIds.length === 0) {
+                console.log('No staff members have availability for this service');
+                return [];
+            }
+
             // Get team members who can be booked
-            const bookingProfilesResponse = await client.bookings.bulkRetrieveTeamMemberBookingProfiles({ teamMemberIds: Array.from(availableStaffIds) });
+            const bookingProfilesResponse = await client.bookings.bulkRetrieveTeamMemberBookingProfiles({ teamMemberIds: availableStaffIds });
 
             const bookingProfilesObj = bookingProfilesResponse.teamMemberBookingProfiles!;
             const bookingProfiles = Object.entries(bookingProfilesObj)
@@ -740,6 +751,7 @@ export class SquareBookingService {
                 console.log('No team member IDs found in booking profiles');
                 return [];
             }
+            
             // Get detailed team member info for all team members
             const teamMemberIds = bookingProfiles.map(profile => profile!.teamMemberId!);
 
@@ -761,31 +773,39 @@ export class SquareBookingService {
             console.log(`Found ${teamMembersResult.teamMembers.length} team members`);
 
             // Map Square team members to our StaffMember format
-            const staffMembers = bookingProfiles.map(profile => {
-                const teamMember = teamMembersResult.teamMembers?.find(
-                    tm => tm.id === profile!.teamMemberId
-                );
+            // Only include staff members who are bookable, active, and have at least one available slot
+            const staffMembers = bookingProfiles
+                .filter(profile => {
+                    const staffId = profile!.teamMemberId!;
+                    // Check if this staff member has any available slots for this service
+                    const hasAvailability = staffAvailabilityCount.get(staffId) > 0;
+                    return hasAvailability && profile!.isBookable;
+                })
+                .map(profile => {
+                    const teamMember = teamMembersResult.teamMembers?.find(
+                        tm => tm.id === profile!.teamMemberId
+                    );
 
-                if (!teamMember) {
-                    console.log(`No team member found for profile ${profile!.teamMemberId}`);
-                    return null;
-                }
+                    if (!teamMember) {
+                        console.log(`No team member found for profile ${profile!.teamMemberId}`);
+                        return null;
+                    }
 
-                // Parse availability from the booking profile
-
-                return {
-                    id: profile!.teamMemberId!,
-                    name: profile!.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
-                    email: teamMember.emailAddress,
-                    phone: teamMember.phoneNumber,
-                    bio: profile!.description,
-                    isActive: profile!.isBookable && teamMember.status === 'ACTIVE',
-                    createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
-                    updatedAt: teamMember.updatedAt
-                        ? new Date(teamMember.updatedAt).toISOString()
-                        : undefined
-                };
-            }).filter(Boolean) as StaffMember[];
+                    return {
+                        id: profile!.teamMemberId!,
+                        name: profile!.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
+                        email: teamMember.emailAddress || undefined,
+                        phone: teamMember.phoneNumber || undefined,
+                        bio: profile!.description || undefined,
+                        isActive: profile!.isBookable && teamMember.status === 'ACTIVE',
+                        createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
+                        updatedAt: teamMember.updatedAt
+                            ? new Date(teamMember.updatedAt).toISOString()
+                            : undefined
+                    };
+                }).filter(Boolean) as StaffMember[];
+                
+                console.log(`Returning ${staffMembers.length} bookable staff members with availability`);
 
             // Update the cache
             this.staffCache = {
@@ -1502,23 +1522,54 @@ export class SquareBookingService {
         endDate: string;   // yyyy-MM-dd
         addonIds?: string[];
     }): Promise<TimeSlot[]> {
-        const {
-            staffId,
-            serviceId: svcId,
-            id,
-            variationId,
-            startDate,
-            endDate,
-            addonIds = [],
-        } = params;
+        const { staffId, serviceId, id, variationId, startDate, endDate, addonIds } = params;
+        
+        const vid = variationId || id || serviceId;
+        if (!vid) {
+            console.error('No service variation ID provided for availability search');
+            return [];
+        }
 
-        const sid = id || svcId;
+        // Log more detailed info to help with debugging
+        console.log(`Getting availability for staff ${staffId} and service variation ${vid} from ${startDate} to ${endDate}`);
+
+        // First check if this staff member can perform this service variation
+        try {
+            // Get the team member's booking profile to check assigned service variations
+            const profileResponse = await client.bookings.teamMemberProfiles.get({ teamMemberId: staffId });
+            
+            if (!profileResponse.teamMemberBookingProfile) {
+                console.error(`No booking profile found for staff member ${staffId}`);
+                return [];
+            }
+            
+            // Check if the service variation is in the staff member's assigned services
+            const profile = profileResponse.teamMemberBookingProfile;
+            const canPerformService = profile.bookableServices?.some(service => 
+                service.serviceVariationId === vid || 
+                service.teamMemberBookableServices?.some(s => s.serviceVariationId === vid)
+            );
+            
+            if (!canPerformService) {
+                console.warn(`Staff member ${staffId} cannot perform service variation ${vid}. ` +
+                           `Make sure they are assigned to this service variation in Square Dashboard.`);
+                return [];
+            }
+            
+            console.log(`Verified staff member ${staffId} can perform service variation ${vid}`);
+        } catch (error) {
+            console.error(`Error checking if staff member ${staffId} can perform service variation ${vid}:`, error);
+            // Continue with the availability search even if this check fails, Square API will validate anyway
+        }
+
+        const sid = id || serviceId;
         if (!sid) throw new Error("No service ID provided");
 
         const service = await this.getServiceById(sid);
         if (!service) return [];
 
-        const vid = variationId || service.variationId;
+        // Already defined vid above, don't redefine it
+        // const vid = variationId || service.variationId; 
         const duration = await SquareBookingService.calculateTotalDuration(service.duration, addonIds);
 
         const locationId = await this.getLocationId();
@@ -1557,21 +1608,17 @@ export class SquareBookingService {
             const availabilities = result?.availabilities || [];
             
             // Enhanced logging for debugging staff availability issues
-            // const month = new Date(startDate).toLocaleString('default', { month: 'long' });
-            // console.log(`Staff ${staffId} availability for ${month}: Found ${availabilities.length} slots`);
+            console.log(`Staff ${staffId} availability search for ${vid}: Found ${availabilities.length} slots`);
             
-            // if (availabilities.length === 0) {
-            //     console.log(`DEBUGGING: No availability found for staff ${staffId} from ${startDate} to ${endDate}`);
-            //     console.log(`Request details: ${JSON.stringify(searchRequest, null, 2)}`);
+            if (availabilities.length === 0) {
+                console.log(`DEBUGGING: No availability found for staff ${staffId} from ${startDate} to ${endDate}`);
+                console.log(`Request details: ${this.safeStringify(searchRequest)}`);
                 
-            //     // Check if there are any errors or warnings in the response
-            //     if (result.errors?.length) {
-            //         console.error(`Availability errors for staff ${staffId}:`, this.safeStringify(result.errors));
-            //     }
-            // } else {
-            //     // Log a sample of found availabilities
-            //     console.log(`First available slot for staff ${staffId}: ${this.safeStringify(availabilities[0])}`);
-            // }
+                // Check if there are any errors or warnings in the response
+                if (result.errors?.length) {
+                    console.error(`Availability errors for staff ${staffId}:`, this.safeStringify(result.errors));
+                }
+            }
 
             return availabilities.map(a => {
                 const start = new Date(a.startAt!);
@@ -1590,6 +1637,21 @@ export class SquareBookingService {
             });
         } catch (err) {
             console.error('Availability fetch failed:', err);
+            
+            // Add more detailed error logging to help diagnose the issue
+            if (err.errors) {
+                console.error('Availability search error details:', this.safeStringify(err.errors));
+                
+                // Check specifically for the team member service variation error
+                const teamMemberServiceError = err.errors.find(e => 
+                    e.detail?.includes('team member who performs the selected service variation'));
+                    
+                if (teamMemberServiceError) {
+                    console.error(`Staff ${staffId} is not assigned to perform service variation ${vid} ` +
+                                 `in Square Dashboard. Please assign this service to the staff member.`);
+                }
+            }
+            
             return [];
         }
     }
