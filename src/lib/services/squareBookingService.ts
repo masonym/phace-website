@@ -1560,6 +1560,13 @@ export class SquareBookingService {
                 bookableServices?: BookableService[];
             };
             
+            // TEMPORARY FIX: Skip service variation check as it's too strict
+            // Instead of returning empty, we'll continue and let Square API determine
+            // if this staff member can perform this service
+            const canPerformService = true;
+            
+            // Keeping this code but commented out for future refinement
+            /*
             const canPerformService = extendedProfile.bookableServices?.some((service: BookableService) => 
                 service.serviceVariationId === vid || 
                 service.teamMemberBookableServices?.some((s: { serviceVariationId?: string }) => s.serviceVariationId === vid)
@@ -1570,8 +1577,13 @@ export class SquareBookingService {
                            `Make sure they are assigned to this service variation in Square Dashboard.`);
                 return [];
             }
+            */
             
-            console.log(`Verified staff member ${staffId} can perform service variation ${vid}`);
+            // Log that we're proceeding with availability check
+            console.log(`Proceeding with availability check for staff ${staffId} and service ${vid}`);
+            
+            // No verification needed with our temporary fix
+            console.log(`Proceeding with availability search for staff ${staffId} and service variation ${vid}`);
         } catch (error) {
             console.error(`Error checking if staff member ${staffId} can perform service variation ${vid}:`, error);
             // Continue with the availability search even if this check fails, Square API will validate anyway
