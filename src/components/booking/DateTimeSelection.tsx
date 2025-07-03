@@ -264,7 +264,7 @@ export default function DateTimeSelection({
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back to Add-on Selection
+            {addons && addons.length > 0 ? 'Back to Add-on Selection' : 'Back to Service Selection'}
           </button>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
