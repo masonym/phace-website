@@ -1535,54 +1535,89 @@ export class SquareBookingService {
         // Log more detailed info to help with debugging
         console.log(`Getting availability for staff ${staffId} and service variation ${vid} from ${startDate} to ${endDate}`);
 
-        // First check if this staff member can perform this service variation
+        // First check if this staff member can perform this service variation by checking
+        // if they are in the service variation's teamMemberIds list
         try {
-            // Get the team member's booking profile to check assigned service variations
-            const profileResponse = await client.bookings.teamMemberProfiles.get({ teamMemberId: staffId });
+            // Get the service variation object that contains team member assignments - using method from the user's message
+            const variationResult = await client.catalog.object.get({
+                objectId: vid,
+                includeRelatedObjects: true
+            });
             
-            if (!profileResponse.teamMemberBookingProfile) {
-                console.error(`No booking profile found for staff member ${staffId}`);
-                return [];
+            if (!variationResult || !variationResult.object) {
+                console.error(`Service variation ${vid} not found`);
+                // Continue anyway and let Square API validate
+            } else {
+                // Check if this is an ITEM_VARIATION object
+                const variation = variationResult.object;
+                
+                // Define a type for the extended variation object
+                interface ExtendedVariation {
+                    type?: string;
+                    id?: string;
+                    itemVariationData?: {
+                        teamMemberIds?: string[];
+                    };
+                    itemData?: {
+                        variations?: Array<{
+                            id?: string;
+                            itemVariationData?: {
+                                teamMemberIds?: string[];
+                            };
+                        }>;
+                    };
+                }
+                
+                // Cast variation to our extended type
+                const extendedVariation = variation as unknown as ExtendedVariation;
+                
+                if (extendedVariation.type === 'ITEM_VARIATION' && extendedVariation.itemVariationData) {
+                    // Check if the staff member is assigned to this variation
+                    const teamMemberIds = extendedVariation.itemVariationData.teamMemberIds || [];
+                    
+                    if (teamMemberIds.length > 0) {
+                        const isAssigned = teamMemberIds.includes(staffId);
+                        
+                        if (!isAssigned) {
+                            console.warn(`Staff member ${staffId} is not assigned to service variation ${vid}. ` +
+                                      `Team members assigned: ${teamMemberIds.join(', ')}`);
+                            // Continue anyway - the next check with Square API will validate
+                        } else {
+                            console.log(`Verified staff member ${staffId} is assigned to service variation ${vid}`);
+                        }
+                    } else {
+                        console.log(`No team members explicitly assigned to variation ${vid}, proceeding with availability check`);
+                    }
+                } else if (extendedVariation.type === 'ITEM') {
+                    // If this is an ITEM, we need to check its variations
+                    const itemVariations = extendedVariation.itemData?.variations || [];
+                    
+                    // Look for a variation that matches our vid
+                    const matchingVariation = itemVariations.find(v => v.id === vid);
+                    
+                    if (matchingVariation && matchingVariation.itemVariationData) {
+                        const teamMemberIds = matchingVariation.itemVariationData.teamMemberIds || [];
+                        
+                        if (teamMemberIds.length > 0) {
+                            const isAssigned = teamMemberIds.includes(staffId);
+                            
+                            if (!isAssigned) {
+                                console.warn(`Staff member ${staffId} is not assigned to service variation ${vid}. ` +
+                                         `Team members assigned: ${teamMemberIds.join(', ')}`);
+                                // Continue anyway - the next check with Square API will validate
+                            } else {
+                                console.log(`Verified staff member ${staffId} is assigned to service variation ${vid}`);
+                            }
+                        } else {
+                            console.log(`No team members explicitly assigned to variation ${vid}, proceeding with availability check`);
+                        }
+                    }
+                } else {
+                    console.log(`Object ${vid} is not a service variation or item, type: ${extendedVariation.type}`);
+                }
             }
-            
-            // Check if the service variation is in the staff member's assigned services
-            const profile = profileResponse.teamMemberBookingProfile;
-            // Add type assertion since the Square types might be incomplete
-            type BookableService = {
-                serviceVariationId?: string;
-                teamMemberBookableServices?: Array<{
-                    serviceVariationId?: string;
-                }>;
-            };
-            
-            // Use type assertion to work with potentially missing properties
-            const extendedProfile = profile as unknown as {
-                bookableServices?: BookableService[];
-            };
-            
-            // TEMPORARY FIX: Skip service variation check as it's too strict
-            // Instead of returning empty, we'll continue and let Square API determine
-            // if this staff member can perform this service
-            const canPerformService = true;
-            
-            // Keeping this code but commented out for future refinement
-            /*
-            const canPerformService = extendedProfile.bookableServices?.some((service: BookableService) => 
-                service.serviceVariationId === vid || 
-                service.teamMemberBookableServices?.some((s: { serviceVariationId?: string }) => s.serviceVariationId === vid)
-            );
-            
-            if (!canPerformService) {
-                console.warn(`Staff member ${staffId} cannot perform service variation ${vid}. ` +
-                           `Make sure they are assigned to this service variation in Square Dashboard.`);
-                return [];
-            }
-            */
             
             // Log that we're proceeding with availability check
-            console.log(`Proceeding with availability check for staff ${staffId} and service ${vid}`);
-            
-            // No verification needed with our temporary fix
             console.log(`Proceeding with availability search for staff ${staffId} and service variation ${vid}`);
         } catch (error) {
             console.error(`Error checking if staff member ${staffId} can perform service variation ${vid}:`, error);
