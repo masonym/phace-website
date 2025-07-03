@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
         const startDate = searchParams.get('start');
         const endDate = searchParams.get('end');
 
+        console.log("Start and end date: ", startDate, endDate);
+
         if (!staffId || !startDate || !endDate) {
             return NextResponse.json({ error: 'Missing required params' }, { status: 400 });
         }

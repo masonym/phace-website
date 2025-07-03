@@ -502,14 +502,12 @@ export class SquareBookingService {
                 }
             }
 
-            console.log(`Fetching fresh service data for ${serviceId} from Square`);
-
             // First try to get the object to determine if it's an ITEM or ITEM_VARIATION
             const result = await client.catalog.object.get({
                 objectId: serviceId
             });
 
-            console.log(`Square API response for ID ${serviceId}: ${this.safeStringify(result)}`);
+            //console.log(`Square API response for ID ${serviceId}: ${this.safeStringify(result)}`);
 
             if (!result.object) {
                 console.log(`No object found with ID ${serviceId}`);
@@ -1529,12 +1527,17 @@ export class SquareBookingService {
         // This lets us safely hardcode the UTC day boundaries without handling DST.
         // 07:00Z = 00:00 PT during daylight time, 23:00 PT during standard time
 
+        // Always ensure we include the full day in search window to avoid missing availability
+        // Using 23:59:59Z ensures we catch all availability for that day
+        // This fixes both the single-day search issue and the batching gap issue
+        const endAtTime = "23:59:59Z";
+
         const searchRequest = {
             query: {
                 filter: {
                     startAtRange: {
                         startAt: `${startDate}T07:00:00Z`,
-                        endAt: `${endDate}T06:59:59Z`
+                        endAt: `${endDate}T${endAtTime}`
                     },
                     locationId,
                     segmentFilters: [
@@ -1546,10 +1549,29 @@ export class SquareBookingService {
                 }
             }
         };
+        
+        console.log(`Search request for availability from ${startDate} to ${endDate} with time range: ${startDate}T07:00:00Z to ${endDate}T${endAtTime}`);
 
         try {
             const result = await client.bookings.searchAvailability(searchRequest);
             const availabilities = result?.availabilities || [];
+            
+            // Enhanced logging for debugging staff availability issues
+            // const month = new Date(startDate).toLocaleString('default', { month: 'long' });
+            // console.log(`Staff ${staffId} availability for ${month}: Found ${availabilities.length} slots`);
+            
+            // if (availabilities.length === 0) {
+            //     console.log(`DEBUGGING: No availability found for staff ${staffId} from ${startDate} to ${endDate}`);
+            //     console.log(`Request details: ${JSON.stringify(searchRequest, null, 2)}`);
+                
+            //     // Check if there are any errors or warnings in the response
+            //     if (result.errors?.length) {
+            //         console.error(`Availability errors for staff ${staffId}:`, this.safeStringify(result.errors));
+            //     }
+            // } else {
+            //     // Log a sample of found availabilities
+            //     console.log(`First available slot for staff ${staffId}: ${this.safeStringify(availabilities[0])}`);
+            // }
 
             return availabilities.map(a => {
                 const start = new Date(a.startAt!);

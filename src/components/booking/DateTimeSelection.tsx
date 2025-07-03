@@ -175,6 +175,8 @@ export default function DateTimeSelection({
     setError(null);
     const start = format(startOfDay(date), 'yyyy-MM-dd');
     const end = format(addDays(date, 1), 'yyyy-MM-dd');
+
+    console.log(`Fetching time slots for ${start} to ${end} for service ${serviceId}, variation ${variationId}, staff ${staffId}`);
     try {
       // Use the BookingCache to get availability data (either from cache or fresh)
       const data: AvailabilityResponse = await BookingCache.getAvailability(
