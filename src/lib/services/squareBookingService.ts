@@ -55,7 +55,7 @@ interface ServiceVariation {
 
 interface Service {
     id: string;
-    categoryId: string;
+    categoryIds: string[];
     name: string;
     description?: string;
     price: number;
@@ -400,7 +400,7 @@ export class SquareBookingService {
 
                     const service = {
                         id: item.id!,
-                        categoryId,
+                        categoryIds: (item.itemData?.categories?.map(c => c.id).filter(Boolean) || [categoryId].filter(Boolean)) as string[],
                         name: item.itemData?.name || 'Unnamed Service',
                         description: item.itemData?.description || '',
                         price: this.safeNumber(price),
@@ -426,7 +426,7 @@ export class SquareBookingService {
                     // Return a default service object if mapping fails
                     return {
                         id: item.id || `unknown-${Math.random().toString(36).substring(7)}`,
-                        categoryId,
+                        categoryIds: [categoryId].filter(Boolean) as string[],
                         name: 'Error Loading Service',
                         description: 'There was an error loading this service',
                         price: 0,
@@ -532,10 +532,11 @@ export class SquareBookingService {
                 const price = variation?.itemVariationData?.priceMoney?.amount || 0;
                 const duration = variation?.itemVariationData?.serviceDuration || 0;
                 const categoryId = item.itemData?.categoryId || '';
+                const categoryIds = (item.itemData?.categories?.map(c => c.id).filter(Boolean) || []) as string[];
 
                 service = {
                     id: item.id!,
-                    categoryId,
+                    categoryIds,
                     name: item.itemData?.name || 'Unnamed Service',
                     description: item.itemData?.description || '',
                     price: this.safeNumber(price),
@@ -577,6 +578,7 @@ export class SquareBookingService {
                 const price = variation.itemVariationData?.priceMoney?.amount || 0;
                 const duration = variation.itemVariationData?.serviceDuration || 0;
                 const categoryId = item.itemData?.categoryId || '';
+                const categoryIds = item.itemData?.categories?.map(c => c.id) || [];
 
                 const variations = item.itemData!.variations;
                 const validVariations = variations!.filter(v => v.type === 'ITEM_VARIATION');
@@ -584,7 +586,7 @@ export class SquareBookingService {
 
                 service = {
                     id: item.id!,
-                    categoryId,
+                    categoryIds: (item.itemData?.categories?.map(c => c.id).filter(Boolean) || [categoryId].filter(Boolean)) as string[],
                     name: item.itemData?.name || 'Unnamed Service',
                     description: item.itemData?.description || '',
                     price: this.safeNumber(price),
@@ -615,16 +617,20 @@ export class SquareBookingService {
                 timestamp: Date.now()
             };
 
-            // If this service has a category ID and we have a cache for it, add to cache
-            if (service.categoryId && this.servicesByCategory[service.categoryId]) {
-                // Check if service already exists in cache
-                const existingIndex = this.servicesByCategory[service.categoryId].services.findIndex(s => s.id === service.id);
-                if (existingIndex >= 0) {
-                    // Update existing service
-                    this.servicesByCategory[service.categoryId].services[existingIndex] = service;
-                } else {
-                    // Add new service
-                    this.servicesByCategory[service.categoryId].services.push(service);
+            // If this service has category IDs and we have a cache for any of them, add to cache
+            if (service.categoryIds && service.categoryIds.length > 0) {
+                for (const catId of service.categoryIds) {
+                    if (this.servicesByCategory[catId]) {
+                        // Check if service already exists in cache
+                        const existingIndex = this.servicesByCategory[catId].services.findIndex(s => s.id === service.id);
+                        if (existingIndex >= 0) {
+                            // Update existing service
+                            this.servicesByCategory[catId].services[existingIndex] = service;
+                        } else {
+                            // Add new service
+                            this.servicesByCategory[catId].services.push(service);
+                        }
+                    }
                 }
             }
 

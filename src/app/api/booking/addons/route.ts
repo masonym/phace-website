@@ -31,10 +31,12 @@ export async function GET(request: Request) {
                 { status: 404 }
             );
         }
+        console.log("Service: ", service);
         
         // Check if this category should skip addons entirely
-        if (service.categoryId && CATEGORIES_WITHOUT_ADDONS.includes(service.categoryId)) {
-            // Return empty array if category should have no addons
+        const hasExcludedCategory = service.categoryIds?.some(id => CATEGORIES_WITHOUT_ADDONS.includes(id));
+        if (hasExcludedCategory) {
+            // Return empty array if any category should have no addons
             return NextResponse.json([]);
         }
         
@@ -46,8 +48,10 @@ export async function GET(request: Request) {
         }
         
         // Check if this service's category has defined addons
-        if (service.categoryId && CATEGORY_ADDON_MAP[service.categoryId]) {
-            const allowedAddonIds = CATEGORY_ADDON_MAP[service.categoryId];
+        // Find the first category that has defined addons
+        const categoryWithAddons = service.categoryIds?.find(id => CATEGORY_ADDON_MAP[id]);
+        if (categoryWithAddons) {
+            const allowedAddonIds = CATEGORY_ADDON_MAP[categoryWithAddons];
             const filteredAddons = allAddons.filter(addon => allowedAddonIds.includes(addon.id));
             return NextResponse.json(filteredAddons);
         }

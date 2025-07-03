@@ -23,3 +23,5 @@ export const CATEGORY_ADDON_MAP: Record<string, string[]> = {
   // Map category IDs to arrays of addon IDs
   // Example: "CATEGORY_ID": ["ADDON_ID1", "ADDON_ID2"]
 };
+
+// CATEGORIES FOR MY SAKE:
