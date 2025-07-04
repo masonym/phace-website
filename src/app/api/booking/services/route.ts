@@ -52,6 +52,7 @@ export async function GET(request: Request) {
         // Otherwise, get all categories but don't load services yet
         console.log("Fetching all categories");
         const categories = await SquareBookingService.getServiceCategories();
+        categories.sort((a, b) => a.name.localeCompare(b.name)); // Sort categories by name
         console.log("Categories returned:", categories.length);
 
         // Return categories without services to avoid loading all services at once
