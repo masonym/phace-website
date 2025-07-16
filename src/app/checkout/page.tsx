@@ -391,7 +391,7 @@ export default function CheckoutPage() {
                                         <span>{item.quantity}x</span>
                                         <div className="relative w-8 h-8 flex-shrink-0">
                                             <Image
-                                                src={item.product.itemData!.imageIds?.[0] || '/placeholder.jpg'}
+                                                src={(item.product.itemData as any).ecom_image_uris?.[0] || '/images/placeholder.png'}
                                                 alt={item.product.itemData!.name || 'Product Image'}
                                                 fill
                                                 className="object-cover rounded"

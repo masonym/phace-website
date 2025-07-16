@@ -146,9 +146,10 @@ export default function ProductPage({ params }: ProductPageProps) {
                 </Link>
             </div>
             <div className="w-full h-[500px] relative mb-10">
-                {product.itemData!.imageIds?.[0] && (
+                {/* Use the ecom_image_uris array that contains URLs extracted from related_objects */}
+                {(product.itemData as any).ecom_image_uris?.[0] && (
                     <Image
-                        src={(product.itemData as any).ecom_image_uris[0] || ''}
+                        src={(product.itemData as any).ecom_image_uris[0]}
                         alt={product.itemData!.name || 'Product Image'}
                         fill
                         className="object-contain"

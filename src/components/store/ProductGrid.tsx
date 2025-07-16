@@ -222,6 +222,8 @@ export default function ProductGrid() {
                         const firstVariation = product.itemData.variations
                             ?.find(v => v.type === "ITEM_VARIATION");
 
+
+
                         return (
                             <ProductCard
                                 key={product.id}
@@ -237,6 +239,7 @@ export default function ProductGrid() {
                                         ? firstVariation.itemVariationData.priceMoney?.currency ?? "CAD"
                                         : "CAD",
                                     categories: product.itemData.categories?.map(cat => cat.id ?? "") ?? [],
+                                    // The ecom_image_uris array already contains URL strings, no need to map them
                                     images: (product.itemData as any).ecom_image_uris ?? [],
                                 }}
                             />

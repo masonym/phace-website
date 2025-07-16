@@ -38,14 +38,61 @@ export class ProductService {
     /**
      * Fetch a list of products from Square
      */
+    /**
+     * Get image URL from related objects
+     * @param imageId The image ID from catalog item
+     * @param relatedObjects Array of related objects from Square API response
+     * @returns URL of the image or undefined if not found
+     */
+    static getImageUrlFromRelatedObjects(imageId: string, relatedObjects?: Square.CatalogObject[]): string | undefined {
+        if (!relatedObjects || !imageId) return undefined;
+        
+        const imageObject = relatedObjects.find(
+            obj => obj.type === 'IMAGE' && obj.id === imageId
+        );
+        
+        // Type assertion for imageData which exists on IMAGE type objects
+        if (imageObject && 'imageData' in imageObject) {
+            return (imageObject as any).imageData?.url;
+        }
+        
+        return undefined;
+    }
+    
+    /**
+     * Get all image URLs for a catalog item from related objects
+     * @param item The catalog item
+     * @param relatedObjects Array of related objects from Square API response
+     * @returns Array of image URLs
+     */
+    static getImageUrlsForItem(item: Square.CatalogObject, relatedObjects?: Square.CatalogObject[]): string[] {
+        // Check if item is of type ITEM and has imageIds
+        if (item.type !== 'ITEM' || !item.itemData || !('imageIds' in item.itemData) || !relatedObjects) return [];
+        
+        // Type assertion to access imageIds
+        const imageIds = (item.itemData as any).imageIds || [];
+        
+        const imageUrls = imageIds
+            .map((imageId: string) => this.getImageUrlFromRelatedObjects(imageId, relatedObjects))
+            .filter((url: string | undefined) => url !== undefined) as string[];
+            
+        return imageUrls;
+    }
+
     static async listProducts(category?: string): Promise<Square.CatalogObject[]> {
         try {
-
             // step 1: get products (ITEMs + ITEM_VARIATIONs)
-            const itemsResult = await client.catalog.searchItems({ productTypes: ["REGULAR"] });
+            // First get all items
+            const itemsResult = await client.catalog.searchItems({ 
+                productTypes: ["REGULAR"]
+            });
+            
+            // Then get related objects with a separate call to include images
+            const catalogResponse = await client.catalog.search({
+                objectTypes: ["IMAGE"],
+                includeRelatedObjects: true
+            });
             if (!itemsResult.items) throw new Error("Failed to fetch products");
-
-            //console.log("Fetched items:", itemsResult.items);
 
             // step 2: get item options using search()
             const optionsResult = await client.catalog.search({
@@ -57,19 +104,24 @@ export class ProductService {
             });
 
             const itemOptions = optionsResult.objects || [];
-            //console.log("Fetched options:", itemOptions);
+            const relatedObjects = catalogResponse.objects || [];
 
             // step 3: build products with options
             const products: Square.CatalogObject[] = itemsResult.items
                 .filter((item) => item.type === 'ITEM')
                 .map((item) => {
+                    // Get image URLs from related objects
+                    const imageUrls = this.getImageUrlsForItem(item, relatedObjects);
+                    
                     return {
                         type: item.type,
                         id: item.id,
-                        version: item.version !== undefined ? BigInt(item.version.toString()) : BigInt(0), // default to BigInt(0) if undefined
+                        version: item.version !== undefined ? BigInt(item.version.toString()) : BigInt(0),
                         itemData: {
                             ...item.itemData,
                             variations: item.itemData?.variations || [],
+                            // Add image URLs to the item data
+                            ecom_image_uris: imageUrls
                         },
                     };
                 });
@@ -103,6 +155,7 @@ export class ProductService {
             if (!itemResult.object) throw new Error("Product not found");
 
             const item = itemResult.object;
+            const relatedObjects = itemResult.relatedObjects || [];
 
             if (item.type !== 'ITEM') {
                 throw new Error("Catalog object is not a product");
@@ -113,6 +166,9 @@ export class ProductService {
             if (!variations || variations.length === 0) {
                 throw new Error("Product has no variations");
             }
+            
+            // Get image URLs from related objects
+            const imageUrls = this.getImageUrlsForItem(item, relatedObjects);
 
             return {
                 type: item.type,
@@ -129,7 +185,11 @@ export class ProductService {
                             ...variation,
                             itemVariationData: variation.itemVariationData,
                         })),
+                    // Add image URLs to the item data
+                    ecom_image_uris: imageUrls
                 },
+                // Add related_objects with a different property name to avoid conflicts with Square types
+                _relatedObjects: relatedObjects
             } as Square.CatalogObjectItem;
         } catch (error) {
             console.error("Error fetching product:", error);
