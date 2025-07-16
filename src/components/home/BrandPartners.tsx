@@ -30,6 +30,7 @@ const partners = [
   { name: "Sharplight", image: "/images/partners/sharplight.webp" },
   { name: "Tizo", image: "/images/partners/tizo.webp" },
   { name: "Zena", image: "/images/partners/zena.webp" },
+  { name: "Bushbalm", image: "/images/partners/bushbalm.webp" },
 ]
 
 export function BrandPartners() {
