@@ -34,6 +34,7 @@ const BRAND_NAMES = [
     "Tizo",
     "Zena",
     "Phace",
+    "Bushbalm",
 ];
 
 export default function ProductGrid() {
