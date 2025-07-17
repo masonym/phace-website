@@ -40,9 +40,10 @@ interface Props {
   service?: Service;
   onSelect: (item: any) => void;
   onBack?: () => void;
+  preloadStaffForServices?: (services: Service[]) => void;
 }
 
-export default function ServiceSelection({ mode, categoryId, service, onSelect, onBack }: Props) {
+export default function ServiceSelection({ mode, categoryId, service, onSelect, onBack, preloadStaffForServices }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [variations, setVariations] = useState<ServiceVariation[]>([]);
@@ -71,6 +72,12 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
 
       console.log("Services returned:", services.length);
       setServices(services);
+      
+      // If preloadStaffForServices is provided, call it with the loaded services
+      // This allows the parent to start pre-loading staff data for these services
+      if (preloadStaffForServices && services.length > 0) {
+        preloadStaffForServices(services);
+      }
     } catch (err: any) {
       console.error("Error fetching services:", err);
       setError(err.message);

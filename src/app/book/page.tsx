@@ -13,6 +13,7 @@ import { showToast } from '@/components/ui/Toast';
 import { BookingCacheProvider } from '@/lib/cache/BookingCacheContext';
 import { useAuth } from '@/lib/hooks/useAuth';
 import CacheControls from '@/components/booking/CacheControls';
+import { BookingPreloader } from '@/lib/preload/BookingPreloader';
 
 type BookingStep =
   | 'category'
@@ -82,6 +83,7 @@ function BookingPageContent() {
   const [bookingData, setBookingData] = useState<BookingData>({});
   const [availableAddons, setAvailableAddons] = useState<Addon[]>([]);
   const [hasLoadedAddons, setHasLoadedAddons] = useState(false);
+  const [preloadedCategories, setPreloadedCategories] = useState(false);
 
   // Dynamically determine the steps based on whether addons are available
   const getSteps = () => {
@@ -116,12 +118,73 @@ function BookingPageContent() {
     setBookingData(prev => ({ ...prev, ...data }));
   };
 
+  // Immediately pre-load categories when the page loads
   useEffect(() => {
+    if (!preloadedCategories) {
+      BookingPreloader.preloadCategories();
+      setPreloadedCategories(true);
+    }
+  }, [preloadedCategories]);
+  
+  // Scroll to top when step changes and trigger pre-loading for next steps
+  useEffect(() => {
+    // Scroll to top
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
-  }, [currentStep]);
+    
+    // Pre-load data for upcoming steps
+    if (currentStep === 'category') {
+      // Categories are already pre-loaded when the page loads
+    } else if (currentStep === 'service' && bookingData.categoryId) {
+      // When on service selection, pre-load staff for popular services
+      const preloadPopularServices = async () => {
+        try {
+          const response = await fetch(`/api/booking/services?categoryId=${bookingData.categoryId}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.length > 0 && Array.isArray(data[0].services)) {
+              // Pre-load staff for the first 2 services (most popular)
+              const popularServices = data[0].services.slice(0, 2);
+              for (const service of popularServices) {
+                BookingPreloader.preloadStaffForService(service.variationId || service.id);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error pre-loading staff for popular services:', error);
+        }
+      };
+      preloadPopularServices();
+    } else if (currentStep === 'service' || currentStep === 'variation') {
+      // No specific pre-loading needed here
+    } else if (currentStep === 'staff' && bookingData.serviceId) {
+      // Pre-load addons for this service while selecting staff
+      BookingPreloader.preloadAddonsForService(bookingData.serviceId);
+    } else if (currentStep === 'addons' && bookingData.serviceId && bookingData.staffId) {
+      // Pre-load availability for today and tomorrow while selecting addons
+      const today = new Date();
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const formatDate = (date: Date) => date.toISOString().split('T')[0];
+      
+      BookingPreloader.preloadAvailability(
+        bookingData.serviceId,
+        bookingData.staffId,
+        formatDate(today),
+        bookingData.variationId
+      );
+      
+      BookingPreloader.preloadAvailability(
+        bookingData.serviceId,
+        bookingData.staffId,
+        formatDate(tomorrow),
+        bookingData.variationId
+      );
+    }
+  }, [currentStep, bookingData.categoryId, bookingData.serviceId, bookingData.staffId, bookingData.variationId]);
 
   return (
     <>
@@ -171,6 +234,24 @@ function BookingPageContent() {
               <ServiceSelection
                 mode="service"
                 categoryId={bookingData.categoryId}
+                preloadStaffForServices={(services: Service[]) => {
+                  console.log("Pre-loading staff for", services.length, "services");
+                  // Pre-load staff for the first few services (likely to be selected)
+                  services.slice(0, 3).forEach((service: Service) => {
+                    // For services with variations, pre-load for each variation
+                    if (service.variations && service.variations.length > 0) {
+                      service.variations.forEach((variation: ServiceVariation) => {
+                        console.log(`Pre-loading staff for variation ${variation.id} of service ${service.id}`);
+                        BookingPreloader.preloadStaffForService(variation.id);
+                      });
+                    } else {
+                      // For services without explicit variations, use the variation ID or service ID
+                      const variationId = service.variationId || service.id;
+                      console.log(`Pre-loading staff for service ${service.id} with variationId ${variationId}`);
+                      BookingPreloader.preloadStaffForService(variationId);
+                    }
+                  });
+                }}
                 onSelect={(selection) => {
                   console.log("Service selection:", selection);
 
@@ -181,6 +262,14 @@ function BookingPageContent() {
                       serviceName: selection.service.name,
                       service: selection.service
                     });
+                    
+                    // Pre-load staff for all variations of this service
+                    if (selection.service.variations) {
+                      selection.service.variations.forEach((variation: ServiceVariation) => {
+                        BookingPreloader.preloadStaffForService(variation.id);
+                      });
+                    }
+                    
                     setCurrentStep('variation');
                   } else if (selection.type === 'variation') {
                     // If this is a service with only one variation, store both and skip variation selection
@@ -192,6 +281,10 @@ function BookingPageContent() {
                       variationName: selection.variation.name,
                       variation: selection.variation
                     });
+                    
+                    // Pre-load staff for this variation
+                    BookingPreloader.preloadStaffForService(selection.variation.id);
+                    
                     setCurrentStep('staff');
                   }
                 }}
@@ -209,6 +302,10 @@ function BookingPageContent() {
                     variationName: selection.variation.name,
                     variation: selection.variation
                   });
+                  
+                  // Pre-load staff for this variation
+                  BookingPreloader.preloadStaffForService(selection.variation.id);
+                  
                   goToNextStep();
                 }}
                 onBack={goToPreviousStep}
@@ -226,18 +323,31 @@ function BookingPageContent() {
                   
                   // Fetch addons for this service to determine if we should show the addons step
                   if (bookingData.serviceId) {
-                    fetch(`/api/booking/addons?serviceId=${bookingData.serviceId}`)
-                      .then(res => res.json())
+                    // We'll use the BookingPreloader to load addons, which also handles caching
+                    BookingPreloader.preloadAddonsForService(bookingData.serviceId)
                       .then(data => {
-                        setAvailableAddons(data);
+                        const addonsArray = Array.isArray(data) ? data : [];
+                        setAvailableAddons(addonsArray);
                         setHasLoadedAddons(true);
+                        
                         // If no addons available, skip the addon step
-                        if (!Array.isArray(data) || data.length === 0) {
+                        if (addonsArray.length === 0) {
                           // Find next step after 'addons'
                           const addonIndex = steps.indexOf('addons');
                           if (addonIndex !== -1 && addonIndex + 1 < steps.length) {
                             // Skip directly to the step after addons
                             setCurrentStep(steps[addonIndex + 1]);
+                            
+                            // Pre-load availability for today
+                            if (bookingData.staffId && bookingData.serviceId) {
+                              const today = new Date().toISOString().split('T')[0];
+                              BookingPreloader.preloadAvailability(
+                                bookingData.serviceId,
+                                bookingData.staffId,
+                                today,
+                                bookingData.variationId
+                              );
+                            }
                           } else {
                             goToNextStep();
                           }
