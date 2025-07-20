@@ -19,8 +19,9 @@ export default function StorePage() {
                         <p className="text-gray-700">Treat someone special with a Phace gift card! Perfect for any occasion.</p>
                     </div>
                     <Link 
-                        href="/gift-cards" 
+                        href="https://squareup.com/gift/MLQZQRE5MYB56/order" 
                         className="px-6 py-3 bg-accent hover:bg-accent/80 text-white font-medium rounded-md transition duration-300 ease-in-out shadow-sm"
+                        target="_blank"
                     >
                         Shop Gift Cards
                     </Link>
