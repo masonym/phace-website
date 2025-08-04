@@ -17,6 +17,16 @@ interface ShippingAddress {
     country: string;
 }
 
+interface AppliedDiscount {
+    id: string;
+    code: string;
+    name: string;
+    type: 'PERCENTAGE' | 'FIXED_AMOUNT';
+    value: number;
+    discountAmount: number;
+    finalAmount: number;
+}
+
 export default function CheckoutPage() {
     const { cart, getCartTotal, clearCart } = useCartContext();
     const router = useRouter();
@@ -33,8 +43,14 @@ export default function CheckoutPage() {
         city: '',
         state: '',
         zipCode: '',
-        country: 'Canada',
+        country: 'CA',
     });
+
+    // Discount code state
+    const [discountCode, setDiscountCode] = useState('');
+    const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
+    const [discountLoading, setDiscountLoading] = useState(false);
+    const [discountError, setDiscountError] = useState('');
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setShippingAddress({
@@ -60,15 +76,25 @@ export default function CheckoutPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             currency: 'CAD',
+                            locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                            fulfillmentMethod,
                             items: cart.map(item => ({
                                 name: item.product.itemData!.name,
                                 variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
                                 quantity: item.quantity,
-                                price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
+                                basePriceMoney: {
+                                    amount: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0),
+                                    currency: 'CAD',
+                                },
                             })),
                             shippingAddress,
-                            locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-                            fulfillmentMethod,
+                            discount: appliedDiscount ? {
+                                code: appliedDiscount.code,
+                                name: appliedDiscount.name,
+                                type: appliedDiscount.type,
+                                value: appliedDiscount.value,
+                                discountAmount: appliedDiscount.discountAmount
+                            } : null,
                         }),
                     });
                     if (response.ok) {
@@ -94,7 +120,7 @@ export default function CheckoutPage() {
         }, 800);
 
         return () => clearTimeout(debounceTimer);
-    }, [cart, shippingAddress, fulfillmentMethod]);
+    }, [cart, shippingAddress, fulfillmentMethod, appliedDiscount]);
 
     const validateShippingAddress = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -124,6 +150,56 @@ export default function CheckoutPage() {
         return parts.join('');
     }
 
+    const handleApplyDiscount = async () => {
+        if (!discountCode.trim()) {
+            setDiscountError('Please enter a discount code');
+            return;
+        }
+
+        setDiscountLoading(true);
+        setDiscountError('');
+
+        try {
+            // Only apply discount to product subtotal, not shipping
+            const subtotal = getCartTotal();
+            const response = await fetch('/api/discount/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: discountCode.trim(),
+                    orderAmount: subtotal,
+                    cartItems: cart
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.valid) {
+                setAppliedDiscount(result.discount);
+                setDiscountError('');
+            } else {
+                setDiscountError(result.error || 'Invalid discount code');
+                setAppliedDiscount(null);
+            }
+        } catch (error) {
+            setDiscountError('Failed to validate discount code');
+            setAppliedDiscount(null);
+        } finally {
+            setDiscountLoading(false);
+        }
+    };
+
+    const handleRemoveDiscount = () => {
+        setAppliedDiscount(null);
+        setDiscountCode('');
+        setDiscountError('');
+    };
+
+    const getFinalTotal = () => {
+        const baseTotal = getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0);
+        return appliedDiscount ? appliedDiscount.finalAmount : baseTotal;
+    };
+
     const handleCardTokenizeResponseReceived = async (token: any) => {
         const validationError = validateShippingAddress();
         if (validationError) {
@@ -135,12 +211,19 @@ export default function CheckoutPage() {
         setError('');
 
         try {
+            // Calculate final amount: discounted subtotal + shipping + tax
+            const finalAmount = appliedDiscount 
+                ? appliedDiscount.finalAmount + 
+                  (fulfillmentMethod === 'shipping' ? 25 : 0) + 
+                  (calculatedOrder ? Number(calculatedOrder.totalTaxMoney.amount) / 100 : 0)
+                : (getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0));
+            
             const response = await fetch('/api/square-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     sourceId: token.token,
-                    amount: getCartTotal() * 100,
+                    amount: Math.round(finalAmount * 100), // Convert to cents
                     currency: 'CAD',
                     items: cart.map(item => ({
                         productId: item.product.id,
@@ -153,6 +236,12 @@ export default function CheckoutPage() {
                     shippingAddress,
                     locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
                     fulfillmentMethod,
+                    discount: appliedDiscount ? {
+                        code: appliedDiscount.code,
+                        name: appliedDiscount.name,
+                        discountAmount: appliedDiscount.discountAmount,
+                        originalAmount: getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0)
+                    } : null,
                 }),
             });
 
@@ -174,9 +263,19 @@ export default function CheckoutPage() {
                         variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
                         price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
                     })),
-                    total: getCartTotal(),
+                    totalAmount: finalAmount,
+                    currency: 'CAD',
+                    locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                    customerId: null, // Could be set if user is logged in
+                    originalTotal: getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0),
+                    discount: appliedDiscount ? {
+                        code: appliedDiscount.code,
+                        name: appliedDiscount.name,
+                        discountAmount: appliedDiscount.discountAmount
+                    } : null,
                     shippingAddress,
                     paymentId: payment.id,
+                    notes: `${fulfillmentMethod === 'shipping' ? 'Shipping' : 'Pickup'} order${appliedDiscount ? ` with ${appliedDiscount.code} discount` : ''}`,
                 }),
             });
 
@@ -379,6 +478,55 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="lg:w-1/3">
+                    {/* Discount Code Section */}
+                    <div className="bg-white p-6 rounded-lg shadow mb-6">
+                        <h3 className="text-lg font-semibold mb-4">Discount Code</h3>
+                        {!appliedDiscount ? (
+                            <div className="space-y-3">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={discountCode}
+                                        onChange={(e) => setDiscountCode(e.target.value)}
+                                        placeholder="Enter discount code"
+                                        className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        disabled={discountLoading}
+                                    />
+                                    <button
+                                        onClick={handleApplyDiscount}
+                                        disabled={discountLoading || !discountCode.trim()}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    >
+                                        {discountLoading ? 'Applying...' : 'Apply'}
+                                    </button>
+                                </div>
+                                {discountError && (
+                                    <p className="text-red-600 text-sm">{discountError}</p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded">
+                                    <div>
+                                        <p className="font-medium text-green-800">{appliedDiscount.name}</p>
+                                        <p className="text-sm text-green-600">
+                                            {appliedDiscount.type === 'PERCENTAGE' 
+                                                ? `${appliedDiscount.value}% off` 
+                                                : `C$${appliedDiscount.value.toFixed(2)} off`
+                                            }
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={handleRemoveDiscount}
+                                        className="text-red-600 hover:text-red-800 text-sm underline"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="bg-gray-50 p-6 rounded-lg">
                         <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
                         <div className="space-y-4">
@@ -422,6 +570,12 @@ export default function CheckoutPage() {
                                         <span>C$25.00</span>
                                     </div>
                                 )}
+                                {appliedDiscount && (
+                                    <div className="flex justify-between text-green-600">
+                                        <span>Discount ({appliedDiscount.code})</span>
+                                        <span>-C${appliedDiscount.discountAmount.toFixed(2)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <span>Tax</span>
                                     <span>
@@ -435,9 +589,15 @@ export default function CheckoutPage() {
                                 <div className="flex justify-between font-semibold">
                                     <span>Total</span>
                                     <span>
-                                        {calculatedOrder
-                                            ? `C$${(Number(calculatedOrder.totalMoney.amount) / 100).toFixed(2)}`
-                                            : `C$${(getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0)).toFixed(2)}`}
+                                        {appliedDiscount
+                                            ? `C$${(
+                                                appliedDiscount.finalAmount + 
+                                                (fulfillmentMethod === 'shipping' ? 25 : 0) + 
+                                                (calculatedOrder ? Number(calculatedOrder.totalTaxMoney.amount) / 100 : 0)
+                                            ).toFixed(2)}`
+                                            : calculatedOrder
+                                                ? `C$${(Number(calculatedOrder.totalMoney.amount) / 100).toFixed(2)}`
+                                                : `C$${(getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0)).toFixed(2)}`}
                                     </span>
                                 </div>
                             </div>

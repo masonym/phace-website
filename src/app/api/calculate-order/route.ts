@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
         shippingAddress,
         locationId,
         fulfillmentMethod,
+        discount,
     } = body;
 
     try {
@@ -31,11 +32,26 @@ export async function POST(req: NextRequest) {
                 name: `${item.name}${item.variationName ? ` (${item.variationName})` : ''}`,
                 quantity: item.quantity.toString(),
                 basePriceMoney: {
-                    amount: BigInt(Math.round(item.price * 100)),
-                    currency,
+                    amount: BigInt(item.basePriceMoney?.amount || Math.round((item.price || 0) * 100)),
+                    currency: item.basePriceMoney?.currency || currency,
                 },
             })),
         };
+
+        // Add discount if provided
+        if (discount && discount.discountAmount > 0) {
+            order.discounts = [
+                {
+                    name: `${discount.name} (${discount.code})`,
+                    type: 'FIXED_AMOUNT',
+                    amountMoney: {
+                        amount: BigInt(Math.round(discount.discountAmount * 100)), // discount amount in cents
+                        currency,
+                    },
+                    scope: 'ORDER',
+                }
+            ];
+        }
 
         if (fulfillmentMethod === 'shipping') {
             order.serviceCharges = [

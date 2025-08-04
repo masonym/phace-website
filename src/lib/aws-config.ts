@@ -27,4 +27,5 @@ export const TABLES = {
     PRODUCTS: 'phace-products',
     ORDERS: 'phace-orders',
     USERS: 'phace-users',
+    COUPONS: 'phace-coupons',
 };

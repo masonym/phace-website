@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
         shippingAddress,
         locationId,
         fulfillmentMethod,
+        discount,
     } = body;
 
     try {
@@ -38,6 +39,21 @@ export async function POST(req: NextRequest) {
                     },
                 })),
         };
+
+        // Add discount if provided
+        if (discount && discount.discountAmount > 0) {
+            order.discounts = [
+                {
+                    name: `${discount.name} (${discount.code})`,
+                    type: 'FIXED_AMOUNT',
+                    amountMoney: {
+                        amount: BigInt(Math.round(discount.discountAmount * 100)), // discount amount in cents
+                        currency,
+                    },
+                    scope: 'ORDER',
+                }
+            ];
+        }
 
         if (fulfillmentMethod === 'shipping') {
             order.serviceCharges = [
