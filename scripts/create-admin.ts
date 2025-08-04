@@ -2,9 +2,25 @@ const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
 const bcrypt = require('bcryptjs');
 const readline = require('readline');
+const dotenv = require('dotenv');
+const path = require('path');
+
+// Load environment variables from .env file in the root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+
+console.log(process.env.AWS_REGION);
+console.log(process.env.AWS_ACCESS_KEY_ID);
+console.log(process.env.AWS_SECRET_ACCESS_KEY);
+
 
 // Configure AWS SDK
-const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-west-2' });
+const ddbClient = new DynamoDBClient({
+    region: process.env.AWS_REGION || 'us-west-2',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    }
+});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 
 const rl = readline.createInterface({
