@@ -13,8 +13,6 @@ interface CreateDiscountRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Implement proper admin authentication
-    // For now, we'll skip authentication - in production, add proper auth check
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(

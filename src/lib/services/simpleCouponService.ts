@@ -14,56 +14,6 @@ interface SimpleCoupon {
   createdAt: Date;
 }
 
-// Initialize example coupons if they don't exist
-async function initializeExampleCoupons() {
-  try {
-    // Check if WELCOME10 exists
-    const welcomeExists = await dynamoDb.send(new GetCommand({
-      TableName: TABLES.COUPONS,
-      Key: { code: 'WELCOME10' }
-    }));
-
-    if (!welcomeExists.Item) {
-      await dynamoDb.send(new PutCommand({
-        TableName: TABLES.COUPONS,
-        Item: {
-          code: 'WELCOME10',
-          name: '10% Welcome Discount',
-          type: 'PERCENTAGE',
-          value: 10,
-          isActive: true,
-          usageLimit: 100,
-          currentUsage: 0,
-          createdAt: new Date().toISOString(),
-        }
-      }));
-    }
-
-    // Check if SAVE25 exists
-    const save25Exists = await dynamoDb.send(new GetCommand({
-      TableName: TABLES.COUPONS,
-      Key: { code: 'SAVE25' }
-    }));
-
-    if (!save25Exists.Item) {
-      await dynamoDb.send(new PutCommand({
-        TableName: TABLES.COUPONS,
-        Item: {
-          code: 'SAVE25',
-          name: '$25 Off Your Order',
-          type: 'FIXED_AMOUNT',
-          value: 25,
-          isActive: true,
-          currentUsage: 0,
-          createdAt: new Date().toISOString(),
-        }
-      }));
-    }
-  } catch (error) {
-    console.error('Error initializing example coupons:', error);
-  }
-}
-
 export class SimpleCouponService {
   static async validateCoupon(code: string): Promise<SimpleCoupon | null> {
     try {
@@ -141,8 +91,6 @@ export class SimpleCouponService {
 
   static async listCoupons(): Promise<SimpleCoupon[]> {
     try {
-      // Initialize example coupons on first access
-      await initializeExampleCoupons();
 
       const result = await dynamoDb.send(new ScanCommand({
         TableName: TABLES.COUPONS
