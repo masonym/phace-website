@@ -4,6 +4,7 @@ import {
     ConfirmSignUpCommand,
     ForgotPasswordCommand,
     ConfirmForgotPasswordCommand,
+    RespondToAuthChallengeCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { cognitoClient, COGNITO_CONFIG } from "../aws-config";
 
@@ -35,6 +36,32 @@ export class AuthService {
             AuthParameters: {
                 USERNAME: email,
                 PASSWORD: password,
+            },
+        });
+
+        const result = await cognitoClient.send(command);
+        
+        // Check if this is a temporary password that needs to be changed
+        if (result.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
+            throw {
+                name: 'NewPasswordRequired',
+                message: 'You must set a new password before you can sign in',
+                session: result.Session,
+                challengeParameters: result.ChallengeParameters
+            };
+        }
+        
+        return result;
+    }
+
+    static async setNewPassword(email: string, newPassword: string, session: string) {
+        const command = new RespondToAuthChallengeCommand({
+            ClientId: COGNITO_CONFIG.ClientId,
+            ChallengeName: 'NEW_PASSWORD_REQUIRED',
+            Session: session,
+            ChallengeResponses: {
+                USERNAME: email,
+                NEW_PASSWORD: newPassword,
             },
         });
 

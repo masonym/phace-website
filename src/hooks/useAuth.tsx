@@ -6,7 +6,9 @@ import Cookies from 'js-cookie';
 
 interface AuthError extends Error {
   needsConfirmation?: boolean;
+  needsNewPassword?: boolean;
   email?: string;
+  session?: string;
 }
 
 interface AuthContextType {
@@ -21,6 +23,7 @@ interface AuthContextType {
   getAccessToken: () => Promise<string | null>;
   refreshUser: () => Promise<void>;
   changePassword: (email: string, oldPassword: string, newPassword: string) => Promise<void>;
+  setNewPassword: (email: string, newPassword: string, session: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -35,6 +38,7 @@ export const AuthContext = createContext<AuthContextType>({
   getAccessToken: async () => null,
   refreshUser: async () => {},
   changePassword: async (email: string, oldPassword: string, newPassword: string) => {},
+  setNewPassword: async (email: string, newPassword: string, session: string) => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -135,6 +139,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'Failed to sign in');
       }
 
+      // Check if user needs to set a new password (temporary password)
+      if (data.needsNewPassword) {
+        const error: AuthError = new Error(data.message || 'You must set a new password before you can sign in');
+        error.needsNewPassword = true;
+        error.email = data.email;
+        error.session = data.session;
+        throw error;
+      }
+
       // Store tokens in cookies
       Cookies.set('idToken', data.idToken, {
         expires: 7, // 7 days
@@ -209,6 +222,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setNewPassword = async (email: string, newPassword: string, session: string) => {
+    try {
+      const response = await fetch('/api/auth/set-new-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, newPassword, session }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to set new password');
+      }
+
+      // Store tokens in cookies after successful password change
+      Cookies.set('idToken', data.idToken, {
+        expires: 7,
+        secure: true,
+        sameSite: 'strict'
+      });
+      
+      Cookies.set('accessToken', data.accessToken, {
+        expires: 7,
+        secure: true,
+        sameSite: 'strict'
+      });
+
+      // Decode token to get user info
+      const decoded = jwtDecode(data.idToken);
+      setUser(decoded);
+      setIsAuthenticated(true);
+
+      // Check admin status
+      try {
+        const adminResponse = await fetch('/api/admin/auth', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${data.idToken}`
+          }
+        });
+
+        if (adminResponse.ok) {
+          setIsAdmin(true);
+          Cookies.set('adminToken', data.idToken, {
+            expires: 7,
+            secure: true,
+            sameSite: 'strict'
+          });
+        } else {
+          setIsAdmin(false);
+          Cookies.remove('adminToken');
+        }
+      } catch (error) {
+        console.error('Admin check error:', error);
+        setIsAdmin(false);
+        Cookies.remove('adminToken');
+      }
+    } catch (error) {
+      console.error('Set new password error:', error);
+      throw error;
+    }
+  };
+
   const signOut = () => {
     Cookies.remove('idToken');
     Cookies.remove('accessToken');
@@ -277,6 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         getAccessToken,
         refreshUser,
         changePassword,
+        setNewPassword,
       }}
     >
       {children}

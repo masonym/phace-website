@@ -35,6 +35,20 @@ export async function POST(request: Request) {
                     { status: 401 }
                 );
             }
+            
+            // Check if the user needs to set a new password (temporary password)
+            if (error.name === 'NewPasswordRequired') {
+                return NextResponse.json(
+                    {
+                        needsNewPassword: true,
+                        email,
+                        session: error.session,
+                        message: error.message
+                    },
+                    { status: 200 }
+                );
+            }
+            
             throw error;
         }
     } catch (error: any) {
