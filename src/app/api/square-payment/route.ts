@@ -31,12 +31,9 @@ export async function POST(req: NextRequest) {
                     autoApplyTaxes: true,
                 },
                 lineItems: items.map((item: any) => ({
-                    name: `${item.name}${item.variationName ? ` (${item.variationName})` : ''}`,
+                    // Use Square catalog variation ID so pricing rules/discounts auto-apply
+                    catalogObjectId: item.catalogObjectId || item.variationId,
                     quantity: item.quantity.toString(),
-                    basePriceMoney: {
-                        amount: BigInt(Math.round(item.price * 100)), // price per unit in cents
-                        currency,
-                    },
                 })),
         };
 

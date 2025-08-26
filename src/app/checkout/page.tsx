@@ -67,51 +67,48 @@ export default function CheckoutPage() {
 
     useEffect(() => {
         const calculateOrder = async () => {
-            const canadianPostalCodeRegex = /^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/;
-            if (cart.length > 0 && canadianPostalCodeRegex.test(shippingAddress.zipCode)) {
-                try {
-                    setCalculating(true);
-                    const response = await fetch('/api/calculate-order', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            currency: 'CAD',
-                            locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-                            fulfillmentMethod,
-                            items: cart.map(item => ({
-                                name: item.product.itemData!.name,
-                                variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
-                                quantity: item.quantity,
-                                basePriceMoney: {
-                                    amount: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0),
-                                    currency: 'CAD',
-                                },
-                            })),
-                            shippingAddress,
-                            discount: appliedDiscount ? {
-                                code: appliedDiscount.code,
-                                name: appliedDiscount.name,
-                                type: appliedDiscount.type,
-                                value: appliedDiscount.value,
-                                discountAmount: appliedDiscount.discountAmount
-                            } : null,
-                        }),
-                    });
-                    if (response.ok) {
-                        const { order } = await response.json();
-                        setCalculatedOrder(order);
-                        setError('');
-                    } else {
-                        const { error } = await response.json();
-                        setError(error || 'Failed to calculate shipping and taxes.');
-                        setCalculatedOrder(null);
-                    }
-                } catch (err: any) {
-                    setError(err.message || 'Failed to calculate totals.');
+            if (cart.length === 0) {
+                setCalculatedOrder(null);
+                return;
+            }
+            try {
+                setCalculating(true);
+                const response = await fetch('/api/calculate-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        currency: 'CAD',
+                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                        fulfillmentMethod,
+                        items: cart.map(item => ({
+                            // Use Square item variation ID so pricing rules/discounts auto-apply
+                            variationId: item.selectedVariation?.id,
+                            quantity: item.quantity,
+                        })),
+                        shippingAddress,
+                        discount: appliedDiscount ? {
+                            code: appliedDiscount.code,
+                            name: appliedDiscount.name,
+                            type: appliedDiscount.type,
+                            value: appliedDiscount.value,
+                            discountAmount: appliedDiscount.discountAmount
+                        } : null,
+                    }),
+                });
+                if (response.ok) {
+                    const { order } = await response.json();
+                    setCalculatedOrder(order);
+                    setError('');
+                } else {
+                    const { error } = await response.json();
+                    setError(error || 'Failed to calculate shipping and taxes.');
                     setCalculatedOrder(null);
-                } finally {
-                    setCalculating(false);
                 }
+            } catch (err: any) {
+                setError(err.message || 'Failed to calculate totals.');
+                setCalculatedOrder(null);
+            } finally {
+                setCalculating(false);
             }
         };
 
@@ -226,12 +223,9 @@ export default function CheckoutPage() {
                     amount: Math.round(finalAmount * 100), // Convert to cents
                     currency: 'CAD',
                     items: cart.map(item => ({
-                        productId: item.product.id,
-                        variationId: item.selectedVariation?.id || null,
+                        // Use Square item variation ID so pricing rules/discounts auto-apply
+                        variationId: item.selectedVariation?.id,
                         quantity: item.quantity,
-                        name: item.product.itemData!.name,
-                        variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
-                        price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
                     })),
                     shippingAddress,
                     locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
@@ -562,18 +556,40 @@ export default function CheckoutPage() {
                             <div className="border-t pt-4 mt-4 space-y-2">
                                 <div className="flex justify-between">
                                     <span>Subtotal</span>
-                                    <span>C${getCartTotal().toFixed(2)}</span>
+                                    <span>
+                                        {calculatedOrder
+                                            ? `C$${(Number(calculatedOrder.totalGrossSalesMoney?.amount ?? 0) / 100).toFixed(2)}`
+                                            : `C$${getCartTotal().toFixed(2)}`}
+                                    </span>
                                 </div>
                                 {fulfillmentMethod === 'shipping' && (
                                     <div className="flex justify-between">
                                         <span>Shipping</span>
-                                        <span>C$25.00</span>
+                                        <span>
+                                            {calculatedOrder && calculatedOrder.totalServiceChargeMoney?.amount != null
+                                                ? `C$${(Number(calculatedOrder.totalServiceChargeMoney.amount) / 100).toFixed(2)}`
+                                                : 'C$25.00'}
+                                        </span>
                                     </div>
                                 )}
-                                {appliedDiscount && (
+                                {calculatedOrder && Number(calculatedOrder.totalDiscountMoney?.amount ?? 0) > 0 ? (
                                     <div className="flex justify-between text-green-600">
-                                        <span>Discount ({appliedDiscount.code})</span>
-                                        <span>-C${appliedDiscount.discountAmount.toFixed(2)}</span>
+                                        <span>Discounts</span>
+                                        <span>-C${(Number(calculatedOrder.totalDiscountMoney.amount) / 100).toFixed(2)}</span>
+                                    </div>
+                                ) : (
+                                    appliedDiscount && (
+                                        <div className="flex justify-between text-green-600">
+                                            <span>Discount ({appliedDiscount.code})</span>
+                                            <span>-C${appliedDiscount.discountAmount.toFixed(2)}</span>
+                                        </div>
+                                    )
+                                )}
+                                {calculatedOrder?.discounts?.length > 0 && (
+                                    <div className="text-xs text-gray-600">
+                                        Applied: {Array.from(new Set((calculatedOrder.discounts || [])
+                                            .map((d: any) => d?.discount?.name || d?.name)
+                                            .filter(Boolean))).join(', ')}
                                     </div>
                                 )}
                                 <div className="flex justify-between">
@@ -589,15 +605,9 @@ export default function CheckoutPage() {
                                 <div className="flex justify-between font-semibold">
                                     <span>Total</span>
                                     <span>
-                                        {appliedDiscount
-                                            ? `C$${(
-                                                appliedDiscount.finalAmount + 
-                                                (fulfillmentMethod === 'shipping' ? 25 : 0) + 
-                                                (calculatedOrder ? Number(calculatedOrder.totalTaxMoney.amount) / 100 : 0)
-                                            ).toFixed(2)}`
-                                            : calculatedOrder
-                                                ? `C$${(Number(calculatedOrder.totalMoney.amount) / 100).toFixed(2)}`
-                                                : `C$${(getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0)).toFixed(2)}`}
+                                        {calculatedOrder
+                                            ? `C$${(Number(calculatedOrder.totalMoney.amount) / 100).toFixed(2)}`
+                                            : `C$${(getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0)).toFixed(2)}`}
                                     </span>
                                 </div>
                             </div>

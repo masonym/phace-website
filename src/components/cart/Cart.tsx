@@ -11,6 +11,9 @@ export function Cart({ onClose }: { onClose: () => void }) {
     const router = useRouter();
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [calculating, setCalculating] = useState(false);
+    const [calculatedOrder, setCalculatedOrder] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         setMounted(true);
@@ -22,6 +25,43 @@ export function Cart({ onClose }: { onClose: () => void }) {
         onClose();
         router.push('/checkout');
     };
+
+    // Preview pricing with Square (pickup by default in cart modal)
+    useEffect(() => {
+        const calc = async () => {
+            if (cart.length === 0) {
+                setCalculatedOrder(null);
+                return;
+            }
+            try {
+                setCalculating(true);
+                setError(null);
+                const res = await fetch('/api/calculate-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        currency: 'CAD',
+                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                        fulfillmentMethod: 'pickup',
+                        items: cart.map(ci => ({ variationId: ci.selectedVariation?.id, quantity: ci.quantity })),
+                    }),
+                });
+                if (!res.ok) {
+                    const j = await res.json().catch(() => ({}));
+                    throw new Error(j.error || 'Failed to calculate order');
+                }
+                const data = await res.json();
+                setCalculatedOrder(data.order);
+            } catch (e: any) {
+                setCalculatedOrder(null);
+                setError(e?.message || 'Failed to calculate order');
+            } finally {
+                setCalculating(false);
+            }
+        };
+        const t = setTimeout(calc, 300);
+        return () => clearTimeout(t);
+    }, [cart]);
 
     const cartContent = (
         <div className="fixed inset-0 z-[100]">
@@ -93,19 +133,74 @@ export function Cart({ onClose }: { onClose: () => void }) {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-medium">
-                                            C${(Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100 * item.quantity).toFixed(2)}
-                                        </p>
+                                        {(() => {
+                                            const originalUnit = Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0);
+                                            const li = calculatedOrder?.lineItems?.find((l: any) => l.catalogObjectId === item.selectedVariation?.id);
+                                            const gross = Number(li?.grossSalesMoney?.amount ?? 0);
+                                            const disc = Number(li?.totalDiscountMoney?.amount ?? 0);
+                                            const discountedUnit = li ? Math.max(0, Math.round((gross - disc) / Math.max(1, item.quantity))) : null;
+                                            const showDiscount = discountedUnit !== null && discountedUnit < originalUnit;
+                                            return (
+                                                <div>
+                                                    {showDiscount ? (
+                                                        <div className="flex flex-col items-end">
+                                                            <div className="text-sm text-red-600 font-semibold">Sale</div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-gray-400 line-through">C${(originalUnit / 100 * item.quantity).toFixed(2)}</span>
+                                                                <span className="font-semibold">C${(((discountedUnit ?? originalUnit) / 100) * item.quantity).toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="font-medium">C${(originalUnit / 100 * item.quantity).toFixed(2)}</p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             ))}
                         </div>
 
                         <div className="mt-6 border-t pt-4">
-                            <div className="flex justify-between items-center mb-4">
-                                <span className="text-lg font-medium">Total</span>
-                                <span className="text-lg font-bold">C${getCartTotal().toFixed(2)}</span>
-                            </div>
+                            {error && (
+                                <div className="bg-red-50 text-red-700 p-2 rounded mb-3 text-sm">{error}</div>
+                            )}
+                            {calculatedOrder ? (
+                                <div className="space-y-2 text-sm mb-4">
+                                    <div className="flex justify-between">
+                                        <span>Subtotal</span>
+                                        <span>C${(Number(calculatedOrder.totalGrossSalesMoney?.amount ?? 0) / 100).toFixed(2)}</span>
+                                    </div>
+                                    {Number(calculatedOrder.totalDiscountMoney?.amount ?? 0) > 0 && (
+                                        <div className="flex justify-between text-red-600">
+                                            <span>Discounts</span>
+                                            <span>-C${(Number(calculatedOrder.totalDiscountMoney.amount) / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {calculatedOrder?.discounts?.length > 0 && (
+                                        <div className="text-xs text-gray-600">
+                                            Applied: {Array.from(new Set((calculatedOrder.discounts || [])
+                                                .map((d: any) => d?.discount?.name || d?.name)
+                                                .filter(Boolean))).join(', ')}
+                                        </div>
+                                    )}
+                                    {Number(calculatedOrder.totalTaxMoney?.amount ?? 0) > 0 && (
+                                        <div className="flex justify-between">
+                                            <span>Estimated Tax</span>
+                                            <span>C${(Number(calculatedOrder.totalTaxMoney.amount) / 100).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center pt-2 border-t mt-2">
+                                        <span className="text-lg font-medium">Total</span>
+                                        <span className="text-lg font-bold">C${(Number(calculatedOrder.totalMoney?.amount ?? 0) / 100).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="text-lg font-medium">Total</span>
+                                    <span className="text-lg font-bold">C${getCartTotal().toFixed(2)}</span>
+                                </div>
+                            )}
                             <button
                                 onClick={handleCheckout}
                                 disabled={isCheckingOut}

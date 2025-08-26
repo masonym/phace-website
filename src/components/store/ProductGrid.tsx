@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ProductCard from './ProductCard';
 import { useProducts } from '@/hooks/useProducts';
-import { Square } from 'square';
+import type { Square } from 'square';
 
 // List of known brand names
 const BRAND_NAMES = [
@@ -221,10 +221,17 @@ export default function ProductGrid() {
                     {filteredProducts.map(product => {
                         if (product.type !== "ITEM" || !product.itemData) return null;
 
-                        const firstVariation = product.itemData.variations
-                            ?.find(v => v.type === "ITEM_VARIATION");
-
-
+                        const variations = product.itemData.variations
+                            ?.filter(v => v.type === "ITEM_VARIATION") ?? [];
+                        const firstVariation = variations[0];
+                        const variationIds = variations.map(v => v.id!).filter(Boolean);
+                        const fixedPriced = variations.filter(v => v.itemVariationData?.pricingType === 'FIXED_PRICING');
+                        const minOriginalPriceCents = fixedPriced.length > 0
+                            ? fixedPriced.reduce((min, v) => {
+                                const amt = Number(v.itemVariationData?.priceMoney?.amount ?? 0);
+                                return min === null ? amt : Math.min(min, amt);
+                              }, null as number | null) ?? undefined
+                            : undefined;
 
                         return (
                             <ProductCard
@@ -243,6 +250,9 @@ export default function ProductGrid() {
                                     categories: product.itemData.categories?.map(cat => cat.id ?? "") ?? [],
                                     // The ecom_image_uris array already contains URL strings, no need to map them
                                     images: (product.itemData as any).ecom_image_uris ?? [],
+                                    // For discount preview (batch across variations)
+                                    variationIds,
+                                    minOriginalPriceCents,
                                 }}
                             />
                         );

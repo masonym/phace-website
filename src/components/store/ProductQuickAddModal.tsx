@@ -16,6 +16,9 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
     const [product, setProduct] = useState<Square.CatalogObjectItem | null>(null);
     const [selectedVariationId, setSelectedVariationId] = useState<string | null>(null);
     const [quantity, setQuantity] = useState(1);
+    const [previewOrder, setPreviewOrder] = useState<any>(null);
+    const [calculatingPreview, setCalculatingPreview] = useState(false);
+    const [previewError, setPreviewError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -49,6 +52,43 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
         return null;
     }
     const currentPrice = selectedVariation?.itemVariationData?.priceMoney?.amount ?? 0;
+
+    // Preview Square-calculated pricing for selected variation and quantity (pickup, no shipping)
+    useEffect(() => {
+        const run = async () => {
+            if (!selectedVariationId || !quantity || quantity < 1) {
+                setPreviewOrder(null);
+                return;
+            }
+            try {
+                setCalculatingPreview(true);
+                setPreviewError(null);
+                const res = await fetch('/api/calculate-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        currency: 'CAD',
+                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                        fulfillmentMethod: 'pickup',
+                        items: [{ variationId: selectedVariationId, quantity }],
+                    }),
+                });
+                if (!res.ok) {
+                    const j = await res.json().catch(() => ({}));
+                    throw new Error(j.error || 'Failed to preview price');
+                }
+                const data = await res.json();
+                setPreviewOrder(data.order);
+            } catch (e: any) {
+                setPreviewOrder(null);
+                setPreviewError(e?.message || 'Preview failed');
+            } finally {
+                setCalculatingPreview(false);
+            }
+        };
+        const t = setTimeout(run, 250);
+        return () => clearTimeout(t);
+    }, [selectedVariationId, quantity]);
 
     const handleAdd = () => {
         if (!product || !selectedVariation) return;
@@ -98,14 +138,45 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
                             <button onClick={onClose} className="text-gray-500 hover:text-black">✕</button>
                         </div>
 
-                        {/* Price Display */}
+                        {/* Price Display (Square-calculated if available) */}
                         <div className="mb-4">
-                            <p className="text-lg font-medium">
-                                C${(Number(currentPrice) / 100).toFixed(2)}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                                Excluding Sales Tax | Shipping
-                            </p>
+                            {(() => {
+                                const originalTotalCents = Number(currentPrice) * Number(quantity || 1);
+                                const li = previewOrder?.lineItems?.find((l: any) => l.catalogObjectId === selectedVariationId);
+                                const gross = Number(li?.grossSalesMoney?.amount ?? 0);
+                                const disc = Number(li?.totalDiscountMoney?.amount ?? 0);
+                                const discountedTotalCents = gross > 0 ? Math.max(0, gross - disc) : null;
+                                const showDiscount = discountedTotalCents !== null && discountedTotalCents < originalTotalCents;
+                                return (
+                                    <div className="flex flex-col items-start gap-1">
+                                        {showDiscount ? (
+                                            <>
+                                                <div className="inline-flex items-center gap-2">
+                                                    <span className="text-sm text-red-600 font-semibold">Sale</span>
+                                                    {originalTotalCents > 0 && discountedTotalCents !== null && (
+                                                        <span className="text-xs text-red-600">{Math.round((1 - discountedTotalCents / originalTotalCents) * 100)}% off</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-gray-400 line-through">C${(originalTotalCents / 100).toFixed(2)}</span>
+                                                    <span className="font-semibold">C${(((discountedTotalCents ?? originalTotalCents) / 100)).toFixed(2)}</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <span className="text-lg font-medium">C${(originalTotalCents / 100).toFixed(2)}</span>
+                                        )}
+                                        <p className="text-sm text-gray-500">Excluding Sales Tax | Shipping</p>
+                                        {previewOrder?.discounts?.length > 0 && (
+                                            <div className="text-xs text-gray-600">
+                                                Applied: {Array.from(new Set((previewOrder.discounts || []).map((d: any) => d.discount?.name || d.name).filter(Boolean))).join(', ')}
+                                            </div>
+                                        )}
+                                        {previewError && (
+                                            <div className="text-xs text-red-600">{previewError}</div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Variation Buttons */}
