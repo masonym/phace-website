@@ -79,6 +79,7 @@ export default function DateTimeSelection({
     return startOfMonth(today);
   });
   const [checkedMonths, setCheckedMonths] = useState<Set<string>>(new Set());
+  const WAITLIST_URL = process.env.NEXT_PUBLIC_WAITLIST_URL;
 
   // Calculate the date range for the calendar
   const monthStart = startOfMonth(currentMonth);
@@ -368,40 +369,154 @@ export default function DateTimeSelection({
 
               {selectedDate ? (
                 loading ? (
-                  <div className="text-center py-8">Loading time slots...</div>
+                  <div className="text-center py-8">
+                    <p className="mb-3">Loading time slots...</p>
+                    <div className="text-sm bg-accent text-white px-2 py-1 rounded">
+                      <span>Don't see a date & time that works for you?</span><br></br>{' '}
+                      {WAITLIST_URL ? (
+                        <a
+                          href={WAITLIST_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-white underline"
+                        >
+                          Join the waitlist
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => setShowWaitlist(true)}
+                          className="text-white underline"
+                        >
+                          Join the waitlist
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ) : error ? (
-                  <div className="text-red-600 text-center py-8">{error}</div>
+                  <div className="text-center py-8">
+                    <p className="text-red-600 mb-3">{error}</p>
+                    <div className="text-sm bg-accent text-white px-2 py-1 rounded">
+                      <span>Don't see a date & time that works for you?</span><br></br>{' '}
+                      {WAITLIST_URL ? (
+                        <a
+                          href={WAITLIST_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-800 underline"
+                        >
+                          Join the waitlist
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => setShowWaitlist(true)}
+                          className="text-accent underline"
+                        >
+                          Join the waitlist
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ) : isDateFullyBooked(selectedDate) ? (
                   <div className="text-center py-8">
                     <p className="text-gray-600 mb-4">This date is fully booked.</p>
-                    <button
-                      onClick={() => setShowWaitlist(true)}
-                      className="bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
-                    >
-                      Join the waitlist for this date
-                    </button>
+                    {WAITLIST_URL ? (
+                      <a
+                        href={WAITLIST_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
+                      >
+                        Join the waitlist
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => setShowWaitlist(true)}
+                        className="bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
+                      >
+                        Join the waitlist for this date
+                      </button>
+                    )}
                   </div>
                 ) : availableTimeSlots.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    No available time slots for this date.
+                    <p className="mb-4">No available time slots for this date.</p>
+                    {WAITLIST_URL ? (
+                      <a
+                        href={WAITLIST_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
+                      >
+                        Join the waitlist
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => setShowWaitlist(true)}
+                        className="bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
+                      >
+                        Join the waitlist for this date
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {availableTimeSlots.map((slot, index) => (
-                      <button
-                        key={index}
-                        onClick={() => onSelect(slot.startTime)}
-                        className="py-3 px-4 rounded-lg text-center bg-[#F8E7E1] text-gray-900 hover:bg-accent hover:text-white transition-colors"
-                      >
-                        {format(parseISO(slot.startTime), 'h:mm a')}
-                      </button>
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      {availableTimeSlots.map((slot, index) => (
+                        <button
+                          key={index}
+                          onClick={() => onSelect(slot.startTime)}
+                          className="py-3 px-4 rounded-lg text-center bg-[#F8E7E1] text-gray-900 hover:bg-blue-500 hover:text-white transition-colors"
+                        >
+                          {format(parseISO(slot.startTime), 'h:mm a')}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-6 text-center text-sm bg-accent text-white px-2 py-1 rounded">
+                      <span>Don't see a date & time that works for you?</span><br></br>{' '}
+                      {WAITLIST_URL ? (
+                        <a
+                          href={WAITLIST_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-white underline"
+                        >
+                          Join the waitlist
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => setShowWaitlist(true)}
+                          className="text-white underline"
+                        >
+                          Join the waitlist
+                        </button>
+                      )}
+                    </div>
+                  </>
                 )
               ) : (
-                <p className="text-center py-8 text-gray-500">
-                  Please select a date to view available time slots
-                </p>
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-4">Please select a date to view available time slots</p>
+                  <div className="text-sm bg-accent text-white px-2 py-1 rounded">
+                    <span>Don't see a date & time that works for you?</span><br></br>{' '}
+                    {WAITLIST_URL ? (
+                      <a
+                        href={WAITLIST_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white underline"
+                      >
+                        Join the waitlist
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => setShowWaitlist(true)}
+                        className="text-white underline"
+                      >
+                        Join the waitlist
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
