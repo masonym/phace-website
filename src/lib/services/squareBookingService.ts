@@ -678,157 +678,93 @@ export class SquareBookingService {
     }
 
     /**
-     * Cache for staff members
+     * Cache for staff members by service variation
      */
-    private static staffCache: {
-        data: StaffMember[];
-        timestamp: number;
-    } | null = null;
+    private static staffCacheByVariation: {
+        [variationId: string]: {
+            data: StaffMember[];
+            timestamp: number;
+        }
+    } = {};
 
     /**
      * Cache expiration time in milliseconds (5 minutes)
      */
-    private static STAFF_CACHE_EXPIRATION = 1;
+    private static STAFF_CACHE_EXPIRATION = 5 * 60 * 1000;
 
     /**
      * Get staff members with caching
      */
     static async getStaffMembers(variationId: string): Promise<StaffMember[]> {
         try {
-            // Check if we have cached data that's still valid
-            if (
-                this.staffCache &&
-                Date.now() - this.staffCache.timestamp < this.STAFF_CACHE_EXPIRATION
-            ) {
-                console.log('Using cached staff members data');
-                return this.staffCache.data;
+            // Check per-variation cache
+            const cached = this.staffCacheByVariation[variationId];
+            if (cached && Date.now() - cached.timestamp < this.STAFF_CACHE_EXPIRATION) {
+                console.log(`Using cached staff members for variation ${variationId}`);
+                return cached.data;
             }
 
-            console.log('Fetching fresh staff members data from Square');
+            console.log(`Fetching staff members assigned to variation ${variationId} from Square Catalog`);
 
-            const today = startOfDay(new Date());
-            const endQuery = addMonths(today, 1);
-
-            const availabilityResponse = await client.bookings.searchAvailability({
-                query: {
-                    filter: {
-                        segmentFilters: [
-                            {
-                                serviceVariationId: variationId,
-                            },
-                        ],
-                        startAtRange: {
-                            startAt: today.toISOString(),
-                            endAt: endQuery.toISOString(),
-                        },
-                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!,
-                    },
-                },
+            // Fetch the variation catalog object to get assigned team members
+            const variationResult = await client.catalog.object.get({
+                objectId: variationId,
+                includeRelatedObjects: true
             });
 
-            // Create a map to count available slots per staff member
-            // This helps us determine if a staff member has actual availability for this service
-            const staffAvailabilityCount = new Map<string, number>();
-            availabilityResponse.availabilities?.forEach(slot => {
-                slot.appointmentSegments?.forEach(seg => {
-                    const staffId = seg.teamMemberId;
-                    staffAvailabilityCount.set(staffId, (staffAvailabilityCount.get(staffId) || 0) + 1);
-                });
-            });
-
-            console.log(`Found availability for ${staffAvailabilityCount.size} staff members`);
-            
-            // Only include staff with at least one available slot
-            const availableStaffIds = Array.from(staffAvailabilityCount.keys());
-            if (availableStaffIds.length === 0) {
-                console.log('No staff members have availability for this service');
+            if (!variationResult || !variationResult.object) {
+                console.warn(`Service variation ${variationId} not found in catalog`);
                 return [];
             }
 
-            // Get team members who can be booked
-            const bookingProfilesResponse = await client.bookings.bulkRetrieveTeamMemberBookingProfiles({ teamMemberIds: availableStaffIds });
+            const obj = variationResult.object as any;
+            let teamMemberIds: string[] = [];
 
-            const bookingProfilesObj = bookingProfilesResponse.teamMemberBookingProfiles!;
-            const bookingProfiles = Object.entries(bookingProfilesObj)
-                .map(([id, entry]) => entry.teamMemberBookingProfile)
-                .filter(Boolean);
-
-            if (bookingProfiles.length === 0) {
-                console.log('No team member IDs found in booking profiles');
-                return [];
+            if (obj?.type === 'ITEM_VARIATION' && obj.itemVariationData) {
+                teamMemberIds = obj.itemVariationData.teamMemberIds || [];
+            } else if (obj?.type === 'ITEM' && obj.itemData?.variations) {
+                const v = obj.itemData.variations.find((x: any) => x.id === variationId);
+                teamMemberIds = v?.itemVariationData?.teamMemberIds || [];
             }
-            
-            // Get detailed team member info for all team members
-            const teamMemberIds = bookingProfiles.map(profile => profile!.teamMemberId!);
 
-            if (teamMemberIds.length === 0) {
-                console.log('No team member IDs found in booking profiles');
+            if (!teamMemberIds || teamMemberIds.length === 0) {
+                console.log(`No team members assigned to variation ${variationId}`);
                 return [];
             }
 
-            const teamMembersResult = await client.teamMembers.search({
-                query: {
-                }
-            });
-
-            if (!teamMembersResult.teamMembers || teamMembersResult.teamMembers.length === 0) {
-                console.log('No team members found');
-                return [];
-            }
-
-            console.log(`Found ${teamMembersResult.teamMembers.length} team members`);
-
-            // Map Square team members to our StaffMember format
-            // Only include staff members who are bookable, active, and have at least one available slot
-            const staffMembers = bookingProfiles
-                .filter(profile => {
-                    const staffId = profile!.teamMemberId!;
-                    // Check if this staff member has any available slots for this service
-                    // Use nullish coalescing to handle undefined result from Map.get()
-                    const availabilityCount = staffAvailabilityCount.get(staffId) ?? 0;
-                    const hasAvailability = availabilityCount > 0;
-                    return hasAvailability && profile!.isBookable;
-                })
-                .map(profile => {
-                    const teamMember = teamMembersResult.teamMembers?.find(
-                        tm => tm.id === profile!.teamMemberId
-                    );
-
-                    if (!teamMember) {
-                        console.log(`No team member found for profile ${profile!.teamMemberId}`);
+            // Fetch staff details for each assigned team member (use existing per-staff cache)
+            const staffResults = await Promise.all(
+                teamMemberIds.map(async (id) => {
+                    try {
+                        const staff = await this.getStaffById(id);
+                        return staff;
+                    } catch (e) {
+                        console.error(`Failed to fetch staff ${id}:`, e);
                         return null;
                     }
+                })
+            );
 
-                    return {
-                        id: profile!.teamMemberId!,
-                        name: profile!.displayName || `${teamMember.givenName || ''} ${teamMember.familyName || ''}`.trim(),
-                        email: teamMember.emailAddress || undefined,
-                        phone: teamMember.phoneNumber || undefined,
-                        bio: profile!.description || undefined,
-                        isActive: profile!.isBookable && teamMember.status === 'ACTIVE',
-                        createdAt: new Date(teamMember.createdAt || Date.now()).toISOString(),
-                        updatedAt: teamMember.updatedAt
-                            ? new Date(teamMember.updatedAt).toISOString()
-                            : undefined
-                    };
-                }).filter(Boolean) as StaffMember[];
-                
-                console.log(`Returning ${staffMembers.length} bookable staff members with availability`);
+            // Keep active/bookable staff
+            const staffMembers = staffResults.filter((s): s is StaffMember => !!s && s.isActive);
 
-            // Update the cache
-            this.staffCache = {
+            console.log(`Returning ${staffMembers.length} assigned staff for variation ${variationId}`);
+
+            // Update per-variation cache
+            this.staffCacheByVariation[variationId] = {
                 data: staffMembers,
                 timestamp: Date.now()
             };
 
             return staffMembers;
         } catch (error: unknown) {
-            console.error('Error fetching staff members from Square:', error);
+            console.error('Error fetching staff members for variation from Square:', error);
 
-            // Return cached data if available, even if expired
-            if (this.staffCache) {
-                console.log('Returning expired cached staff data due to error');
-                return this.staffCache.data;
+            // Return cached data for this variation if available, even if expired
+            const cached = this.staffCacheByVariation[variationId];
+            if (cached) {
+                console.log(`Returning expired cached staff data for variation ${variationId} due to error`);
+                return cached.data;
             }
 
             return [];
