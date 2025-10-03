@@ -1194,10 +1194,25 @@ export class SquareBookingService {
 
             // Ensure dates are in RFC 3339 format with timezone (Z for UTC)
             // If the dates don't already have a timezone, assume they're in UTC
-            const formattedStartTime = startTime.endsWith('Z') ? startTime : `${startTime}Z`;
-            const formattedEndTime = endTime.endsWith('Z') ? endTime : `${endTime}Z`;
+            let formattedStartTime = startTime.endsWith('Z') ? startTime : `${startTime}Z`;
+            let formattedEndTime = endTime.endsWith('Z') ? endTime : `${endTime}Z`;
+
+            // Square API requires a minimum 1-hour time range
+            // Calculate the actual duration between start and end
+            const startDate = new Date(formattedStartTime);
+            const endDate = new Date(formattedEndTime);
+            const durationMs = endDate.getTime() - startDate.getTime();
+            const oneHourMs = 60 * 60 * 1000;
+
+            // If the duration is less than 1 hour, extend the end time to make it at least 1 hour
+            if (durationMs < oneHourMs) {
+                const adjustedEndDate = new Date(startDate.getTime() + oneHourMs);
+                formattedEndTime = adjustedEndDate.toISOString();
+                console.log(`Adjusted end time to meet 1-hour minimum: ${formattedEndTime}`);
+            }
 
             console.log(`Formatted times: ${formattedStartTime} to ${formattedEndTime}`);
+            console.log(`Time range duration: ${(new Date(formattedEndTime).getTime() - new Date(formattedStartTime).getTime()) / (60 * 1000)} minutes`);
 
             // Construct the request body
             const requestBody = {
