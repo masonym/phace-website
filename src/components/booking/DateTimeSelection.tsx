@@ -87,7 +87,7 @@ export default function DateTimeSelection({
   const calendarStart = startOfWeek(monthStart);
   const calendarEnd = endOfWeek(monthEnd);
   const dates = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  const maxDate = addMonths(startOfDay(new Date()), 2);
+  const maxDate = addMonths(startOfDay(new Date()), 4);
 
   // Fetch available dates for the current month range
   useEffect(() => {
