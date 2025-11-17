@@ -120,7 +120,7 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                         <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-[#DEC3C5] transition-colors">
                             <div className="text-center mb-4">
                                 <div className="inline-flex items-center justify-center w-16 h-16 bg-[#DEC3C5]/10 rounded-full mb-3" aria-hidden="true">
-                                    <span className="text-2xl">💳</span>
+                                    <span className="text-2xl">🎁</span>
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Buy $100, Get $50 FREE</h3>
                                 <div className="text-3xl font-bold text-[#B09182] mb-1">$150 Total Value</div>
@@ -160,7 +160,7 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                             </div>
                             <div className="text-center mb-4">
                                 <div className="inline-flex items-center justify-center w-16 h-16 bg-[#B09182]/10 rounded-full mb-3" aria-hidden="true">
-                                    <span className="text-2xl">💳</span>
+                                    <span className="text-2xl">🎁</span>
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Buy $200, Get $100 FREE</h3>
                                 <div className="text-3xl font-bold text-[#B09182] mb-1">$300 Total Value</div>
@@ -202,9 +202,9 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                         </h4>
                         <div className="space-y-2 text-sm text-gray-600">
                             <p>• <strong>Bonus gift cards:</strong> Will be emailed separately to the purchaser after purchase.</p>
-                            <p>• <strong>Usage restrictions:</strong> Only one bonus card may be used per transaction or service.</p>
+                            <p>• <strong>Usage restrictions:</strong> Only one bonus card may be used per retail transaction or service.</p>
                             <p>• <strong>Exclusions:</strong> Bonus cards are not valid for use on naturopath, IV therapy, or nail services.</p>
-                            <p>• <strong>Regular gift cards:</strong> The main $100 or $200 gift card has no restrictions and can be used on any service.</p>
+                            <p>• <strong>Regular gift cards:</strong> May be used towards any retail purchase or service/service provider.</p>
                             {/* <p>• <strong>Expiration:</strong> Gift cards do not expire. Bonus cards issued within promotional period.</p> */}
                         </div>
                     </div>
