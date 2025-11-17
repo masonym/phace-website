@@ -6,6 +6,7 @@ import FloatingButtons from '@/components/shared/FloatingButtons'
 import { CartProvider } from '@/components/providers/CartProvider';
 import { AuthProvider } from '@/hooks/useAuth'
 import { Toaster } from 'react-hot-toast';
+import FirstVisitGiftCard from '@/components/promotions/FirstVisitGiftCard';
 
 export const metadata: Metadata = {
   title: 'Phace - Medical Spa in Chilliwack',
@@ -41,6 +42,7 @@ export default function RootLayout({
           </CartProvider>
         </AuthProvider>
         <Toaster position="bottom-right" />
+        <FirstVisitGiftCard />
       </body>
     </html>
   )
