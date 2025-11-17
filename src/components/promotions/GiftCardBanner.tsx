@@ -10,13 +10,13 @@ export default function GiftCardBanner() {
     return (
         <>
             {/* Persistent Banner */}
-            <div className="bg-gradient-to-r from-red-600 to-green-600 text-white py-3 px-4 shadow-lg mt-20">
+            <div className="bg-[#B09182] text-white py-3 px-4 shadow-lg mt-20">
                 <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-3 text-center sm:text-left">
                         {/* <span className="text-2xl" aria-hidden="true">🎄</span> */}
                         <div>
                             <p className="font-semibold text-sm sm:text-base">
-                                Holiday Gift Card Special! Buy $100, Get $150 Value • Buy $200, Get $300 Value
+                                Holiday Gift Card Special! Buy $100, Get $50 FREE • Buy $200, Get $100 FREE
                             </p>
                             <p className="text-xs sm:text-sm opacity-90">
                                 Limited time offer - Bonus gift cards emailed separately
@@ -27,7 +27,7 @@ export default function GiftCardBanner() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => setIsLightboxOpen(true)}
-                            className="bg-white text-red-600 hover:bg-gray-100 font-medium py-2 px-4 rounded-md text-sm sm:text-base transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
+                            className="bg-white text-[#59637E] hover:bg-gray-100 font-medium py-2 px-4 rounded-md text-sm sm:text-base transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
                         >
                             Learn More
                         </button>
