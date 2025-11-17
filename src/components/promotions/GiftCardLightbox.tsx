@@ -129,15 +129,15 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                             
                             <ul className="space-y-2 mb-4 text-sm">
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#DEC3C5]">✓</span>
+                                    <span className="text-[#B09182]">✓</span>
                                     <span>Get $50 in FREE bonus cards</span>
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#DEC3C5]">✓</span>
+                                    <span className="text-[#B09182]">✓</span>
                                     <span>Get 2× $25 bonus gift cards</span>
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#DEC3C5]">✓</span>
+                                    <span className="text-[#B09182]">✓</span>
                                     <span>Bonus cards emailed separately</span>
                                 </li>
                             </ul>
@@ -159,7 +159,7 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                                 BEST VALUE
                             </div>
                             <div className="text-center mb-4">
-                                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#DEC3C5]/10 rounded-full mb-3" aria-hidden="true">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#B09182]/10 rounded-full mb-3" aria-hidden="true">
                                     <span className="text-2xl">💳</span>
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Buy $200, Get $100 FREE</h3>
@@ -177,7 +177,7 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                                     <span>Get 4× $25 bonus gift cards</span>
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#DEC3C5]">✓</span>
+                                    <span className="text-[#B09182]">✓</span>
                                     <span>Bonus cards emailed separately</span>
                                 </li>
                             </ul>
