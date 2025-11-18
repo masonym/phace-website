@@ -101,7 +101,7 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                             <h1 id="gift-card-title" className="text-2xl font-bold text-[#59637E]">Holiday Gift Card Special</h1>
                             {/* <span className="text-2xl" aria-hidden="true">🎅</span> */}
                         </div>
-                        <p className="text-[#59637E]/80">Give the gift of beauty this holiday season!</p>
+                        <p className="text-[#59637E]/80">Give the gift of glow this holiday season!</p>
                     </div>
                     
                     <button 
