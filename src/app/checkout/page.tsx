@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/components/providers/CartProvider';
-import { PaymentForm, CreditCard } from 'react-square-web-payments-sdk';
+import { PaymentForm, CreditCard, Afterpay, AfterpayMessage } from 'react-square-web-payments-sdk';
 import Image from 'next/image';
 
 interface ShippingAddress {
@@ -51,6 +51,21 @@ export default function CheckoutPage() {
     const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
     const [discountLoading, setDiscountLoading] = useState(false);
     const [discountError, setDiscountError] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'afterpay'>('card');
+    const [isPaymentFormReady, setIsPaymentFormReady] = useState(false);
+
+    // Delay PaymentForm rendering until order calculation is complete
+    useEffect(() => {
+        console.log('🔍 PaymentForm useEffect triggered, calculatedOrder exists:', !!calculatedOrder);
+        if (calculatedOrder && calculatedOrder.totalMoney?.amount) {
+            const timer = setTimeout(() => {
+                setIsPaymentFormReady(true);
+            }, 100);
+            return () => clearTimeout(timer);
+        } else {
+            setIsPaymentFormReady(false);
+        }
+    }, [calculatedOrder]);
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setShippingAddress({
@@ -66,6 +81,12 @@ export default function CheckoutPage() {
     }, [cart, router]);
 
     useEffect(() => {
+        console.log('🔍 calculateOrder useEffect triggered, dependencies:', {
+            cartLength: cart.length,
+            fulfillmentMethod,
+            appliedDiscount
+        });
+        
         const calculateOrder = async () => {
             if (cart.length === 0) {
                 setCalculatedOrder(null);
@@ -73,6 +94,15 @@ export default function CheckoutPage() {
             }
             try {
                 setCalculating(true);
+                console.log('🔍 Calling calculate-order API with:', {
+                    currency: 'CAD',
+                    locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                    fulfillmentMethod,
+                    itemCount: cart.length,
+                    shippingAddress,
+                    appliedDiscount
+                });
+                
                 const response = await fetch('/api/calculate-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -95,16 +125,23 @@ export default function CheckoutPage() {
                         } : null,
                     }),
                 });
+                
+                console.log('🔍 calculate-order API response status:', response.status);
+                
                 if (response.ok) {
                     const { order } = await response.json();
+                    console.log('🔍 calculate-order API success - order:', order);
                     setCalculatedOrder(order);
                     setError('');
                 } else {
-                    const { error } = await response.json();
+                    const errorData = await response.json();
+                    console.log('🔍 calculate-order API error:', errorData);
+                    const { error } = errorData;
                     setError(error || 'Failed to calculate shipping and taxes.');
                     setCalculatedOrder(null);
                 }
             } catch (err: any) {
+                console.log('🔍 calculate-order API exception:', err);
                 setError(err.message || 'Failed to calculate totals.');
                 setCalculatedOrder(null);
             } finally {
@@ -117,7 +154,7 @@ export default function CheckoutPage() {
         }, 800);
 
         return () => clearTimeout(debounceTimer);
-    }, [cart, shippingAddress, fulfillmentMethod, appliedDiscount]);
+    }, [cart, shippingAddress, fulfillmentMethod]); // Remove appliedDiscount dependency to break circular issue
 
     const validateShippingAddress = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -172,9 +209,11 @@ export default function CheckoutPage() {
             const result = await response.json();
 
             if (result.valid) {
+                console.log('🔍 Discount API Success:', result.discount);
                 setAppliedDiscount(result.discount);
                 setDiscountError('');
             } else {
+                console.log('🔍 Discount API Failed:', result.error);
                 setDiscountError(result.error || 'Invalid discount code');
                 setAppliedDiscount(null);
             }
@@ -197,7 +236,25 @@ export default function CheckoutPage() {
         return appliedDiscount ? appliedDiscount.finalAmount : baseTotal;
     };
 
+    // Validate shipping information is complete
+    const isShippingInfoComplete = () => {
+        return (
+            shippingAddress.name.trim() &&
+            shippingAddress.email.trim() &&
+            shippingAddress.phone.trim() &&
+            shippingAddress.street.trim() &&
+            shippingAddress.city.trim() &&
+            shippingAddress.state.trim() &&
+            shippingAddress.zipCode.trim() &&
+            shippingAddress.country.trim()
+        );
+    };
+
+    // Afterpay eligibility: typically $1-$2000 CAD equivalent + complete shipping info
+    const isAfterpayEligible = getFinalTotal() >= 1 && getFinalTotal() <= 2000 && isShippingInfoComplete();
+
     const handleCardTokenizeResponseReceived = async (token: any) => {
+        console.log('🔍 Payment token received:', token);
         const validationError = validateShippingAddress();
         if (validationError) {
             setError(validationError);
@@ -208,19 +265,19 @@ export default function CheckoutPage() {
         setError('');
 
         try {
-            // Calculate final amount: discounted subtotal + shipping + tax
-            const finalAmount = appliedDiscount 
-                ? appliedDiscount.finalAmount + 
-                  (fulfillmentMethod === 'shipping' ? 25 : 0) + 
-                  (calculatedOrder ? Number(calculatedOrder.totalTaxMoney.amount) / 100 : 0)
-                : (getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0));
+            // Use the same amount that Afterpay saw in PaymentRequestOptions
+            const finalAmount = calculatedOrder 
+                ? Number(calculatedOrder.totalMoney.amount) / 100 // Convert from cents to dollars, match PaymentRequest
+                : getFinalTotal();
+            
+            console.log('🔍 Final amount for payment:', finalAmount, 'CAD');
             
             const response = await fetch('/api/square-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     sourceId: token.token,
-                    amount: Math.round(finalAmount * 100), // Convert to cents
+                    amount: Math.round(finalAmount * 100), // Convert to cents for Square API
                     currency: 'CAD',
                     items: cart.map(item => ({
                         // Use Square item variation ID so pricing rules/discounts auto-apply
@@ -325,7 +382,7 @@ export default function CheckoutPage() {
                         </div>
 
                         <div className="bg-white p-6 rounded-lg shadow">
-                            <h2 className="text-xl font-semibold mb-4">Shipping Address</h2>
+                            <h2 className="text-xl font-semibold mb-4">Billing/Shipping Address</h2>
                             <div className="grid grid-cols-1 gap-4">
                                 <input
                                     type="text"
@@ -417,12 +474,105 @@ export default function CheckoutPage() {
 
                         <div className="bg-white p-6 rounded-lg shadow">
                             <h2 className="text-xl font-semibold mb-4">Payment Information</h2>
-                            <PaymentForm
-                                applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID!}
-                                locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}
-                                cardTokenizeResponseReceived={handleCardTokenizeResponseReceived}
+                            
+                            {/* Payment Method Selection */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Choose Payment Method
+                                </label>
+                                <div className="flex gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('card')}
+                                        className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                                            paymentMethod === 'card'
+                                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                                        }`}
+                                    >
+                                        Credit/Debit Card
+                                    </button>
+                                    <div className="flex-1 relative group">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentMethod('afterpay')}
+                                            disabled={!isAfterpayEligible}
+                                            className={`w-full py-3 px-4 rounded-lg border-2 transition-colors ${
+                                                paymentMethod === 'afterpay'
+                                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                    : !isAfterpayEligible
+                                                    ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-center gap-2">
+                                                Afterpay
+                                                {!isAfterpayEligible && (
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        </button>
+                                        {!isAfterpayEligible && (
+                                            <div className="absolute z-10 w-full mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none md:pointer-events-auto">
+                                                {getFinalTotal() < 1 || getFinalTotal() > 2000 
+                                                    ? `Order total $${getFinalTotal().toFixed(2)} - Afterpay requires $1-$2,000`
+                                                    : 'Complete all shipping fields above to enable Afterpay'
+                                                }
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {isPaymentFormReady && (
+                                <PaymentForm
+                                    key={`${appliedDiscount?.id || 'no-discount'}-${fulfillmentMethod}-${getFinalTotal()}`}
+                                    applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID!}
+                                    locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}
+                                    cardTokenizeResponseReceived={handleCardTokenizeResponseReceived}
+                                createPaymentRequest={() => {
+                                    // Use calculatedOrder to match what the UI displays
+                                    const finalAmountForAfterpay = calculatedOrder 
+                                        ? Number(calculatedOrder.totalMoney.amount) / 100 // Convert from cents to dollars
+                                        : getFinalTotal();
+                                    
+                                    console.log('🔍 Afterpay PaymentRequest Debug:');
+                                    console.log('  - calculatedOrder.totalMoney.amount:', calculatedOrder?.totalMoney?.amount);
+                                    console.log('  - calculatedOrder exists:', !!calculatedOrder);
+                                    console.log('  - finalAmountForAfterpay:', finalAmountForAfterpay);
+                                    console.log('  - getFinalTotal():', getFinalTotal());
+                                    console.log('  - appliedDiscount:', appliedDiscount);
+                                    
+                                    if (!calculatedOrder) {
+                                        console.log('🚨 ERROR: calculatedOrder is null when PaymentRequest is called!');
+                                    }
+                                    
+                                    return {
+                                        countryCode: 'CA',
+                                        currencyCode: 'CAD',
+                                        total: {
+                                            amount: String(finalAmountForAfterpay),
+                                            label: 'Total',
+                                            pending: false,
+                                        },
+                                        // Required for Afterpay
+                                        shippingContact: {
+                                            familyName: shippingAddress.name.split(' ').slice(1).join(' ') || '',
+                                            givenName: shippingAddress.name.split(' ')[0] || '',
+                                            email: shippingAddress.email,
+                                            phone: shippingAddress.phone,
+                                            countryCode: 'CA',
+                                            state: shippingAddress.state,
+                                            city: shippingAddress.city,
+                                            addressLines: [shippingAddress.street],
+                                            postalCode: shippingAddress.zipCode.replace(/\s/g, ''),
+                                        },
+                                    };
+                                }}
                                 createVerificationDetails={() => ({
-                                    amount: String(calculatedOrder ? calculatedOrder.totalMoney.amount : getCartTotal() * 100),
+                                    amount: String(calculatedOrder ? calculatedOrder.totalMoney.amount : getFinalTotal() * 100),
                                     currencyCode: 'CAD',
                                     intent: 'CHARGE',
                                     billingContact: {
@@ -437,36 +587,49 @@ export default function CheckoutPage() {
                                     },
                                 })}
                             >
-                                <CreditCard
-                                    render={(Button: any) => (
-                                        <div className="flex justify-end mt-4">
-                                            <Button
-                                                css={{
-                                                    backgroundColor: '#B09182',
-                                                    color: 'white',
-                                                    padding: '12px 32px',
-                                                    borderRadius: '9999px',
-                                                    fontSize: '16px',
-                                                    fontWeight: 'bold',
-                                                    '&:after': {
-                                                        backgroundColor: '#B09182',
-                                                    },
-                                                    '&:hover': {
-                                                        backgroundColor: '#B09182/90',
-                                                    },
-                                                    '&:active': {
-                                                        backgroundColor: '#B09182',
-                                                    },
-                                                    marginLeft: 'auto',
-                                                    width: '40%',
-                                                }}
-                                            >
-                                                Process Payment
-                                            </Button>
-                                        </div>
-                                    )}
-                                />
+                                {/* Credit Card Payment */}
+                                {paymentMethod === 'card' && (
+                                    <div>
+                                        <CreditCard
+                                            render={(Button: any) => (
+                                                <div className="flex justify-end mt-4">
+                                                    <Button
+                                                        css={{
+                                                            backgroundColor: '#B09182',
+                                                            color: 'white',
+                                                            padding: '12px 32px',
+                                                            borderRadius: '9999px',
+                                                            fontSize: '16px',
+                                                            fontWeight: 'bold',
+                                                            '&:after': {
+                                                                backgroundColor: '#B09182',
+                                                            },
+                                                            '&:hover': {
+                                                                backgroundColor: '#B09182/90',
+                                                            },
+                                                            '&:active': {
+                                                                backgroundColor: '#B09182',
+                                                            },
+                                                            marginLeft: 'auto',
+                                                            width: '40%',
+                                                        }}
+                                                    >
+                                                        Process Payment
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Afterpay Payment */}
+                                {paymentMethod === 'afterpay' && (
+                                    <div>
+                                        <Afterpay />
+                                    </div>
+                                )}
                             </PaymentForm>
+                            )}
                         </div>
                     </div>
                 </div>

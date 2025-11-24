@@ -29,7 +29,7 @@ export default function Checkout() {
         zipCode: '',
         country: 'CA', // Default to Canada, adjust as needed
     });
-
+    
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setShippingAddress({
             ...shippingAddress,
@@ -195,6 +195,7 @@ export default function Checkout() {
 
                         <div className="bg-white p-6 rounded-lg shadow">
                             <h2 className="text-xl font-semibold mb-4">Payment Information</h2>
+                            
                             <PaymentForm
                                 applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID!}
                                 locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}
