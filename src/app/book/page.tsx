@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceSelection from '@/components/booking/ServiceSelection';
 import StaffSelection from '@/components/booking/StaffSelection';
@@ -79,11 +80,55 @@ export interface BookingData {
 
 // Wrapper component that provides the BookingCacheContext
 function BookingPageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState<BookingStep>('category');
   const [bookingData, setBookingData] = useState<BookingData>({});
   const [availableAddons, setAvailableAddons] = useState<Addon[]>([]);
   const [hasLoadedAddons, setHasLoadedAddons] = useState(false);
   const [preloadedCategories, setPreloadedCategories] = useState(false);
+  const [initializedFromUrl, setInitializedFromUrl] = useState(false);
+
+  // sync URL with current state
+  const updateUrl = useCallback((step: BookingStep, data: BookingData) => {
+    const params = new URLSearchParams();
+    params.set('step', step);
+    if (data.categoryId) params.set('categoryId', data.categoryId);
+    if (data.serviceId) params.set('serviceId', data.serviceId);
+    if (data.variationId) params.set('variationId', data.variationId);
+    router.replace(`/book?${params.toString()}`, { scroll: false });
+  }, [router]);
+
+  // initialize from URL params on mount
+  useEffect(() => {
+    if (initializedFromUrl) return;
+    
+    const stepParam = searchParams.get('step') as BookingStep | null;
+    const categoryId = searchParams.get('categoryId');
+    const serviceId = searchParams.get('serviceId');
+    const variationId = searchParams.get('variationId');
+
+    const newBookingData: BookingData = {};
+    if (categoryId) newBookingData.categoryId = categoryId;
+    if (serviceId) newBookingData.serviceId = serviceId;
+    if (variationId) newBookingData.variationId = variationId;
+
+    if (Object.keys(newBookingData).length > 0) {
+      setBookingData(prev => ({ ...prev, ...newBookingData }));
+    }
+
+    if (stepParam && ['category', 'service', 'variation', 'staff', 'datetime', 'addons', 'client', 'consent', 'summary'].includes(stepParam)) {
+      setCurrentStep(stepParam);
+    }
+
+    setInitializedFromUrl(true);
+  }, [searchParams, initializedFromUrl]);
+
+  // update URL when step or booking data changes (after initial load)
+  useEffect(() => {
+    if (!initializedFromUrl) return;
+    updateUrl(currentStep, bookingData);
+  }, [currentStep, bookingData.categoryId, bookingData.serviceId, bookingData.variationId, initializedFromUrl, updateUrl]);
 
   // Dynamically determine the steps based on whether addons are available
   const getSteps = () => {
