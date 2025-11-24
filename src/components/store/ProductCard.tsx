@@ -30,7 +30,8 @@ export default function ProductCard({ product }: ProductCardProps) {
 
     const { addToCart } = useCartContext();
     
-    const isAlumierProduct = product.name.includes('AlumierMD');
+    // this also needs to be changed in src\app\store\product\[id]\page.tsx
+    const isAlumierProduct = product.name.includes('AlumierMD') || product.name.includes('Alumiglow');
 
     const handleAlumierRedirect = () => {
         window.open('https://ca.alumiermd.com/account/register?code=E2BVZCUK', '_blank');

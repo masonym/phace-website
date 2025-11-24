@@ -96,7 +96,8 @@ export default function ProductPage({ params }: ProductPageProps) {
         fetchProduct();
     }, [params.id, router]);
 
-    const isAlumierProduct = product?.itemData?.name?.includes('AlumierMD') || false;
+    // this also needs to be changed in ProductCard.tsx
+    const isAlumierProduct = product?.itemData?.name?.includes('AlumierMD') || product?.itemData?.name?.includes('AlumierMD') || false;
 
     const handleAddToCart = () => {
         if (!product || !selectedVariation) return;
