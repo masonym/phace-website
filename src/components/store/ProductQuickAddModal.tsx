@@ -97,6 +97,7 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
 
     const handleAdd = () => {
         if (!product || !selectedVariation) return;
+        
         addToCart(product, quantity, selectedVariation as Square.CatalogObjectItemVariation);
         openCart();
         onClose();

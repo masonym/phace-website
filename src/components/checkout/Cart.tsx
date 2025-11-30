@@ -38,7 +38,12 @@ export default function Cart() {
                         currency: 'CAD',
                         locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
                         fulfillmentMethod: 'pickup',
-                        items: cart.map(ci => ({ variationId: ci.selectedVariation?.id, quantity: ci.quantity })),
+                        items: cart.map(ci => ({ 
+                            variationId: ci.selectedVariation?.id, 
+                            quantity: ci.quantity,
+                            basePrice: ci.basePrice,
+                            price: ci.price,
+                        })),
                         shippingAddress: { name: '', street: '', city: '', state: '', zipCode: '', country: 'CA' },
                     }),
                 });
@@ -168,7 +173,8 @@ export default function Cart() {
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                     <span>Subtotal</span>
-                                    <span>${(Number(calculatedOrder.totalGrossSalesMoney?.amount ?? 0) / 100).toFixed(2)}</span>
+                                    <span>${(calculatedOrder.lineItems?.reduce((sum: number, item: any) => 
+                                        sum + Number(item.basePriceMoney?.amount || 0), 0) / 100).toFixed(2)}</span>
                                 </div>
                                 {Number(calculatedOrder.totalDiscountMoney?.amount ?? 0) > 0 && (
                                     <div className="flex justify-between text-red-600">

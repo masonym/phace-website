@@ -105,6 +105,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             showToast({ title: 'Invalid Quantity', description: 'Enter a quantity of 1 or more', status: 'error' });
             return;
         }
+        
         addToCart(product, quantity, selectedVariation);
         openCart();
         showToast({ title: 'Added to Cart', description: `${quantity} item(s) added.`, status: 'success' });

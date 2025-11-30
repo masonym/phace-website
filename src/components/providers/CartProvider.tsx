@@ -3,6 +3,7 @@
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { Square } from 'square';
 import { CartItem } from '@/types/product';
+import { showToast } from '@/components/ui/Toast';
 
 interface CartContextType {
     cart: CartItem[];
@@ -28,7 +29,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const savedCart = localStorage.getItem('cart');
         if (savedCart) {
             try {
-                setCart(JSON.parse(savedCart));
+                const parsedCart = JSON.parse(savedCart);
+                // Filter out cart items with invalid prices (both basePrice and price must be > 0)
+                const validCart = parsedCart.filter((item: any) => 
+                    item.basePrice > 0 && 
+                    item.price > 0
+                );
+                setCart(validCart);
             } catch (error) {
                 console.error('Failed to parse cart from localStorage:', error);
                 localStorage.removeItem('cart');
@@ -41,6 +48,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [cart]);
 
     const addToCart = (product: Square.CatalogObjectItem, quantity: number, selectedVariation: Square.CatalogObjectItemVariation | null) => {
+        // Validate price before adding to cart
+        const priceAmount = selectedVariation?.itemVariationData?.priceMoney?.amount;
+        if (!priceAmount || Number(priceAmount) <= 0) {
+            showToast({ 
+                title: 'Cannot Add to Cart', 
+                description: 'This item is not available for purchase or has invalid pricing.', 
+                status: 'error' 
+            });
+            return;
+        }
+
         setCart(prevCart => {
             const existingItemIndex = prevCart.findIndex(
                 item => item.product.id === product.id &&
@@ -52,13 +70,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 newCart[existingItemIndex].quantity += quantity;
                 return newCart;
             } else {
-                const priceAmount = selectedVariation?.itemVariationData?.priceMoney?.amount;
+                const price = Number(priceAmount) / 100;
                 return [...prevCart, { 
                     product, 
                     quantity, 
                     selectedVariation,
-                    basePrice: priceAmount ? Number(priceAmount) / 100 : undefined,
-                    price: priceAmount ? Number(priceAmount) / 100 : undefined,
+                    basePrice: price,
+                    price: price,
                 }];
             }
         });
@@ -93,8 +111,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const getCartTotal = () => {
         return cart.reduce((total, item) => {
-            const price = item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0;
-            return total + (Number(price) / 100 * item.quantity); // Convert cents to dollars
+            const price = item.price || item.basePrice || 0;
+            return total + (price * item.quantity); // Price is already in dollars
         }, 0);
     };
 

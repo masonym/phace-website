@@ -285,6 +285,8 @@ export default function CheckoutPage() {
                         // Use Square item variation ID so pricing rules/discounts auto-apply
                         variationId: item.selectedVariation?.id,
                         quantity: item.quantity,
+                        basePrice: item.basePrice,
+                        price: item.price,
                     })),
                     shippingAddress,
                     locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
@@ -723,7 +725,8 @@ export default function CheckoutPage() {
                                     <span>Subtotal</span>
                                     <span>
                                         {calculatedOrder
-                                            ? `C$${(Number(calculatedOrder.totalGrossSalesMoney?.amount ?? 0) / 100).toFixed(2)}`
+                                            ? `C$${(calculatedOrder.lineItems?.reduce((sum: number, item: any) => 
+                                                sum + Number(item.basePriceMoney?.amount || 0), 0) / 100).toFixed(2)}`
                                             : `C$${getCartTotal().toFixed(2)}`}
                                     </span>
                                 </div>
