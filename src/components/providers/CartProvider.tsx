@@ -52,7 +52,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 newCart[existingItemIndex].quantity += quantity;
                 return newCart;
             } else {
-                return [...prevCart, { product, quantity, selectedVariation }];
+                const priceAmount = selectedVariation?.itemVariationData?.priceMoney?.amount;
+                return [...prevCart, { 
+                    product, 
+                    quantity, 
+                    selectedVariation,
+                    basePrice: priceAmount ? Number(priceAmount) / 100 : undefined,
+                    price: priceAmount ? Number(priceAmount) / 100 : undefined,
+                }];
             }
         });
     };

@@ -114,6 +114,8 @@ export default function CheckoutPage() {
                             // Use Square item variation ID so pricing rules/discounts auto-apply
                             variationId: item.selectedVariation?.id,
                             quantity: item.quantity,
+                            basePrice: item.basePrice,
+                            price: item.price,
                         })),
                         shippingAddress,
                         discount: appliedDiscount ? {

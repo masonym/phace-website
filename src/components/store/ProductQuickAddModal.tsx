@@ -70,7 +70,12 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
                         currency: 'CAD',
                         locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
                         fulfillmentMethod: 'pickup',
-                        items: [{ variationId: selectedVariationId, quantity }],
+                        items: [{ 
+                            variationId: selectedVariationId, 
+                            quantity,
+                            basePrice: currentPrice ? Number(currentPrice) / 100 : undefined,
+                            price: currentPrice ? Number(currentPrice) / 100 : undefined,
+                        }],
                     }),
                 });
                 if (!res.ok) {

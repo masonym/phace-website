@@ -9,4 +9,6 @@ export interface CartItem {
   product: Square.CatalogObjectItem;
   quantity: number;
   selectedVariation: Square.CatalogObjectItemVariation | null;
+  basePrice?: number;
+  price?: number;
 }
