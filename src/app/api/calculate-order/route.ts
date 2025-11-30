@@ -41,13 +41,22 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No items provided for order calculation.' }, { status: 400 });
         }
         const missingIds: number[] = [];
+        const missingPrices: number[] = [];
         items.forEach((it: any, idx: number) => {
             const id = it?.catalogObjectId || it?.variationId;
             if (!id) missingIds.push(idx);
+            
+            const price = it?.basePrice || it?.price;
+            if (!price || price <= 0) missingPrices.push(idx);
         });
         if (missingIds.length > 0) {
             return NextResponse.json({
                 error: `One or more items are missing variationId/catalogObjectId at indices: ${missingIds.join(', ')}`,
+            }, { status: 400 });
+        }
+        if (missingPrices.length > 0) {
+            return NextResponse.json({
+                error: `One or more items are missing valid price data (basePrice/price) at indices: ${missingPrices.join(', ')}`,
             }, { status: 400 });
         }
 
@@ -61,6 +70,11 @@ export async function POST(req: NextRequest) {
                 // Use Square catalog variation ID so pricing rules/discounts auto-apply
                 catalogObjectId: item.catalogObjectId || item.variationId,
                 quantity: item.quantity.toString(),
+                // Include base_price_money for variably priced items
+                basePriceMoney: {
+                    amount: BigInt(Math.round((item.basePrice || item.price) * 100)),
+                    currency: effectiveCurrency,
+                },
             })),
         };
 
