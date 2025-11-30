@@ -296,8 +296,11 @@ export default function CheckoutPage() {
                 }),
             });
 
-            if (!response.ok) throw new Error('Failed to process payment');
-            const { payment } = await response.json();
+            const paymentResult = await response.json();
+            if (!response.ok) {
+                throw new Error(paymentResult.error || 'Failed to process payment');
+            }
+            const { payment } = paymentResult;
 
             const orderResponse = await fetch('/api/orders', {
                 method: 'POST',
@@ -330,7 +333,12 @@ export default function CheckoutPage() {
                 }),
             });
 
-            if (!orderResponse.ok) throw new Error('Failed to create order');
+            const orderResult = await orderResponse.json();
+            if (!orderResponse.ok) {
+                throw new Error(orderResult.error || 'Failed to create order');
+            }
+            
+            clearCart();
             router.push('/checkout/success');
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
