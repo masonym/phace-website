@@ -86,12 +86,13 @@ export async function POST(req: NextRequest) {
                 {
                     type: 'PICKUP' as any,
                     state: 'PROPOSED' as any,
-                    recipient: {
-                        displayName: shippingAddress.name,
-                    },
                     pickupDetails: {
+                        recipient: {
+                            displayName: shippingAddress.name,
+                        },
                         isCurbsidePickup: false,
                         note: 'Order ready for pickup.',
+                        scheduleType: 'ASAP',
                     }
                 },
             ];
