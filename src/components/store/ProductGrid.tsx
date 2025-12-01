@@ -45,9 +45,125 @@ export default function ProductGrid() {
     const [selectedBrand, setSelectedBrand] = useState<string>('all');
     const [categoryNames, setCategoryNames] = useState<Square.CatalogObject[]>([]);
     const [windowWidth, setWindowWidth] = useState<number>(0);
+    const [discountPreviews, setDiscountPreviews] = useState<Map<string, { minSalePriceCents: number | null; discountPercent: number | null }>>(new Map());
 
     // Refs
     const categoryScrollRef = useRef<HTMLDivElement>(null);
+
+    // Batch fetch discount previews for all products
+    useEffect(() => {
+        const fetchBatchDiscountPreviews = async () => {
+            if (!Array.isArray(products) || products.length === 0) return;
+
+            // Check cache first
+            const cacheKey = 'discount-previews';
+            const cached = sessionStorage.getItem(cacheKey);
+            const now = Date.now();
+            
+            if (cached) {
+                try {
+                    const { data, timestamp } = JSON.parse(cached);
+                    // Use cache if less than 5 minutes old
+                    if (now - timestamp < 5 * 60 * 1000) {
+                        setDiscountPreviews(new Map(Object.entries(data)));
+                        return;
+                    }
+                } catch (e) {
+                    // Ignore cache errors and fetch fresh
+                }
+            }
+
+            // Collect all variation IDs from products
+            const allVariationIds: string[] = [];
+            const productVariationMap = new Map<string, { variationIds: string[]; minOriginalPriceCents?: number }>();
+            
+            products.forEach(product => {
+                if (product.type !== "ITEM" || !product.itemData) return;
+                
+                const variations = product.itemData.variations
+                    ?.filter(v => v.type === "ITEM_VARIATION") ?? [];
+                const variationIds = variations.map(v => v.id!).filter(Boolean);
+                const fixedPriced = variations.filter(v => v.itemVariationData?.pricingType === 'FIXED_PRICING');
+                const minOriginalPriceCents = fixedPriced.length > 0
+                    ? fixedPriced.reduce((min, v) => {
+                        const amt = Number(v.itemVariationData?.priceMoney?.amount ?? 0);
+                        return min === null ? amt : Math.min(min, amt);
+                      }, null as number | null) ?? undefined
+                    : undefined;
+
+                if (variationIds.length > 0) {
+                    allVariationIds.push(...variationIds);
+                    productVariationMap.set(product.id, { variationIds, minOriginalPriceCents });
+                }
+            });
+
+            if (allVariationIds.length === 0) return;
+
+            try {
+                // Single API call for all variations
+                const res = await fetch('/api/preview-variations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        variationIds: allVariationIds,
+                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                    }),
+                });
+
+                if (!res.ok) return;
+
+                const batchData = await res.json();
+                
+                // Process batch data and map back to individual products
+                const previewMap = new Map();
+                
+                productVariationMap.forEach((productData, productId) => {
+                    // For each product, find the minimum discounted price among its variations
+                    const productVariationIds = productData.variationIds;
+                    
+                    // Find the minimum discounted price for this product's variations
+                    const productResults = batchData.results?.filter((result: any) => 
+                        productVariationIds.includes(result.variationId)
+                    ) || [];
+                    
+                    const minDiscounted = productResults.length > 0
+                        ? productResults.reduce((min: number | null, result: any) => {
+                            const price = result.discountedUnitPriceCents;
+                            return min === null || price < min ? price : min;
+                        }, null)
+                        : null;
+                    
+                    let discountPercent = null;
+                    const baselineOriginal = typeof productData.minOriginalPriceCents === 'number'
+                        ? productData.minOriginalPriceCents
+                        : null;
+                    
+                    if (baselineOriginal && minDiscounted !== null && minDiscounted < baselineOriginal) {
+                        const pct = Math.round(100 - (minDiscounted / baselineOriginal) * 100);
+                        discountPercent = pct;
+                    }
+                    
+                    previewMap.set(productId, {
+                        minSalePriceCents: minDiscounted,
+                        discountPercent
+                    });
+                });
+
+                setDiscountPreviews(previewMap);
+                
+                // Cache the results
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                    data: Object.fromEntries(previewMap),
+                    timestamp: now
+                }));
+                
+            } catch (error) {
+                console.error('Failed to fetch batch discount previews:', error);
+            }
+        };
+
+        fetchBatchDiscountPreviews();
+    }, [products]);
 
     // Fetch category names when products load
     useEffect(() => {
@@ -254,6 +370,7 @@ export default function ProductGrid() {
                                     variationIds,
                                     minOriginalPriceCents,
                                 }}
+                                discountPreview={discountPreviews.get(product.id)}
                             />
                         );
                     })}

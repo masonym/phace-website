@@ -21,12 +21,15 @@ interface ProductCardProps {
         variationIds?: string[];
         minOriginalPriceCents?: number;
     };
+    // Pass batched discount data to prevent individual API calls
+    discountPreview?: {
+        minSalePriceCents: number | null;
+        discountPercent: number | null;
+    };
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, discountPreview }: ProductCardProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [minSalePriceCents, setMinSalePriceCents] = useState<number | null>(null);
-    const [discountPercent, setDiscountPercent] = useState<number | null>(null);
 
     const { addToCart } = useCartContext();
     
@@ -37,39 +40,9 @@ export default function ProductCard({ product }: ProductCardProps) {
         window.open('https://ca.alumiermd.com/account/register?code=E2BVZCUK', '_blank');
     };
 
-    // Fetch discounted preview price across all variations and use the minimum
-    useEffect(() => {
-        const fetchPreview = async () => {
-            if (!Array.isArray(product.variationIds) || product.variationIds.length === 0) return;
-            try {
-                const res = await fetch('/api/preview-variations', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        variationIds: product.variationIds,
-                        // pass locationId from client env to avoid server env mismatch
-                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-                    }),
-                });
-                if (!res.ok) return;
-                const data = await res.json();
-                const minDiscounted = typeof data.minDiscountedUnitPriceCents === 'number' ? data.minDiscountedUnitPriceCents : null;
-                setMinSalePriceCents(minDiscounted);
-
-                const baselineOriginal = typeof product.minOriginalPriceCents === 'number'
-                    ? product.minOriginalPriceCents
-                    : (typeof product.price === 'number' ? Number(product.price) : null);
-                if (baselineOriginal && minDiscounted !== null && minDiscounted < baselineOriginal) {
-                    const pct = Math.round(100 - (minDiscounted / baselineOriginal) * 100);
-                    setDiscountPercent(pct);
-                } else setDiscountPercent(null);
-            } catch (_) {
-                // ignore preview errors
-            }
-        };
-        fetchPreview();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [JSON.stringify(product.variationIds), product.minOriginalPriceCents, product.price]);
+    // Use batched discount data instead of individual API calls
+    const minSalePriceCents = discountPreview?.minSalePriceCents || null;
+    const discountPercent = discountPreview?.discountPercent || null;
 
     if (product.type !== 'ITEM') {
         return null;
