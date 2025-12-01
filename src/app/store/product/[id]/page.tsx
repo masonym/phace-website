@@ -74,6 +74,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     const [selectedVariation, setSelectedVariation] = useState<Square.CatalogObjectItemVariation | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [discountPreviews, setDiscountPreviews] = useState<Map<string, { discountedUnitPriceCents: number; appliedDiscounts: string[] }>>(new Map());
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -95,6 +96,76 @@ export default function ProductPage({ params }: ProductPageProps) {
         };
         fetchProduct();
     }, [params.id, router]);
+
+    // Fetch discount previews for product variations
+    useEffect(() => {
+        const fetchDiscountPreviews = async () => {
+            if (!product?.itemData?.variations) return;
+
+            // Check cache first
+            const cacheKey = `product-discounts-${product.id}`;
+            const cached = sessionStorage.getItem(cacheKey);
+            const now = Date.now();
+            
+            if (cached) {
+                try {
+                    const { data, timestamp } = JSON.parse(cached);
+                    // Use cache if less than 5 minutes old
+                    if (now - timestamp < 5 * 60 * 1000) {
+                        setDiscountPreviews(new Map(Object.entries(data)));
+                        return;
+                    }
+                } catch (e) {
+                    // Ignore cache errors and fetch fresh
+                }
+            }
+
+            // Collect variation IDs
+            const variations = product.itemData.variations.filter(v => v.type === 'ITEM_VARIATION');
+            const variationIds = variations.map(v => v.id!).filter(Boolean);
+
+            if (variationIds.length === 0) return;
+
+            try {
+                const res = await fetch('/api/preview-variations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        variationIds,
+                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                    }),
+                });
+
+                if (!res.ok) return;
+
+                const data = await res.json();
+                
+                // Convert results array to Map for easy lookup
+                const previewMap = new Map();
+                if (data.results) {
+                    data.results.forEach((result: any) => {
+                        previewMap.set(result.variationId, {
+                            discountedUnitPriceCents: result.discountedUnitPriceCents,
+                            appliedDiscounts: result.appliedDiscounts
+                        });
+                    });
+                }
+
+                setDiscountPreviews(previewMap);
+                
+                // Cache the results
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                    data: Object.fromEntries(previewMap),
+                    timestamp: now
+                }));
+                
+            } catch (error) {
+                console.error('Failed to fetch discount previews:', error);
+            }
+        };
+
+        fetchDiscountPreviews();
+    }, [product]);
 
     // this also needs to be changed in ProductCard.tsx
     const isAlumierProduct = product?.itemData?.name?.includes('AlumierMD') || product?.itemData?.name?.includes('AlumierMD') || false;
@@ -180,14 +251,39 @@ export default function ProductPage({ params }: ProductPageProps) {
                                         onClick={() => setSelectedVariation(variation)}
                                     >
                                         <div className="font-medium">{variation.itemVariationData?.name}</div>
-                                        {variation.itemVariationData?.priceMoney && (
-                                            <div className="text-sm text-gray-700 mt-1">
-                                                {formatMoney(
-                                                    variation.itemVariationData.priceMoney.amount!,
-                                                    variation.itemVariationData.priceMoney.currency!
-                                                )}
-                                            </div>
-                                        )}
+                                        {variation.itemVariationData?.priceMoney && (() => {
+                                            const originalPrice = Number(variation.itemVariationData.priceMoney.amount!);
+                                            const discountPreview = discountPreviews.get(variation.id!);
+                                            const showDiscount = discountPreview?.discountedUnitPriceCents !== undefined && 
+                                                              discountPreview.discountedUnitPriceCents < originalPrice;
+                                            
+                                            if (showDiscount && discountPreview) {
+                                                const discountPercent = Math.round(100 - (discountPreview.discountedUnitPriceCents / originalPrice) * 100);
+                                                return (
+                                                    <div className="mt-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                                                                {discountPercent > 0 ? `${discountPercent}% off` : 'Sale'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-baseline gap-2 mt-1">
+                                                            <span className="text-xs text-gray-400 line-through">
+                                                                {formatMoney(originalPrice, variation.itemVariationData.priceMoney.currency!)}
+                                                            </span>
+                                                            <span className="text-sm font-semibold text-gray-900">
+                                                                {formatMoney(discountPreview.discountedUnitPriceCents, variation.itemVariationData.priceMoney.currency!)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            
+                                            return (
+                                                <div className="text-sm text-gray-700 mt-1">
+                                                    {formatMoney(originalPrice, variation.itemVariationData.priceMoney.currency!)}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 ))}
                         </div>
