@@ -333,7 +333,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                     ? 'No services found in this category. Please select a different category.'
                     : 'No variations found for this service. Please select a different service.'}
               </p>
-              <pre className="mt-4 text-left bg-gray-100 p-4 rounded overflow-auto max-w-lg mx-auto text-xs">
+              {/* <pre className="mt-4 text-left bg-gray-100 p-4 rounded overflow-auto max-w-lg mx-auto text-xs">
                 Debug Info:
                 {JSON.stringify({
                   mode,
@@ -345,7 +345,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                   loading,
                   error
                 }, null, 2)}
-              </pre>
+              </pre> */}
             </div>
           )}
         </div>
