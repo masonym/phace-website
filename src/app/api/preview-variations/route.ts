@@ -32,42 +32,71 @@ export async function POST(req: NextRequest) {
 
     // Resolve previews, using cache per-variation. We do per-variation calculate calls to avoid cross-item rule interactions.
     const results: Array<{ variationId: string; discountedUnitPriceCents: number; appliedDiscounts: string[] }> = [];
+    const now = Date.now();
 
+    // Separate cached and uncached variations
+    const uncachedVariations: string[] = [];
     for (const vid of variationIds) {
-      const now = Date.now();
       const cached = cache.get(vid);
       if (cached && cached.expiresAt > now) {
         results.push({ variationId: vid, discountedUnitPriceCents: cached.priceCents, appliedDiscounts: cached.appliedDiscounts });
-        continue;
+      } else {
+        uncachedVariations.push(vid);
       }
+    }
 
-      const order: any = {
-        locationId,
-        pricingOptions: { autoApplyDiscounts: true, autoApplyTaxes: true },
-        lineItems: [
-          {
-            catalogObjectId: vid,
-            quantity: '1',
-          },
-        ],
-      };
+    // Process uncached variations in parallel batches to avoid overwhelming Square API
+    const BATCH_SIZE = 10; // Limit concurrent requests
+    const timeoutMs = 8000; // 8 second timeout per request
 
-      const resp = await client.orders.calculate({ order });
-      const li = resp.order?.lineItems?.[0];
-      const gross = Number(li?.grossSalesMoney?.amount ?? 0);
-      const disc = Number(li?.totalDiscountMoney?.amount ?? 0);
-      const discounted = Math.max(0, gross - disc);
+    for (let i = 0; i < uncachedVariations.length; i += BATCH_SIZE) {
+      const batch = uncachedVariations.slice(i, i + BATCH_SIZE);
+      
+      const batchPromises = batch.map(async (vid) => {
+        try {
+          const order: any = {
+            locationId,
+            pricingOptions: { autoApplyDiscounts: true, autoApplyTaxes: true },
+            lineItems: [
+              {
+                catalogObjectId: vid,
+                quantity: '1',
+              },
+            ],
+          };
 
-      const appliedDiscountNames: string[] = [];
-      const orderDiscounts = resp.order?.discounts as any[] | undefined;
-      if (orderDiscounts && Array.isArray(orderDiscounts)) {
-        for (const d of orderDiscounts) {
-          if (d?.name) appliedDiscountNames.push(String(d.name));
+          // Add timeout wrapper
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+          });
+
+          const calculatePromise = client.orders.calculate({ order });
+          const resp = await Promise.race([calculatePromise, timeoutPromise]) as any;
+          
+          const li = resp.order?.lineItems?.[0];
+          const gross = Number(li?.grossSalesMoney?.amount ?? 0);
+          const disc = Number(li?.totalDiscountMoney?.amount ?? 0);
+          const discounted = Math.max(0, gross - disc);
+
+          const appliedDiscountNames: string[] = [];
+          const orderDiscounts = resp.order?.discounts as any[] | undefined;
+          if (orderDiscounts && Array.isArray(orderDiscounts)) {
+            for (const d of orderDiscounts) {
+              if (d?.name) appliedDiscountNames.push(String(d.name));
+            }
+          }
+
+          cache.set(vid, { priceCents: discounted, appliedDiscounts: appliedDiscountNames, expiresAt: now + TTL_MS });
+          return { variationId: vid, discountedUnitPriceCents: discounted, appliedDiscounts: appliedDiscountNames };
+        } catch (error) {
+          console.error(`Failed to fetch preview for variation ${vid}:`, error);
+          // Return original price as fallback
+          return { variationId: vid, discountedUnitPriceCents: 0, appliedDiscounts: [] };
         }
-      }
+      });
 
-      cache.set(vid, { priceCents: discounted, appliedDiscounts: appliedDiscountNames, expiresAt: now + TTL_MS });
-      results.push({ variationId: vid, discountedUnitPriceCents: discounted, appliedDiscounts: appliedDiscountNames });
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
     }
 
     // Also provide the minimum price across variations for convenience

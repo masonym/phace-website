@@ -68,16 +68,17 @@ export default function ProductCard({ product, discountPreview }: ProductCardPro
                                 const baselineOriginal = typeof product.minOriginalPriceCents === 'number'
                                     ? product.minOriginalPriceCents
                                     : Number(product.price);
-                                const showDiscount = minSalePriceCents !== null && minSalePriceCents < baselineOriginal;
-                                if (showDiscount) {
+                                const showDiscount = discountPreview?.minSalePriceCents !== null && discountPreview?.minSalePriceCents !== undefined && discountPreview.minSalePriceCents < baselineOriginal;
+                                if (showDiscount && discountPreview) {
+                                    const salePrice = discountPreview.minSalePriceCents!; // Non-null assertion - we've validated above
                                     return (
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-                                                {discountPercent ? `${discountPercent}% off` : 'Sale'}
+                                                {discountPreview.discountPercent ? `${discountPreview.discountPercent}% off` : 'Sale'}
                                             </span>
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-gray-400 line-through">C${(baselineOriginal / 100).toFixed(2)}</span>
-                                                <span className="text-gray-900 font-semibold">{hasMultiple ? `From C$${(minSalePriceCents! / 100).toFixed(2)}` : `C$${(minSalePriceCents! / 100).toFixed(2)}`}</span>
+                                                <span className="text-gray-900 font-semibold">{hasMultiple ? `From C$${(salePrice / 100).toFixed(2)}` : `C$${(salePrice / 100).toFixed(2)}`}</span>
                                             </div>
                                         </div>
                                     );
