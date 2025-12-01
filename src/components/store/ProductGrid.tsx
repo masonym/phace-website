@@ -38,6 +38,83 @@ const BRAND_NAMES = [
     "Colorescience"
 ];
 
+// Skeleton loading component for product grid
+function ProductGridSkeleton() {
+    return (
+        <div className="container mx-auto px-4 py-24">
+            {/* Desktop sidebar skeleton */}
+            <div className="hidden lg:block lg:w-1/5 lg:min-w-[200px] lg:sticky lg:top-24 lg:self-start lg:h-fit mb-8">
+                <div className="mb-8">
+                    <div className="h-7 w-32 bg-gray-200 rounded mb-4 animate-pulse"></div>
+                    <div className="flex flex-col gap-2">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="h-10 w-full bg-gray-200 rounded-md animate-pulse"></div>
+                        ))}
+                    </div>
+                </div>
+                <div>
+                    <div className="h-7 w-32 bg-gray-200 rounded mb-4 animate-pulse"></div>
+                    <div className="flex flex-col gap-2">
+                        {[...Array(12)].map((_, i) => (
+                            <div key={i} className="h-10 w-full bg-gray-200 rounded-md animate-pulse"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile filters skeleton */}
+            <div className="lg:hidden mb-8">
+                <div className="mb-6">
+                    <div className="h-5 w-32 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                    <div className="flex gap-4 overflow-x-auto pb-4">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="h-10 w-24 bg-gray-200 rounded-md animate-pulse"></div>
+                        ))}
+                    </div>
+                </div>
+                <div>
+                    <div className="h-5 w-32 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                    <div className="flex gap-4 overflow-x-auto pb-4">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="h-10 w-24 bg-gray-200 rounded-md animate-pulse"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Product count skeleton */}
+            <div className="mb-6">
+                <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+
+            {/* Product grid skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
+                {[...Array(9)].map((_, i) => (
+                    <div key={i} className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
+                        {/* Product image skeleton */}
+                        <div className="relative h-64 w-full bg-gray-200 animate-pulse"></div>
+                        
+                        {/* Product content skeleton */}
+                        <div className="p-4">
+                            {/* Product title skeleton */}
+                            <div className="h-6 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4 animate-pulse"></div>
+                            
+                            {/* Price skeleton */}
+                            <div className="mb-4">
+                                <div className="h-5 w-20 bg-gray-200 rounded animate-pulse"></div>
+                            </div>
+                            
+                            {/* Add to cart button skeleton */}
+                            <div className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function ProductGrid() {
     // State hooks
     const { products, isLoading, error } = useProducts();
@@ -215,8 +292,8 @@ export default function ProductGrid() {
     }, []);
 
     // Loading and error states
-    if (isLoading) return <div>Loading...</div>;
-    if (error) return <div>Error loading products</div>;
+    if (isLoading) return <ProductGridSkeleton />;
+    if (error) return <div className="container mx-auto px-4 py-8 text-center text-red-600">Error loading products: {String(error)}</div>;
 
     // Derived values
     const isDesktop = windowWidth >= 1024;
