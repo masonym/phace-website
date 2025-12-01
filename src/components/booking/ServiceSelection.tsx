@@ -103,7 +103,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
         category.isActive !== false // Consider undefined or true as active
       ).filter((category: any) => {
         // filter out categories like "Add-ons", "Gift Cards", and "Retail"
-        const excludedCategories = ['add-ons', 'add-ons', 'gift cards', 'retail'];
+        const excludedCategories = ['add-ons', 'add-ons', 'gift cards', 'retail', 'black friday service packages'];
         const categoryNameLower = category.name.toLowerCase().trim();
         const isExcluded = excludedCategories.includes(categoryNameLower);
 
