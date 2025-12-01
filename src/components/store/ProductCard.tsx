@@ -43,6 +43,9 @@ export default function ProductCard({ product, discountPreview }: ProductCardPro
     // Use batched discount data instead of individual API calls
     const minSalePriceCents = discountPreview?.minSalePriceCents || null;
     const discountPercent = discountPreview?.discountPercent || null;
+    
+    // Check if discounts are still loading
+    const isDiscountLoading = discountPreview === undefined && Array.isArray(product.variationIds) && product.variationIds.length > 0;
 
     if (product.type !== 'ITEM') {
         return null;
@@ -68,22 +71,38 @@ export default function ProductCard({ product, discountPreview }: ProductCardPro
                                 const baselineOriginal = typeof product.minOriginalPriceCents === 'number'
                                     ? product.minOriginalPriceCents
                                     : Number(product.price);
+                                
+                                // Show loading state while discounts are being fetched
+                                if (isDiscountLoading) {
+                                    return (
+                                        <div className="flex items-center gap-2">
+                                            <div className="animate-pulse">
+                                                <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                                            </div>
+                                            <span className="text-gray-600 text-sm">Loading price...</span>
+                                        </div>
+                                    );
+                                }
+                                
                                 const showDiscount = discountPreview?.minSalePriceCents !== null && discountPreview?.minSalePriceCents !== undefined && discountPreview.minSalePriceCents < baselineOriginal;
+                                
                                 if (showDiscount && discountPreview) {
                                     const salePrice = discountPreview.minSalePriceCents!; // Non-null assertion - we've validated above
                                     return (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                                        <div className="flex items-center gap-2 transition-all duration-300 ease-in-out">
+                                            <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full animate-fade-in">
                                                 {discountPreview.discountPercent ? `${discountPreview.discountPercent}% off` : 'Sale'}
                                             </span>
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-gray-400 line-through">C${(baselineOriginal / 100).toFixed(2)}</span>
-                                                <span className="text-gray-900 font-semibold">{hasMultiple ? `From C$${(salePrice / 100).toFixed(2)}` : `C$${(salePrice / 100).toFixed(2)}`}</span>
+                                                <span className="text-gray-900 font-semibold animate-fade-in">{hasMultiple ? `From C$${(salePrice / 100).toFixed(2)}` : `C$${(salePrice / 100).toFixed(2)}`}</span>
                                             </div>
                                         </div>
                                     );
                                 }
-                                return <p className="text-gray-600">C${(baselineOriginal / 100).toFixed(2)}</p>;
+                                
+                                // Show base price when no discounts available
+                                return <p className="text-gray-600 transition-all duration-300 ease-in-out">C${(baselineOriginal / 100).toFixed(2)}</p>;
                             })()}
                         </div>
                     ) : (

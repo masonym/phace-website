@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import custom animations for smooth UI transitions */
+@import '../styles/animations.css';
+
 @font-face {
   font-family: 'Spinnaker';
   /*src: url('/fonts/Spinnaker-Regular.ttf') format('truetype');*/
