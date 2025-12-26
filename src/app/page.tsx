@@ -10,7 +10,7 @@ import GiftCardBanner from '@/components/promotions/GiftCardBanner'
 export default function Home() {
   return (
     <>
-      <GiftCardBanner />
+      {/* <GiftCardBanner /> */}
       <Hero />
       <Services />
       <ClientStories />

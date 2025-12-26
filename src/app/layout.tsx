@@ -42,7 +42,7 @@ export default function RootLayout({
           </CartProvider>
         </AuthProvider>
         <Toaster position="bottom-right" />
-        <FirstVisitGiftCard />
+        {/* <FirstVisitGiftCard /> */}
       </body>
     </html>
   )
