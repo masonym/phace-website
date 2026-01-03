@@ -10,7 +10,13 @@ import {
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { v4 as uuidv4 } from 'uuid';
 
-const dynamoClient = new DynamoDBClient({});
+const dynamoClient = new DynamoDBClient({ 
+    region: process.env.AWS_REGION || 'us-west-2',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    },
+});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 const verifier = CognitoJwtVerifier.create({
