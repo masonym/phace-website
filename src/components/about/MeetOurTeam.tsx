@@ -42,6 +42,17 @@ const team = [
       'Anna is a Certified Medical Aesthetician, Laser Technician, and Paramedical Tattoo Artist. With over a decade of experience, she has a deep knowledge of how the skin functions.',
       'Specializing in all skin focused treatments and customized scar revisions, her positive attitude will guarantee that you always feel welcome and comfortable at Phace. Helping to bring out your confidence is what Anna loves most about her work.'
     ]
+  },
+  {
+    name: 'Alyssa Maxwell',
+    title: 'Certified Medical Aesthetician',
+    image: '/images/team/alyssa.webp',
+    instagram: '@_skinbyalyssa',
+    bio: [
+      'Alyssa is a Certified Medical Aesthetician with over a decade of experience. With a passion for skincare, she combines advanced, results-oriented treatments with a warm, personalized approach.',
+      'She specializes in advanced custom facials, chemical peels, microneedling, Tixel, and waxing, combining precision with a calming and empathetic atmosphere. She understands that skin concerns can be deeply personal, which is why building long-term relationships with her clients, taking the time to educate and empower them, has always been important to her.',
+      'Alyssa has recently returned to her hometown of Chilliwack and is eager to share her expertise with some new faces.'
+    ]
   }
 ]
 
