@@ -10,7 +10,7 @@ const services = [
 
     // Our treatments incorporate cutting-edge technology and medical-grade products to deliver visible results. Whether you're looking to address specific skin concerns or simply maintain healthy, glowing skin, we have the perfect treatment for you.`,
     image: '/images/facials.webp',
-    // link: '/treatments/facials'
+    link: '/treatments'
   },
   {
     title: 'Brows, Lashes, and Nails',
@@ -36,7 +36,13 @@ const services = [
     // longDescription: `Experience the transformative power of our advanced laser services at Phace, designed for exceptional results in hair removal, facial rejuvenation, acne, and rosacea treatments. Our experienced team customizes treatment plans to address your unique concerns, ensuring optimal results and a radiant, youthful complexion.`,
 
     image: '/images/laser-treatments.webp',
-    // link: '/treatments/laser',
+    link: '/treatments',
+  },
+  {
+    title: 'IV Therapy',
+    description: "IV therapy at Phace is designed to support hydration, recovery, and overall wellness through medically guided care. Whether you're feeling depleted, looking to support your body during a demanding season, or simply want a more efficient way to replenish fluids and nutrients, our IV therapies are tailored with intention and oversight. The goal is simple — help you feel supported, restored and better equipped to move through life feeling your best.",
+    image: '/images/iv-therapy1.webp',
+    link: '/treatments/iv-therapy'
   },
   {
     title: 'Paramedical Scar Revision & Tattooing',
