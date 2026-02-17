@@ -30,7 +30,7 @@ const team = [
     image: '/images/team/paz.webp',
     instagram: '@yarrownaillounge',
     bio: [
-      'Paz, 7 years as Certified Nail Technician, finds joy in building personal connections through her profession. Her passion lies in uplifting women by offering pampering services and providing support and encouragement to empower others.'
+      'Paz, over 9 years as Certified Nail Technician, finds joy in building personal connections through her profession. Her passion lies in uplifting women by offering pampering services and providing support and encouragement to empower others.'
     ]
   },
   {
@@ -53,6 +53,18 @@ const team = [
       'She specializes in advanced custom facials, chemical peels, microneedling, Tixel, and waxing, combining precision with a calming and empathetic atmosphere. She understands that skin concerns can be deeply personal, which is why building long-term relationships with her clients, taking the time to educate and empower them, has always been important to her.',
       'Alyssa has recently returned to her hometown of Chilliwack and is eager to share her expertise with some new faces.'
     ]
+  },
+  {
+    name: 'Kylee Faubert',
+    title: 'LPN',
+    image: '/images/team/kylee.webp',
+    instagram: '@itsnursekylee',
+    bio: [
+      'Kylee is a Licensed Practical Nurse specializing in Vitamin Therapy, Iron Infusions, and medical aesthetics. ',
+      'Kylee’s nursing background stems from Emergency Medicine. She provides a holistic approach and strives to close the gap on health promotion and prevention, supporting you, and your optimal wellness. ',
+      'She is regularly completing additional education to ensure her clients are always getting the most up to date and evidence based practice in regards to treatments. ',
+      'She works under the medical direction on Dr. Janine MacKenzie and offers lab testing and IV infusions. '
+    ]
   }
 ]
 
@@ -63,16 +75,15 @@ export function MeetOurTeam() {
         <h2 className="text-6xl font-light text-[#E4B4A6] mb-16">
           MEET OUR TEAM
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {team.map((member) => (
             <div key={member.name} className="space-y-6">
-              <div className="aspect-w-3 aspect-h-4 rounded-[2rem] overflow-hidden bg-[#F8E7E1]">
+              <div className="relative w-full rounded-[2rem] overflow-hidden bg-[#F8E7E1]" style={{ paddingBottom: '133.33%' }}>
                 <Image
                   src={member.image}
                   alt={member.name}
-                  width={400}
-                  height={400}
-                  className="object-cover"
+                  fill
+                  className="object-cover object-top"
                 />
               </div>
               <div className="text-center">
