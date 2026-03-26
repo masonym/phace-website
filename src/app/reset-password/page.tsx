@@ -17,24 +17,9 @@ const passwordRequirements: PasswordRequirement[] = [
     validator: (password) => password.length >= 8,
   },
   {
-    id: 'uppercase',
-    label: 'Contains at least one uppercase letter',
-    validator: (password) => /[A-Z]/.test(password),
-  },
-  {
-    id: 'lowercase',
-    label: 'Contains at least one lowercase letter',
-    validator: (password) => /[a-z]/.test(password),
-  },
-  {
-    id: 'number',
-    label: 'Contains at least one number',
-    validator: (password) => /\d/.test(password),
-  },
-  {
     id: 'special',
-    label: 'Contains at least one special character (@$!%*?&)',
-    validator: (password) => /[@$!%*?&]/.test(password),
+    label: 'Contains at least one special character (@$!%*?& -)',
+    validator: (password) => /[@$!%*?&\s-]/.test(password),
   },
 ];
 

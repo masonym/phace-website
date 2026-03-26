@@ -140,9 +140,9 @@ export class PhaceStack extends Stack {
             },
             passwordPolicy: {
                 minLength: 8,
-                requireLowercase: true,
-                requireUppercase: true,
-                requireDigits: true,
+                requireLowercase: false,
+                requireUppercase: false,
+                requireDigits: false,
                 requireSymbols: true,
             },
             accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
