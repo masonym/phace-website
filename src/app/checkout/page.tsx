@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/components/providers/CartProvider';
 import { PaymentForm, CreditCard, Afterpay, AfterpayMessage } from 'react-square-web-payments-sdk';
 import Image from 'next/image';
+import { calculateB2G1Discount, countB2G1FreeItems } from '@/lib/utils/promotions';
 
 interface ShippingAddress {
     name: string;
@@ -53,6 +54,10 @@ export default function CheckoutPage() {
     const [discountError, setDiscountError] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'card' | 'afterpay'>('card');
     const [isPaymentFormReady, setIsPaymentFormReady] = useState(false);
+
+    const b2g1CategoryId = process.env.NEXT_PUBLIC_B2G1_PROMO_CATEGORY_ID ?? '';
+    const b2g1DiscountAmount = useMemo(() => calculateB2G1Discount(cart, b2g1CategoryId), [cart, b2g1CategoryId]);
+    const b2g1FreeItemCount = useMemo(() => countB2G1FreeItems(cart, b2g1CategoryId), [cart, b2g1CategoryId]);
 
     // Delay PaymentForm rendering until order calculation is complete
     useEffect(() => {
@@ -118,13 +123,7 @@ export default function CheckoutPage() {
                             price: item.price,
                         })),
                         shippingAddress,
-                        discount: appliedDiscount ? {
-                            code: appliedDiscount.code,
-                            name: appliedDiscount.name,
-                            type: appliedDiscount.type,
-                            value: appliedDiscount.value,
-                            discountAmount: appliedDiscount.discountAmount
-                        } : null,
+                        discount: getCombinedDiscount(),
                     }),
                 });
                 
@@ -235,7 +234,23 @@ export default function CheckoutPage() {
 
     const getFinalTotal = () => {
         const baseTotal = getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0);
-        return appliedDiscount ? appliedDiscount.finalAmount : baseTotal;
+        const couponDiscount = appliedDiscount ? appliedDiscount.discountAmount : 0;
+        return Math.max(0, baseTotal - couponDiscount - b2g1DiscountAmount);
+    };
+
+    const getCombinedDiscount = () => {
+        const totalDiscountAmount = (appliedDiscount?.discountAmount ?? 0) + b2g1DiscountAmount;
+        if (totalDiscountAmount <= 0) return null;
+        const nameParts: string[] = [];
+        if (b2g1DiscountAmount > 0) nameParts.push('Buy 2 Get 1 Free');
+        if (appliedDiscount) nameParts.push(appliedDiscount.name);
+        return {
+            name: nameParts.join(' + '),
+            code: appliedDiscount?.code ?? 'B2G1',
+            type: 'FIXED_AMOUNT' as const,
+            value: totalDiscountAmount,
+            discountAmount: totalDiscountAmount,
+        };
     };
 
     // Validate shipping information is complete
@@ -291,12 +306,7 @@ export default function CheckoutPage() {
                     shippingAddress,
                     locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
                     fulfillmentMethod,
-                    discount: appliedDiscount ? {
-                        code: appliedDiscount.code,
-                        name: appliedDiscount.name,
-                        discountAmount: appliedDiscount.discountAmount,
-                        originalAmount: getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0)
-                    } : null,
+                    discount: getCombinedDiscount(),
                 }),
             });
 
@@ -323,14 +333,11 @@ export default function CheckoutPage() {
                     locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
                     customerId: null, // Could be set if user is logged in
                     originalTotal: getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0),
-                    discount: appliedDiscount ? {
-                        code: appliedDiscount.code,
-                        name: appliedDiscount.name,
-                        discountAmount: appliedDiscount.discountAmount
-                    } : null,
+                    discount: getCombinedDiscount(),
                     shippingAddress,
                     paymentId: payment.id,
-                    notes: `${fulfillmentMethod === 'shipping' ? 'Shipping' : 'Pickup'} order${appliedDiscount ? ` with ${appliedDiscount.code} discount` : ''}`,
+                    notes: `${fulfillmentMethod === 'shipping' ? 'Shipping' : 'Pickup'} order${appliedDiscount ? ` with ${appliedDiscount.code} discount` : ''}${b2g1DiscountAmount > 0 ? ' with Buy 2 Get 1 Free promo' : ''}`,
+
                 }),
             });
 
@@ -690,6 +697,16 @@ export default function CheckoutPage() {
 
                     <div className="bg-gray-50 p-6 rounded-lg">
                         <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+                        {b2g1FreeItemCount > 0 && (
+                            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                                <div>
+                                    <p className="text-sm font-semibold text-green-800">Buy 2 Get 1 Free Applied!</p>
+                                    <p className="text-xs text-green-600">
+                                        {b2g1FreeItemCount} item{b2g1FreeItemCount > 1 ? 's' : ''} free - lowest priced qualifying item{b2g1FreeItemCount > 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <div className="space-y-4">
                             {cart.map((item, index) => (
                                 <div
@@ -726,7 +743,7 @@ export default function CheckoutPage() {
                                     <span>
                                         {calculatedOrder
                                             ? `C$${(calculatedOrder.lineItems?.reduce((sum: number, item: any) => 
-                                                sum + Number(item.basePriceMoney?.amount || 0), 0) / 100).toFixed(2)}`
+                                                sum + Number(item.basePriceMoney?.amount || 0) * parseInt(item.quantity || '1'), 0) / 100).toFixed(2)}`
                                             : `C$${getCartTotal().toFixed(2)}`}
                                     </span>
                                 </div>
@@ -746,12 +763,20 @@ export default function CheckoutPage() {
                                         <span>-C${(Number(calculatedOrder.totalDiscountMoney.amount) / 100).toFixed(2)}</span>
                                     </div>
                                 ) : (
-                                    appliedDiscount && (
-                                        <div className="flex justify-between text-green-600">
-                                            <span>Discount ({appliedDiscount.code})</span>
-                                            <span>-C${appliedDiscount.discountAmount.toFixed(2)}</span>
-                                        </div>
-                                    )
+                                    <>
+                                        {appliedDiscount && (
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Discount ({appliedDiscount.code})</span>
+                                                <span>-C${appliedDiscount.discountAmount.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {b2g1DiscountAmount > 0 && (
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Buy 2 Get 1 Free</span>
+                                                <span>-C${b2g1DiscountAmount.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                                 {calculatedOrder?.discounts?.length > 0 && (
                                     <div className="text-xs text-gray-600">

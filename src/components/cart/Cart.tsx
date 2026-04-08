@@ -2,9 +2,10 @@
 
 import { useCartContext } from '../providers/CartProvider';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
+import { calculateB2G1Discount, countB2G1FreeItems } from '@/lib/utils/promotions';
 
 export function Cart({ onClose }: { onClose: () => void }) {
     const { cart, removeFromCart, updateQuantity, getCartTotal } = useCartContext();
@@ -14,6 +15,10 @@ export function Cart({ onClose }: { onClose: () => void }) {
     const [calculating, setCalculating] = useState(false);
     const [calculatedOrder, setCalculatedOrder] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const b2g1CategoryId = process.env.NEXT_PUBLIC_B2G1_PROMO_CATEGORY_ID ?? '';
+    const b2g1DiscountAmount = useMemo(() => calculateB2G1Discount(cart, b2g1CategoryId), [cart, b2g1CategoryId]);
+    const b2g1FreeItemCount = useMemo(() => countB2G1FreeItems(cart, b2g1CategoryId), [cart, b2g1CategoryId]);
 
     useEffect(() => {
         setMounted(true);
@@ -49,6 +54,12 @@ export function Cart({ onClose }: { onClose: () => void }) {
                             basePrice: ci.basePrice,
                             price: ci.price,
                         })),
+                        discount: b2g1DiscountAmount > 0 ? {
+                            name: 'Buy 2 Get 1 Free',
+                            code: 'B2G1',
+                            type: 'FIXED_AMOUNT',
+                            discountAmount: b2g1DiscountAmount,
+                        } : null,
                     }),
                 });
                 if (!res.ok) {
@@ -138,35 +149,25 @@ export function Cart({ onClose }: { onClose: () => void }) {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        {(() => {
-                                            const originalUnit = Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0);
-                                            const li = calculatedOrder?.lineItems?.find((l: any) => l.catalogObjectId === item.selectedVariation?.id);
-                                            const gross = Number(li?.grossSalesMoney?.amount ?? 0);
-                                            const disc = Number(li?.totalDiscountMoney?.amount ?? 0);
-                                            const discountedUnit = li ? Math.max(0, Math.round((gross - disc) / Math.max(1, item.quantity))) : null;
-                                            const showDiscount = discountedUnit !== null && discountedUnit < originalUnit;
-                                            return (
-                                                <div>
-                                                    {showDiscount ? (
-                                                        <div className="flex flex-col items-end">
-                                                            <div className="text-sm text-red-600 font-semibold">Sale</div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-gray-400 line-through">C${(originalUnit / 100 * item.quantity).toFixed(2)}</span>
-                                                                <span className="font-semibold">C${(((discountedUnit ?? originalUnit) / 100) * item.quantity).toFixed(2)}</span>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <p className="font-medium">C${(originalUnit / 100 * item.quantity).toFixed(2)}</p>
-                                                    )}
-                                                </div>
-                                            );
-                                        })()}
+                                        <p className="font-medium">
+                                            C${(Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100 * item.quantity).toFixed(2)}
+                                        </p>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
                         <div className="mt-6 border-t pt-4">
+                            {b2g1FreeItemCount > 0 && (
+                                <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                                    <div>
+                                        <p className="text-sm font-semibold text-green-800">Buy 2 Get 1 Free Applied!</p>
+                                        <p className="text-xs text-green-600">
+                                            {b2g1FreeItemCount} item{b2g1FreeItemCount > 1 ? 's' : ''} free - lowest priced qualifying item{b2g1FreeItemCount > 1 ? 's' : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                             {error && (
                                 <div className="bg-red-50 text-red-700 p-2 rounded mb-3 text-sm">{error}</div>
                             )}
@@ -175,19 +176,12 @@ export function Cart({ onClose }: { onClose: () => void }) {
                                     <div className="flex justify-between">
                                         <span>Subtotal</span>
                                         <span>C${(calculatedOrder.lineItems?.reduce((sum: number, item: any) => 
-                                            sum + Number(item.basePriceMoney?.amount || 0), 0) / 100).toFixed(2)}</span>
+                                            sum + Number(item.basePriceMoney?.amount || 0) * parseInt(item.quantity || '1'), 0) / 100).toFixed(2)}</span>
                                     </div>
                                     {Number(calculatedOrder.totalDiscountMoney?.amount ?? 0) > 0 && (
-                                        <div className="flex justify-between text-red-600">
-                                            <span>Discounts</span>
+                                        <div className="flex justify-between text-green-600">
+                                            <span>Buy 2 Get 1 Free</span>
                                             <span>-C${(Number(calculatedOrder.totalDiscountMoney.amount) / 100).toFixed(2)}</span>
-                                        </div>
-                                    )}
-                                    {calculatedOrder?.discounts?.length > 0 && (
-                                        <div className="text-xs text-gray-600">
-                                            Applied: {Array.from(new Set((calculatedOrder.discounts || [])
-                                                .map((d: any) => d?.discount?.name || d?.name)
-                                                .filter(Boolean))).join(', ')}
                                         </div>
                                     )}
                                     {Number(calculatedOrder.totalTaxMoney?.amount ?? 0) > 0 && (
