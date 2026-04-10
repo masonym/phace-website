@@ -178,9 +178,15 @@ export function Cart({ onClose }: { onClose: () => void }) {
                                         <span>C${(calculatedOrder.lineItems?.reduce((sum: number, item: any) => 
                                             sum + Number(item.basePriceMoney?.amount || 0) * parseInt(item.quantity || '1'), 0) / 100).toFixed(2)}</span>
                                     </div>
-                                    {Number(calculatedOrder.totalDiscountMoney?.amount ?? 0) > 0 && (
+                                    {b2g1DiscountAmount > 0 && (
                                         <div className="flex justify-between text-green-600">
                                             <span>Buy 2 Get 1 Free</span>
+                                            <span>-C${b2g1DiscountAmount.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {Number(calculatedOrder.totalDiscountMoney?.amount ?? 0) > 0 && b2g1DiscountAmount === 0 && (
+                                        <div className="flex justify-between text-green-600">
+                                            <span>Discounts</span>
                                             <span>-C${(Number(calculatedOrder.totalDiscountMoney.amount) / 100).toFixed(2)}</span>
                                         </div>
                                     )}
