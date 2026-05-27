@@ -107,6 +107,31 @@ export async function POST(req: NextRequest) {
             throw new Error('Failed to create order with Square or retrieve total amount');
         }
 
+        // Create or retrieve Square customer for receipt email and customer history
+        const nameParts = shippingAddress.name.split(' ').filter(Boolean);
+        const givenName = nameParts[0] || '';
+        const familyName = nameParts.slice(1).join(' ') || '';
+
+        const customerResponse = await client.customers.create({
+            idempotencyKey: crypto.randomUUID(),
+            emailAddress: shippingAddress.email,
+            givenName,
+            familyName,
+            phoneNumber: shippingAddress.phone ? `+1${shippingAddress.phone.replace(/\D/g, '')}` : undefined,
+            address: {
+                addressLine1: shippingAddress.street,
+                locality: shippingAddress.city,
+                administrativeDistrictLevel1: shippingAddress.state,
+                postalCode: shippingAddress.zipCode,
+                country: 'CA',
+            },
+        });
+
+        const customerId = customerResponse.customer?.id;
+        if (!customerId) {
+            throw new Error('Failed to create Square customer');
+        }
+
         const paymentResponse = await client.payments.create({
             idempotencyKey: crypto.randomUUID(),
             sourceId,
@@ -116,6 +141,7 @@ export async function POST(req: NextRequest) {
             },
             locationId,
             orderId,
+            customerId,
             shippingAddress: {
                 addressLine1: shippingAddress.street,
                 locality: shippingAddress.city,
