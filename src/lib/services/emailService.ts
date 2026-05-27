@@ -88,16 +88,16 @@ export class EmailService {
             </tr>
         `;
 
-        // const receiptButton = data.receiptUrl ? `
-        //     <tr>
-        //         <td style="padding:0 40px 32px;" align="center">
-        //             <a href="${data.receiptUrl}" target="_blank"
-        //                 style="display:inline-block;background-color:#B09182;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:50px;letter-spacing:1px;">
-        //                 View Receipt
-        //             </a>
-        //         </td>
-        //     </tr>
-        // ` : '';
+        const receiptButton = data.receiptUrl ? `
+            <tr>
+                <td style="padding:0 40px 32px;" align="center">
+                    <a href="${data.receiptUrl}" target="_blank"
+                        style="display:inline-block;background-color:#B09182;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:50px;letter-spacing:1px;">
+                        View Receipt
+                    </a>
+                </td>
+            </tr>
+        ` : '';
 
         return `<!DOCTYPE html>
 <html lang="en">
