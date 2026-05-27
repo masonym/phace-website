@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ProductService } from '@/lib/services/productService';
+import { EmailService } from '@/lib/services/emailService';
 import { SquareClient, SquareEnvironment } from "square";
 
 const client = new SquareClient({
@@ -152,6 +153,49 @@ export async function POST(req: NextRequest) {
             note: `Purchase of ${items.length} item(s)`,
             autocomplete: true,
         });
+
+        // Send branded confirmation email via AWS SES
+        try {
+            const squareOrder = orderResponse.order!;
+            const formatMoney = (amount: bigint | null | undefined) =>
+                `$${((Number(amount ?? BigInt(0))) / 100).toFixed(2)} CAD`;
+
+            const lineItems = squareOrder.lineItems ?? [];
+            const subtotalCents = lineItems.reduce(
+                (sum, li) => sum + Number(li.totalMoney?.amount ?? BigInt(0)),
+                0
+            );
+
+            const discountAmount = squareOrder.totalDiscountMoney?.amount;
+
+            await EmailService.sendOrderConfirmation({
+                orderId: orderId,
+                customerName: shippingAddress.name,
+                customerEmail: shippingAddress.email,
+                items: lineItems.map((li) => ({
+                    name: li.name ?? 'Item',
+                    variationName: li.variationName ?? undefined,
+                    quantity: li.quantity ?? '1',
+                    totalFormatted: formatMoney(li.totalMoney?.amount),
+                })),
+                subtotalFormatted: `$${(subtotalCents / 100).toFixed(2)} CAD`,
+                taxFormatted: formatMoney(squareOrder.totalTaxMoney?.amount),
+                discountFormatted: discountAmount && discountAmount > BigInt(0)
+                    ? formatMoney(discountAmount)
+                    : undefined,
+                totalFormatted: formatMoney(squareOrder.totalMoney?.amount),
+                fulfillmentMethod: fulfillmentMethod === 'shipping' ? 'shipping' : 'pickup',
+                shippingAddress: fulfillmentMethod === 'shipping' ? {
+                    street: shippingAddress.street,
+                    city: shippingAddress.city,
+                    state: shippingAddress.state,
+                    zipCode: shippingAddress.zipCode,
+                } : undefined,
+                receiptUrl: paymentResponse.payment?.receiptUrl ?? undefined,
+            });
+        } catch (emailError) {
+            console.error('[Email Error] Failed to send order confirmation:', emailError);
+        }
 
         return NextResponse.json(JSON.parse(ProductService.safeStringify({ payment: paymentResponse.payment })));
     } catch (error: any) {
