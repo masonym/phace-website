@@ -145,7 +145,7 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
           onClick={handleContinue}
           className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
         >
-          Continue to Client Information
+          Continue to Appointment Time
         </button>
       </div>
     </div>
