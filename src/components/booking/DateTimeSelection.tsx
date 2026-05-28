@@ -175,7 +175,7 @@ export default function DateTimeSelection({
     setLoading(true);
     setError(null);
     const start = format(startOfDay(date), 'yyyy-MM-dd');
-    const end = format(addDays(date, 1), 'yyyy-MM-dd');
+    const end = start;
 
     console.log(`Fetching time slots for ${start} to ${end} for service ${serviceId}, variation ${variationId}, staff ${staffId}`);
     try {
