@@ -18,11 +18,6 @@ interface WaitlistFormData {
     preferredDates: string[];
 }
 
-interface AvailabilityResponse {
-    slots: any[];
-    isFullyBooked: boolean;
-    staffAvailable: boolean;
-}
 
 export default function WaitlistForm({ serviceId, variationId, staffId, onBack, onSuccess }: WaitlistFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,44 +29,55 @@ export default function WaitlistForm({ serviceId, variationId, staffId, onBack, 
     useEffect(() => {
         const fetchAvailableDates = async () => {
             setIsLoading(true);
-            const dates: string[] = [];
-            let daysChecked = 0;
-            let validDatesFound = 0;
-            const maxDaysToCheck = 60; // Look up to 60 days ahead
-            const desiredValidDates = 14; // We want to show at least 14 valid dates
+            const foundDates: string[] = [];
 
-            while (daysChecked < maxDaysToCheck && validDatesFound < desiredValidDates) {
-                const date = addDays(new Date(), daysChecked);
-                const formattedDate = format(date, 'yyyy-MM-dd');
+            const today = new Date();
+            const batchDays = 10;
+            const totalDays = 60;
+            const batches: Array<{ start: string; end: string }> = [];
 
-                try {
-                    const params = new URLSearchParams({
-                        serviceId,
-                        staffId: staffId || '',
-                        date: formattedDate,
-                    });
-
-                    const response = await fetch(`/api/booking/availability?${params}`);
-                    if (!response.ok) continue;
-
-                    const data: AvailabilityResponse = await response.json();
-                    if (data.staffAvailable) {
-                        dates.push(formattedDate);
-                        validDatesFound++;
-                    }
-                } catch (error) {
-                    console.error('Error checking date availability:', error);
-                }
-
-                daysChecked++;
+            for (let offset = 1; offset <= totalDays; offset += batchDays) {
+                batches.push({
+                    start: format(addDays(today, offset), 'yyyy-MM-dd'),
+                    end: format(addDays(today, Math.min(offset + batchDays - 1, totalDays)), 'yyyy-MM-dd'),
+                });
             }
 
-            setAvailableDates(dates);
+            const results = await Promise.all(
+                batches.map(async ({ start, end }) => {
+                    try {
+                        const params = new URLSearchParams({
+                            start,
+                            end,
+                            serviceId,
+                            staffId: staffId || '',
+                            ...(variationId && { variationId }),
+                        });
+                        const res = await fetch(`/api/booking/availability?${params}`);
+                        if (!res.ok) return {} as Record<string, any[]>;
+                        const json = await res.json();
+                        return (json.slotsByDate ?? {}) as Record<string, any[]>;
+                    } catch (error) {
+                        console.error('Error checking date availability:', error);
+                        return {} as Record<string, any[]>;
+                    }
+                })
+            );
+
+            for (const slotsByDate of results) {
+                for (const date of Object.keys(slotsByDate).sort()) {
+                    if (slotsByDate[date]?.length > 0 && foundDates.length < 14) {
+                        foundDates.push(date);
+                    }
+                }
+            }
+
+            setAvailableDates(foundDates);
             setIsLoading(false);
         };
 
         fetchAvailableDates();
-    }, [serviceId, staffId]);
+    }, [serviceId, staffId, variationId]);
 
     const handleDateSelect = (date: string) => {
         setSelectedDates(prev => {

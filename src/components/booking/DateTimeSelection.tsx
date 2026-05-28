@@ -121,40 +121,47 @@ export default function DateTimeSelection({
         const newAvailableDates = new Set<string>(availableDates);
         const newFullyBookedDates = new Set<string>(fullyBookedDates);
 
-        // Process each batch sequentially to avoid overwhelming the server
-        for (const batch of batches) {
-          const batchStart = format(batch[0], 'yyyy-MM-dd');
-          const batchEnd = format(batch[batch.length - 1], 'yyyy-MM-dd');
+        // Process all batches concurrently
+        const batchResults = await Promise.all(
+          batches.map(async (batch) => {
+            const batchStart = format(batch[0], 'yyyy-MM-dd');
+            const batchEnd = format(batch[batch.length - 1], 'yyyy-MM-dd');
 
-          const params = new URLSearchParams({
-            start: batchStart,
-            end: batchEnd,
-            staffId,
-            serviceId,
-            ...(variationId && { variationId }),
-            ...(addons.length > 0 && { addons: addons.join(',') }),
-          });
+            const params = new URLSearchParams({
+              start: batchStart,
+              end: batchEnd,
+              staffId,
+              serviceId,
+              ...(variationId && { variationId }),
+              ...(addons.length > 0 && { addons: addons.join(',') }),
+            });
 
-          try {
-            const res = await fetch(`/api/booking/availability?${params}`);
-            if (!res.ok) throw new Error('Request failed');
-
-            const json = await res.json();
-            const { slotsByDate } = json;
-
-            for (const date in slotsByDate) {
-              if (slotsByDate[date]?.length > 0) {
-                newAvailableDates.add(date);
-              } else {
-                newFullyBookedDates.add(date);
-              }
+            try {
+              const res = await fetch(`/api/booking/availability?${params}`);
+              if (!res.ok) throw new Error('Request failed');
+              const json = await res.json();
+              console.log(`Batch availability for ${batchStart}–${batchEnd}:`, json.slotsByDate);
+              return (json.slotsByDate ?? {}) as Record<string, any[]>;
+            } catch (err) {
+              console.error(`Batch availability error for ${batchStart}–${batchEnd}:`, err);
+              return {} as Record<string, any[]>;
             }
-            console.log(`Batch availability for ${batchStart}–${batchEnd}:`, slotsByDate);
-          } catch (err) {
-            console.error(`Batch availability error for ${batchStart}–${batchEnd}:`, err);
-          }
+          })
+        );
 
-          await new Promise(res => setTimeout(res, 100 + Math.random() * 200)); // jitter
+        for (const slotsByDate of batchResults) {
+          for (const date in slotsByDate) {
+            if (slotsByDate[date]?.length > 0) {
+              newAvailableDates.add(date);
+              BookingCache.set(
+                `availability_${staffId}_${serviceId}_${date}`,
+                { slots: slotsByDate[date] },
+                2 * 60 * 1000
+              );
+            } else {
+              newFullyBookedDates.add(date);
+            }
+          }
         }
 
         setAvailableDates(newAvailableDates);
