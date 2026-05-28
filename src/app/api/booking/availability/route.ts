@@ -44,11 +44,7 @@ export async function GET(req: NextRequest) {
         }
 
 
-        const isSingleDay = (() => {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            return end.getTime() - start.getTime() <= 26 * 60 * 60 * 1000;
-        })();
+        const isSingleDay = startDate === endDate;
         if (isSingleDay) {
             const slots = grouped[startDate] || [];
             return NextResponse.json({ slots });
