@@ -32,6 +32,7 @@ export default function ConsentFormsPage() {
     const [deletingForm, setDeletingForm] = useState<ConsentForm | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [previewForm, setPreviewForm] = useState<ConsentForm | null>(null);
+    const [copiedFormId, setCopiedFormId] = useState<string | null>(null);
 
     const router = useRouter();
     const { isAuthenticated, isLoading, getIdToken } = useAuth();
@@ -380,6 +381,17 @@ export default function ConsentFormsPage() {
                                             </div>
                                         </div>
                                         <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
+                                            <button
+                                                onClick={() => {
+                                                    const url = `${window.location.origin}/forms/${form.id}`;
+                                                    navigator.clipboard.writeText(url);
+                                                    setCopiedFormId(form.id);
+                                                    setTimeout(() => setCopiedFormId(null), 2000);
+                                                }}
+                                                className="flex-1 sm:flex-none bg-blue-50 text-blue-700 px-4 py-2 rounded hover:bg-blue-100"
+                                            >
+                                                {copiedFormId === form.id ? 'Copied!' : 'Copy Link'}
+                                            </button>
                                             <button
                                                 onClick={() => setPreviewForm(form)}
                                                 className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"

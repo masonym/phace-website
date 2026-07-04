@@ -25,11 +25,34 @@ const verifier = CognitoJwtVerifier.create({
     tokenUse: 'id',
 });
 
-// GET /api/booking/consent-forms?serviceId={serviceId}
+// GET /api/booking/consent-forms?id={formId} — fetch single form by ID (public, no auth)
+// GET /api/booking/consent-forms?serviceId={serviceId} — fetch forms for a service
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
         const serviceId = searchParams.get('serviceId');
+
+        // Fetch a single form by ID
+        if (id) {
+            const command = new GetCommand({
+                TableName: 'phace-forms',
+                Key: { pk: 'CONSENT_FORM', sk: id },
+            });
+            const response = await docClient.send(command);
+            if (!response.Item) {
+                return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+            }
+            return NextResponse.json({
+                id: response.Item.sk,
+                title: response.Item.title,
+                content: response.Item.content,
+                serviceIds: response.Item.serviceIds,
+                isActive: response.Item.isActive,
+                sections: response.Item.sections,
+                version: response.Item.version,
+            });
+        }
 
         // Base query parameters
         let queryParams: any = {
