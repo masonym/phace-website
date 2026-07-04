@@ -76,7 +76,7 @@ export default function AdminLayout({
             {pathname !== '/admin/login' && (
                 <nav className="bg-white shadow relative w-full">
                     <div className="w-full px-4 sm:px-6 lg:px-8">
-                        <div className="flex flex-col lg:flex-row justify-between min-h-[64px]">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between min-h-[64px]">
                             <div className="flex items-center justify-between w-full lg:w-auto py-4 lg:py-0">
                                 <div className="flex items-center min-w-0">
                                     <Link
@@ -125,6 +125,24 @@ export default function AdminLayout({
                                     className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
                                 >
                                     Calendar
+                                </Link>
+                                <Link
+                                    href="/admin/discounts"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
+                                >
+                                    Discounts
+                                </Link>
+                                <Link
+                                    href="/admin/orders"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
+                                >
+                                    Orders
+                                </Link>
+                                <Link
+                                    href="/admin/waitlist"
+                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
+                                >
+                                    Waitlist
                                 </Link>
                                 <Link
                                     href="/"
