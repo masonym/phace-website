@@ -1,5 +1,6 @@
 import { Square } from "square";
 import { SquareClient, SquareEnvironment } from "square";
+import { HIDDEN_CATEGORY_IDS } from "@/lib/config/storeConfig";
 
 const client = new SquareClient({
     token: process.env.SQUARE_ACCESS_TOKEN!,
@@ -106,9 +107,16 @@ export class ProductService {
             const itemOptions = optionsResult.objects || [];
             const relatedObjects = catalogResponse.objects || [];
 
+            const hiddenCategoryIds = new Set(HIDDEN_CATEGORY_IDS);
+
             // step 3: build products with options
             const products: Square.CatalogObject[] = itemsResult.items
                 .filter((item) => item.type === 'ITEM')
+                // Hide any product belonging to a blocked category
+                .filter((item) =>
+                    hiddenCategoryIds.size === 0 ||
+                    !item.itemData?.categories?.some((cat) => cat.id && hiddenCategoryIds.has(cat.id))
+                )
                 .map((item) => {
                     // Get image URLs from related objects
                     const imageUrls = this.getImageUrlsForItem(item, relatedObjects);
@@ -125,14 +133,6 @@ export class ProductService {
                         },
                     };
                 });
-
-            // optionally filter by category if provided
-            // this doesnt work
-            //if (category) {
-            //    return products.filter((product) =>
-            //        product..categories.some((cat) => cat.name === category)
-            //    );
-            //}
 
             return products;
         } catch (error) {
