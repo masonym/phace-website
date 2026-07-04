@@ -1,7 +1,17 @@
+'use client'
+
 import React from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export function Footer() {
+  const pathname = usePathname()
+
+  // The admin section has its own layout, so hide the marketing footer there.
+  if (pathname?.startsWith('/admin')) {
+    return null
+  }
+
   return (
     <footer className="bg-secondary py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -3,12 +3,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { CartButton } from './cart/CartButton';
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isAuthenticated, user } = useAuth()
+  const pathname = usePathname()
+
+  // The admin section has its own header/layout, so hide the marketing nav there.
+  if (pathname?.startsWith('/admin')) {
+    return null
+  }
 
   return (
     <nav className="fixed w-full bg-[#FDECC2]/80 backdrop-blur-sm z-50">
