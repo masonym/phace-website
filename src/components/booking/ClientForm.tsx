@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -19,15 +19,41 @@ interface ClientFormData {
 }
 
 interface Props {
-  onSubmit: (data: ClientFormData) => void;
+  onSubmit: (data: ClientFormData) => void | Promise<void>;
   onBack: () => void;
 }
 
 export default function ClientForm({ onSubmit, onBack }: Props) {
   const [wantAccount, setWantAccount] = useState(false);
   const { user, isAuthenticated } = useAuth();
-  const { register, handleSubmit, formState: { errors }, setValue, getValues } = useForm<ClientFormData>();
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<ClientFormData>({
+    mode: 'onTouched',
+  });
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Square's <CreditCard> button swallows tokenization errors (they only reach
+  // the console), which leaves the button looking dead. Watch for a click that
+  // never produces a token and tell the user something instead of nothing.
+  const tokenizeWatchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearWatchdog = () => {
+    if (tokenizeWatchdog.current) {
+      clearTimeout(tokenizeWatchdog.current);
+      tokenizeWatchdog.current = null;
+    }
+  };
+
+  useEffect(() => clearWatchdog, []);
+
+  const handlePaymentButtonClick = () => {
+    setPaymentError(null);
+    clearWatchdog();
+    tokenizeWatchdog.current = setTimeout(() => {
+      setPaymentError(
+        'We could not read your card details. Please check the card number, expiry, CVV and postal code, then try again.'
+      );
+    }, 15000);
+  };
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -42,12 +68,41 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
       if (!data.paymentNonce) {
         throw new Error('Payment information is required');
       }
-      onSubmit({
+      setPaymentError(null);
+      await onSubmit({
         ...data,
         createAccount: wantAccount,
       });
     } catch (error) {
+      console.error('Client form submission failed:', error);
       setPaymentError(error instanceof Error ? error.message : 'Failed to process payment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Without this, a failed validation silently does nothing: the field errors
+  // render up next to the inputs, far above the payment button.
+  const onFormInvalid = (formErrors: typeof errors) => {
+    setIsSubmitting(false);
+    const fieldLabels: Record<string, string> = {
+      name: 'Full Name',
+      email: 'Email Address',
+      phone: 'Phone Number',
+      password: 'Password',
+    };
+    const missing = Object.keys(formErrors)
+      .map((field) => fieldLabels[field] || field)
+      .join(', ');
+    setPaymentError(
+      missing
+        ? `Please fix the following before continuing: ${missing}.`
+        : 'Please check your information before continuing.'
+    );
+    const firstField = Object.keys(formErrors)[0];
+    if (firstField) {
+      document.getElementById(firstField)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById(firstField)?.focus({ preventScroll: true });
     }
   };
 
@@ -204,32 +259,26 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
             <PaymentForm
               applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID!}
               locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}
-              cardTokenizeResponseReceived={async (token, verifiedBuyer) => {
-                if (token.status === 'OK') {
+              cardTokenizeResponseReceived={async (token) => {
+                clearWatchdog();
+                if (token.status === 'OK' && token.token) {
+                  setIsSubmitting(true);
                   setValue('paymentNonce', token.token);
-                  handleSubmit(onFormSubmit)();
+                  await handleSubmit(onFormSubmit, onFormInvalid)();
                 } else {
-                  setPaymentError('Card tokenization failed');
+                  setIsSubmitting(false);
+                  setPaymentError(
+                    'We could not verify your card. Please double-check the card number, expiry, CVV and postal code and try again.'
+                  );
                 }
               }}
-              createVerificationDetails={() => ({
-                amount: 0, // do not charge the user, just get their card 
-                currencyCode: 'CAD',
-                intent: 'STORE',
-                billingContact: {
-                  country: 'CA',
-                  givenName: getValues('name').split(' ')[0],
-                  familyName: getValues('name').split(' ').slice(1).join(' '),
-                  email: getValues('email'),
-                  phone: getValues('phone'),
-                },
-              })}
             >
 
               <CreditCard
                 render={(Button: any) => (
-                  <div className="flex justify-end mt-4">
+                  <div className="flex justify-end mt-4" onClickCapture={handlePaymentButtonClick}>
                     <Button
+                      isLoading={isSubmitting}
                       css={{
                         backgroundColor: '#B09182',
                         color: 'white',
@@ -250,13 +299,15 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
                         width: '40%',
                       }}
                     >
-                      Continue to Consent Forms
+                      {isSubmitting ? 'Processing…' : 'Continue to Consent Forms'}
                     </Button>
                   </div>
                 )}
               />
             </PaymentForm>
-            {paymentError && <p className="mt-1 text-sm text-red-600">{paymentError}</p>}
+            {paymentError && (
+              <p role="alert" className="mt-2 text-sm text-red-600">{paymentError}</p>
+            )}
           </div>
           {/*
           <div className="flex justify-end">
