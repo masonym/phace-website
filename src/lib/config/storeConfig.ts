@@ -12,4 +12,5 @@
 export const HIDDEN_CATEGORY_IDS: string[] = [
     // 'EXAMPLE_CATEGORY_ID',
     "I3UFN36WO3SYONZM2GUJVLRD", // Paz Retail
+    "JOCFMCTA5Y7B2PRPIWMST26F", // Link Only (items sold via Square payment links, not the storefront)
 ];
