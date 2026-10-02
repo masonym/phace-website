@@ -75,7 +75,7 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
                 >
                     <motion.div
                         ref={modalRef}
-                        className="relative bg-[#FFFBF0] rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto md:grid md:grid-cols-[6fr_5fr]"
+                        className="relative bg-[#FFFBF0] rounded-xl shadow-xl w-full max-w-2xl xl:max-w-6xl max-h-[90vh] overflow-y-auto xl:grid xl:grid-cols-[3fr_2fr]"
                         initial={{ scale: 0.95, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.95, opacity: 0 }}
@@ -89,22 +89,15 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
                             ×
                         </button>
 
-                        {/* Product image: shown uncropped so all five products are visible, over a blurred copy to fill the column */}
-                        <div className="relative aspect-[1290/876] md:aspect-auto md:min-h-full overflow-hidden">
-                            <Image
-                                src="/images/promotions/first-five.webp"
-                                alt=""
-                                aria-hidden="true"
-                                fill
-                                sizes="(min-width: 1024px) 560px, (min-width: 768px) 55vw, 100vw"
-                                className="object-cover blur-2xl scale-110 opacity-70"
-                            />
+                        {/* Product image. Fine print sits below both columns on desktop so this
+                            column stays wide enough to show all five products */}
+                        <div className="relative aspect-[1290/876] xl:aspect-auto">
                             <Image
                                 src="/images/promotions/first-five.webp"
                                 alt="The five products in the new Phace skincare collection on a wooden shelf"
                                 fill
-                                sizes="(min-width: 1024px) 560px, (min-width: 768px) 55vw, 100vw"
-                                className="object-contain"
+                                sizes="(min-width: 1280px) 692px, (min-width: 672px) 672px, 100vw"
+                                className="object-cover"
                                 priority
                             />
                         </div>
@@ -154,8 +147,11 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
                             <p className="text-sm text-[#59637E]/80 text-center mt-3">
                                 Preorders close October 10 at midnight. Pickup + delivery begins October 26.
                             </p>
+                        </div>
 
-                            <p className="text-xs text-[#59637E]/60 mt-5 leading-relaxed">
+                        {/* Fine print */}
+                        <div className="px-6 sm:px-8 pb-6 xl:pt-6 xl:col-span-2">
+                            <p className="text-xs text-[#59637E]/60 leading-relaxed">
                                 Your $100 Phace service credit can be used toward one eligible regularly priced
                                 Phace service of $150+. Credit must be used by June 30th, 2027. Excludes nail and
                                 naturopathic services. One credit per transaction. No cash value. Cannot be
