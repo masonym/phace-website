@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { BookingCache } from '@/lib/cache/bookingCache';
+import { HIDDEN_CATEGORY_IDS } from '@/lib/config/storeConfig';
 
 interface ServiceVariation {
   id: string;
@@ -105,7 +106,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
         // filter out categories like "Add-ons", "Gift Cards", and "Retail"
         const excludedCategories = ['add-ons', 'add-ons', 'gift cards', 'retail', 'black friday service packages', 'buy 2 get 1 free', 'paz retail'];
         const categoryNameLower = category.name.toLowerCase().trim();
-        const isExcluded = excludedCategories.includes(categoryNameLower);
+        const isExcluded = excludedCategories.includes(categoryNameLower) || HIDDEN_CATEGORY_IDS.includes(category.id);
 
         return !isExcluded;
       });

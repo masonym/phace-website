@@ -4,7 +4,8 @@
  * HIDDEN_CATEGORY_IDS: Square category IDs whose products should be hidden
  * from the storefront. Any product belonging to one of these categories is
  * filtered out server-side in ProductService.listProducts(), so it never
- * reaches the /api/products response or the /store page.
+ * reaches the /api/products response or the /store page. These categories
+ * are also hidden from the category list on the /book page.
  *
  * To find a category ID: open the category in Square, or inspect the
  * `categories[].id` values returned by /api/products.
