@@ -7,6 +7,7 @@ import { CartProvider } from '@/components/providers/CartProvider';
 import { AuthProvider } from '@/hooks/useAuth'
 import { Toaster } from 'react-hot-toast';
 import FirstVisitGiftCard from '@/components/promotions/FirstVisitGiftCard';
+import FirstFivePresale from '@/components/promotions/FirstFivePresale';
 
 export const metadata: Metadata = {
   title: 'Phace - Medical Spa in Chilliwack',
@@ -55,6 +56,7 @@ export default function RootLayout({
         </AuthProvider>
         <Toaster position="bottom-right" />
         {/* <FirstVisitGiftCard /> */}
+        <FirstFivePresale />
       </body>
     </html>
   )
