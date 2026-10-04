@@ -112,9 +112,12 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
             {bookingData.addons && bookingData.addons.length > 0 && (
               <div>
                 <h4 className="font-medium text-gray-700">Add-ons</h4>
-                <ul className="list-disc list-inside text-gray-900">
-                  {bookingData.addons.map((addon, index) => (
-                    <li key={index}>{addon.name}</li>
+                <ul className="text-gray-900 space-y-1">
+                  {bookingData.addons.map((addon) => (
+                    <li key={addon.id} className="flex justify-between gap-4">
+                      <span>{addon.name}</span>
+                      <span className="text-gray-600">+${(addon.price / 100).toFixed(2)}</span>
+                    </li>
                   ))}
                 </ul>
               </div>

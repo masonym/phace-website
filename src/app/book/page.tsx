@@ -378,6 +378,9 @@ function BookingPageContent() {
     }
   }, [currentStep, bookingData.serviceId, bookingData.staffId, bookingData.variationId]);
 
+  // What the add-ons step totals against: the chosen variation, or the service itself
+  const bookedItem = bookingData.variation ?? bookingData.service;
+
   if (!restored) {
     return (
       <main className="min-h-screen bg-[#FFFBF0] pt-24 flex items-center justify-center">
@@ -485,7 +488,12 @@ function BookingPageContent() {
             )}
             {currentStep === 'addons' && (
               <AddonSelection
-                serviceId={bookingData.serviceId!}
+                addons={availableAddons}
+                baseService={bookedItem && {
+                  name: bookingData.serviceName || bookingData.service?.name || 'treatment',
+                  price: bookedItem.price || 0,
+                  duration: bookedItem.duration || 0,
+                }}
                 initialSelectedIds={(bookingData.addons || []).map(addon => addon.id)}
                 onSelect={(selectedAddonsData) => {
                   // Duration changes with add-ons, so any previously picked time is cleared

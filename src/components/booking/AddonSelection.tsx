@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface Addon {
   id: string;
@@ -11,97 +11,53 @@ interface Addon {
 }
 
 interface Props {
-  serviceId: string;
+  /** Add-ons for this service, already loaded when the provider was picked */
+  addons: Addon[];
+  /** The treatment being booked, so the running total includes it */
+  baseService?: { name: string; price: number; duration: number };
   /** Add-ons picked earlier, so going back doesn't lose them */
   initialSelectedIds?: string[];
   onSelect: (selectedAddonsData: Addon[]) => void;
   onBack: () => void;
 }
 
-export default function AddonSelection({ serviceId, initialSelectedIds = [], onSelect, onBack }: Props) {
-  const [addons, setAddons] = useState<Addon[]>([]);
-  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(initialSelectedIds);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+// Square durations arrive in milliseconds, but some add-ons store minutes
+const toMinutes = (duration: number) => (duration >= 1000 ? duration / 60000 : duration);
 
-  useEffect(() => {
-    const fetchAddons = async () => {
-      try {
-        const response = await fetch(`/api/booking/addons?serviceId=${serviceId}`);
-        if (!response.ok) throw new Error('Failed to fetch addons');
-        const data: Addon[] = await response.json();
-        setAddons(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+const formatMinutes = (minutes: number) => {
+  const rounded = Math.round(minutes);
+  const hours = Math.floor(rounded / 60);
+  const mins = rounded % 60;
+  if (hours === 0) return `${mins} min`;
+  return mins === 0 ? `${hours} hr` : `${hours} hr ${mins} min`;
+};
 
-    fetchAddons();
-  }, [serviceId]);
+const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+export default function AddonSelection({ addons, baseService, initialSelectedIds = [], onSelect, onBack }: Props) {
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(
+    // Drop any earlier picks that are no longer offered
+    initialSelectedIds.filter(id => addons.some(addon => addon.id === id))
+  );
 
   const toggleAddon = (addonId: string) => {
-    setSelectedAddonIds(prev => {
-      if (prev.includes(addonId)) {
-        return prev.filter(id => id !== addonId);
-      } else {
-        return [...prev, addonId];
-      }
-    });
-  };
-
-  const handleContinue = () => {
-    const selectedAddonsData = addons.filter(addon => selectedAddonIds.includes(addon.id));
-    onSelect(selectedAddonsData);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">Loading add-ons...</div>
-      </div>
+    setSelectedAddonIds(prev =>
+      prev.includes(addonId) ? prev.filter(id => id !== addonId) : [...prev, addonId]
     );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center">
-        <p className="text-red-600">We couldn&apos;t load add-ons for this service.</p>
-        <div className="flex gap-4">
-          <button
-            onClick={() => onSelect([])}
-            className="px-6 py-2 bg-accent text-white rounded-full hover:bg-accent/90 transition-colors"
-          >
-            Continue without add-ons
-          </button>
-          <button
-            onClick={onBack}
-            className="px-6 py-2 border border-accent-soft text-accent rounded-full hover:bg-accent/10 transition-colors"
-          >
-            Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const selectedTotal = addons
-    .filter(addon => selectedAddonIds.includes(addon.id))
-    .reduce((total, addon) => total + addon.price, 0);
-
-  const formatDuration = (durationMs: number) => {
-    // Convert from milliseconds to minutes if needed
-    const minutes = durationMs >= 1000 ? durationMs / 60000 : durationMs;
-    return `${minutes} min`;
   };
+
+  const selectedAddons = addons.filter(addon => selectedAddonIds.includes(addon.id));
+  const addonsPrice = selectedAddons.reduce((total, addon) => total + addon.price, 0);
+  const addonsMinutes = selectedAddons.reduce((total, addon) => total + toMinutes(addon.duration), 0);
+  const totalPrice = (baseService?.price ?? 0) + addonsPrice;
+  const totalMinutes = toMinutes(baseService?.duration ?? 0) + addonsMinutes;
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-light text-center mb-2">Add Extra Services</h1>
+        <h1 className="text-4xl font-light text-center mb-2">Enhance Your Treatment</h1>
         <p className="text-center text-gray-600 mb-8">
-          Enhance your treatment with these additional services
+          Optional extras{baseService ? ` for your ${baseService.name}` : ''}. Choose as many as you like, or skip this step.
         </p>
       </div>
 
@@ -126,52 +82,84 @@ export default function AddonSelection({ serviceId, initialSelectedIds = [], onS
         Back
       </button>
 
-      {/* Add-ons Grid */}
-      <div className="grid gap-4">
-        {addons.length === 0 ? (
-          <p className="text-center text-gray-600">No additional services available for this treatment.</p>
-        ) : (
-          addons.map((addon) => (
-            <div
+      {/* Add-ons: the whole card toggles */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4" role="group" aria-label="Add-ons">
+        {addons.map((addon) => {
+          const selected = selectedAddonIds.includes(addon.id);
+          const minutes = toMinutes(addon.duration);
+          return (
+            <button
               key={addon.id}
-              className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+              type="button"
+              role="checkbox"
+              aria-checked={selected}
+              onClick={() => toggleAddon(addon.id)}
+              className={`text-left rounded-xl p-5 border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${
+                selected
+                  ? 'bg-[#F8E7E1] border-accent shadow-md'
+                  : 'bg-white border-transparent shadow-sm hover:shadow-md hover:border-accent-soft/40'
+              }`}
             >
               <div className="flex items-start gap-4">
-                <label className="flex items-start gap-4 flex-1 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedAddonIds.includes(addon.id)}
-                    onChange={() => toggleAddon(addon.id)}
-                    className="mt-1.5 h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
-                  />
-                  <div className="flex-1">
-                    <p className="text-lg font-medium">{addon.name}</p>
-                    <p className="text-gray-600 mt-1">{addon.description}</p>
-                    <div className="mt-2 space-x-4">
-                      <span className="text-sm text-gray-600">Duration: {formatDuration(addon.duration)}</span>
-                      <span className="text-sm text-gray-600">Price: ${(addon.price / 100).toFixed(2)}</span>
-                    </div>
+                <span
+                  aria-hidden="true"
+                  className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                    selected ? 'bg-accent border-accent text-white' : 'border-accent-soft text-transparent'
+                  }`}
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-lg font-medium text-gray-900">{addon.name}</p>
+                    <p className="font-medium text-accent whitespace-nowrap">+{formatPrice(addon.price)}</p>
                   </div>
-                </label>
+                  {addon.description && (
+                    <p className="text-gray-600 mt-1">{addon.description}</p>
+                  )}
+                  {minutes > 0 && (
+                    <p className="text-sm text-gray-500 mt-2">Adds {formatMinutes(minutes)}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
-        )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Continue Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
-        {selectedAddonIds.length > 0 && (
-          <p className="text-gray-700" aria-live="polite">
-            {selectedAddonIds.length} add-on{selectedAddonIds.length === 1 ? '' : 's'} selected: +${(selectedTotal / 100).toFixed(2)}
-          </p>
-        )}
-        <button
-          onClick={handleContinue}
-          className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
-        >
-          Continue to Appointment Time
-        </button>
+      {/* Running total; sticks to the bottom of the screen so it stays in reach on long lists */}
+      <div className="sticky bottom-4 z-20 rounded-xl border border-[#DEC3C5] bg-white/95 backdrop-blur px-4 py-3 sm:px-6 sm:py-4 shadow-md">
+        <div className="flex items-center justify-between gap-4">
+          <div aria-live="polite">
+            {baseService ? (
+              <>
+                <p className="font-medium text-gray-900">
+                  Total {formatPrice(totalPrice)}
+                  {totalMinutes > 0 && <span className="font-normal text-gray-600"> · {formatMinutes(totalMinutes)}</span>}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {selectedAddons.length === 0
+                    ? 'No add-ons selected'
+                    : `Includes ${selectedAddons.length} add-on${selectedAddons.length === 1 ? '' : 's'} (+${formatPrice(addonsPrice)})`}
+                </p>
+              </>
+            ) : (
+              <p className="text-gray-700">
+                {selectedAddons.length === 0
+                  ? 'No add-ons selected'
+                  : `${selectedAddons.length} add-on${selectedAddons.length === 1 ? '' : 's'}: +${formatPrice(addonsPrice)}`}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => onSelect(selectedAddons)}
+            className="flex-shrink-0 bg-accent text-white px-6 sm:px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"
+          >
+            {selectedAddons.length === 0 ? 'Skip add-ons' : 'Continue'}
+          </button>
+        </div>
       </div>
     </div>
   );
