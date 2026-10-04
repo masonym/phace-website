@@ -101,7 +101,7 @@ export default function BookingConfirmedPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FFFBF0] pt-24 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-soft"></div>
       </div>
     );
   }
@@ -195,13 +195,13 @@ export default function BookingConfirmedPage() {
                 href={googleCalendarUrl(appointment)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block text-center border border-accent text-accent px-6 py-3 rounded-lg hover:bg-accent/10 transition-colors"
+                className="inline-block text-center border border-accent-soft text-accent px-6 py-3 rounded-lg hover:bg-accent/10 transition-colors"
               >
                 Add to Google Calendar
               </a>
               <button
                 onClick={() => downloadIcs(appointment)}
-                className="inline-block border border-accent text-accent px-6 py-3 rounded-lg hover:bg-accent/10 transition-colors"
+                className="inline-block border border-accent-soft text-accent px-6 py-3 rounded-lg hover:bg-accent/10 transition-colors"
               >
                 Add to Apple / Outlook Calendar
               </button>

@@ -6,7 +6,7 @@ export function InnovativeSolutions() {
   return (
     <section className="py-20 bg-[#F8E7E1]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-6xl font-light text-[#E4B4A6] mb-16">
+        <h2 className="text-6xl font-light text-heading mb-16">
           INNOVATIVE SOLUTIONS
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -25,14 +25,14 @@ export function InnovativeSolutions() {
                 />
               </div>
               <div className="p-8">
-                <h3 className="text-2xl font-light text-[#4A5568] mb-4 group-hover:text-[#E4B4A6] transition-colors">
+                <h3 className="text-2xl font-light text-[#4A5568] mb-4 group-hover:text-heading-strong transition-colors">
                   {treatment.name}
                 </h3>
                 <p className="text-gray-600 mb-6">
                   {treatment.description}
                 </p>
                 <span
-                  className="inline-block text-[#4A5568] group-hover:text-[#E4B4A6] transition-colors"
+                  className="inline-block text-[#4A5568] group-hover:text-heading-strong transition-colors"
                 >
                   Learn More →
                 </span>

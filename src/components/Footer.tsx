@@ -47,7 +47,7 @@ function NewsletterSignup() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Email Address"
-        className="w-full px-4 py-2 rounded-full bg-white/50 border border-accent/20 focus:outline-none focus:border-accent"
+        className="w-full px-4 py-2 rounded-full bg-white/50 border border-accent-soft/20 focus:outline-none focus:border-accent"
       />
       <label className="flex items-center space-x-2">
         <input
@@ -154,7 +154,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-accent/20">
+        <div className="mt-12 pt-8 border-t border-accent-soft/20">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p>&copy; {new Date().getFullYear()} Phace. All rights reserved.</p>
             <div className="flex space-x-4 mt-4 md:mt-0">

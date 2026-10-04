@@ -72,7 +72,7 @@ export function MeetOurTeam() {
   return (
     <section className="py-20 bg-[#F5F0EA]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-6xl font-light text-[#E4B4A6] mb-16">
+        <h2 className="text-6xl font-light text-heading mb-16">
           MEET OUR TEAM
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -90,7 +90,7 @@ export function MeetOurTeam() {
                 />
               </div>
               <div className="text-center">
-                <h3 className="text-2xl font-light text-[#E4B4A6]">
+                <h3 className="text-2xl font-light text-heading">
                   {member.name}
                 </h3>
                 <p className="text-gray-600 mb-4">{member.title}</p>
@@ -106,7 +106,7 @@ export function MeetOurTeam() {
                     href={`https://instagram.com/${member.instagram.replace("@", "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#E4B4A6] hover:text-[#d19586] transition-colors text-sm inline-block mt-4"
+                    className="text-heading-strong hover:text-heading transition-colors text-sm inline-block mt-4"
                   >
                     {member.instagram}
                   </Link>

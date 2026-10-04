@@ -123,21 +123,21 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                                     <span className="text-2xl">🎁</span>
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Buy $100, Get $50 FREE</h3>
-                                <div className="text-3xl font-bold text-[#B09182] mb-1">$150 Total Value</div>
+                                <div className="text-3xl font-bold text-[#8A6A5B] mb-1">$150 Total Value</div>
                                 <p className="text-sm text-gray-600">(2× $25 bonus gift cards)</p>
                             </div>
                             
                             <ul className="space-y-2 mb-4 text-sm">
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#B09182]">✓</span>
+                                    <span className="text-[#8A6A5B]">✓</span>
                                     <span>Get $50 in FREE bonus cards</span>
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#B09182]">✓</span>
+                                    <span className="text-[#8A6A5B]">✓</span>
                                     <span>Get 2× $25 bonus gift cards</span>
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#B09182]">✓</span>
+                                    <span className="text-[#8A6A5B]">✓</span>
                                     <span>Bonus cards emailed separately</span>
                                 </li>
                             </ul>
@@ -146,7 +146,7 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                                 href={squareGiftCardUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block w-full bg-[#B09182] hover:bg-[#B09182]/90 text-white font-medium py-3 px-4 rounded-md text-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#B09182]/50"
+                                className="block w-full bg-[#8A6A5B] hover:bg-[#8A6A5B]/90 text-white font-medium py-3 px-4 rounded-md text-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#8A6A5B]/50"
                                 aria-label="Buy $100 gift card with $50 in bonus cards"
                             >
                                 Buy $100 Card
@@ -155,29 +155,29 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
 
                         {/* $200 Gift Card Option */}
                         <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-[#B09182] transition-colors relative">
-                            <div className="absolute top-2 right-2 border-2 border-[#B09182] text-[#B09182] bg-white text-xs px-2 py-1 rounded-full font-medium">
+                            <div className="absolute top-2 right-2 border-2 border-[#B09182] text-[#8A6A5B] bg-white text-xs px-2 py-1 rounded-full font-medium">
                                 BEST VALUE
                             </div>
                             <div className="text-center mb-4">
-                                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#B09182]/10 rounded-full mb-3" aria-hidden="true">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#8A6A5B]/10 rounded-full mb-3" aria-hidden="true">
                                     <span className="text-2xl">🎁</span>
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Buy $200, Get $100 FREE</h3>
-                                <div className="text-3xl font-bold text-[#B09182] mb-1">$300 Total Value</div>
+                                <div className="text-3xl font-bold text-[#8A6A5B] mb-1">$300 Total Value</div>
                                 <p className="text-sm text-gray-600">(4× $25 bonus gift cards)</p>
                             </div>
                             
                             <ul className="space-y-2 mb-4 text-sm">
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#B09182]">✓</span>
+                                    <span className="text-[#8A6A5B]">✓</span>
                                     <span>Get $100 in FREE bonus cards</span>
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#B09182]">✓</span>
+                                    <span className="text-[#8A6A5B]">✓</span>
                                     <span>Get 4× $25 bonus gift cards</span>
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <span className="text-[#B09182]">✓</span>
+                                    <span className="text-[#8A6A5B]">✓</span>
                                     <span>Bonus cards emailed separately</span>
                                 </li>
                             </ul>
@@ -186,7 +186,7 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                                 href={squareGiftCardUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block w-full bg-[#B09182] hover:bg-[#B09182]/90 text-white font-medium py-3 px-4 rounded-md text-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#B09182]/50"
+                                className="block w-full bg-[#8A6A5B] hover:bg-[#8A6A5B]/90 text-white font-medium py-3 px-4 rounded-md text-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#8A6A5B]/50"
                                 aria-label="Buy $200 gift card with $100 in bonus cards"
                             >
                                 Buy $200 Card
@@ -216,7 +216,7 @@ export default function GiftCardLightbox({ isOpen, onClose }: GiftCardLightboxPr
                         </p>
                         <button
                             onClick={onClose}
-                            className="text-gray-600 hover:text-gray-900 text-sm underline focus:outline-none focus:ring-2 focus:ring-[#B09182]/50 rounded px-2 py-1"
+                            className="text-gray-600 hover:text-gray-900 text-sm underline focus:outline-none focus:ring-2 focus:ring-[#8A6A5B]/50 rounded px-2 py-1"
                         >
                             Maybe later
                         </button>

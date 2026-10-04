@@ -7,7 +7,7 @@ export default function ShippingPolicyPage() {
     <div className="container mx-auto px-4 py-12 max-w-5xl mt-24">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          <h1 className="text-4xl font-light text-[var(--primary)] mb-4">
+          <h1 className="text-4xl font-light text-heading mb-4">
             SHIPPING<br />POLICY
           </h1>
         </div>

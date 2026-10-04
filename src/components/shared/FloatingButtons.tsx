@@ -33,7 +33,7 @@ export default function FloatingButtons() {
         href="https://www.beautifi.com/doctors/phace-medical-aesthetics-and-skincare/"
         target="_blank"
         rel="noopener noreferrer"
-        className="group relative flex items-center justify-center w-16 h-16 bg-white hover:bg-gray-50 border-2 border-accent text-accent rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+        className="group relative flex items-center justify-center w-16 h-16 bg-white hover:bg-gray-50 border-2 border-accent-soft text-accent rounded-full shadow-lg transition-all duration-300 hover:scale-110"
         aria-label="Finance with Beautifi"
       >
         <div className="relative w-full h-full p-2">

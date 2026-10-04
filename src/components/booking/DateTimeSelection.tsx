@@ -332,7 +332,7 @@ export default function DateTimeSelection({
                     className="absolute inset-0 bg-gray-100/70 rounded-xl flex items-center justify-center z-10"
                   >
                     <div className="text-center">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent mb-2"></div>
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent-soft mb-2"></div>
                       <p className="text-gray-600">Loading availability...</p>
                     </div>
                   </motion.div>

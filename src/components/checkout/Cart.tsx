@@ -70,7 +70,7 @@ export default function Cart() {
                 <h2 className="text-xl font-semibold mb-4">Your cart is empty</h2>
                 <button
                     onClick={() => router.push('/store')}
-                    className="text-primary hover:text-primary-dark"
+                    className="text-accent hover:text-heading"
                 >
                     Continue Shopping
                 </button>
@@ -213,7 +213,7 @@ export default function Cart() {
                         )}
                         <button
                             onClick={handleCheckout}
-                            className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark"
+                            className="w-full bg-accent text-white py-2 px-4 rounded hover:bg-accent/90"
                         >
                             Proceed to Checkout
                         </button>

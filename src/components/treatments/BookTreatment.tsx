@@ -15,7 +15,7 @@ export function BookTreatment() {
 
         <Link
           href="/book"
-          className="inline-block bg-[#E4B4A6] text-white px-8 py-4 rounded-full text-lg hover:bg-[#d19586] transition-colors"
+          className="inline-block bg-accent text-white px-8 py-4 rounded-full text-lg hover:bg-accent/90 transition-colors"
         >
           Schedule Your Appointment
         </Link>

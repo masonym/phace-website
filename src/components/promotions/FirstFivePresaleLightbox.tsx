@@ -108,7 +108,7 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
 
                         {/* Content */}
                         <div className="p-6 sm:p-8">
-                            <p className="text-xs uppercase tracking-[0.2em] text-[#B09182] mb-2">
+                            <p className="text-xs uppercase tracking-[0.2em] text-[#8A6A5B] mb-2">
                                 Pre-sale · Now through October 10
                             </p>
                             <h2 id="first-five-title" className="text-3xl text-[#59637E] mb-3">
@@ -123,7 +123,7 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
                             <ul className="space-y-1.5 mb-6 text-sm text-[#59637E]">
                                 {PRODUCTS.map((product) => (
                                     <li key={product} className="flex items-center gap-2">
-                                        <span className="text-[#B09182]" aria-hidden="true">✓</span>
+                                        <span className="text-[#8A6A5B]" aria-hidden="true">✓</span>
                                         <span>{product}</span>
                                     </li>
                                 ))}
@@ -134,7 +134,7 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
                                     <span className="text-3xl text-[#59637E]">$259.99</span>
                                     <span className="text-sm text-[#59637E]/70">complete collection</span>
                                 </div>
-                                <p className="text-[#B09182] font-medium mt-1">
+                                <p className="text-[#8A6A5B] font-medium mt-1">
                                     + a $100 Phace service credit with your preorder
                                 </p>
                             </div>
@@ -143,7 +143,7 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
                                 href={PRESALE_URL}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block w-full bg-[#B09182] hover:bg-[#B09182]/90 text-white font-medium py-3 px-4 rounded-md text-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#B09182]/50"
+                                className="block w-full bg-[#8A6A5B] hover:bg-[#8A6A5B]/90 text-white font-medium py-3 px-4 rounded-md text-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#8A6A5B]/50"
                             >
                                 Preorder Now
                             </a>
@@ -165,7 +165,7 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
                             <div className="mt-4 text-center">
                                 <button
                                     onClick={onClose}
-                                    className="text-[#59637E]/70 hover:text-[#59637E] text-sm underline focus:outline-none focus:ring-2 focus:ring-[#B09182]/50 rounded px-2 py-1"
+                                    className="text-[#59637E]/70 hover:text-[#59637E] text-sm underline focus:outline-none focus:ring-2 focus:ring-[#8A6A5B]/50 rounded px-2 py-1"
                                 >
                                     Maybe later
                                 </button>

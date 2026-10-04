@@ -31,7 +31,7 @@ export default function Error({
           </button>
           <a
             href="/"
-            className="border border-accent text-accent px-6 py-2 rounded-full hover:bg-accent/10 transition-colors"
+            className="border border-accent-soft text-accent px-6 py-2 rounded-full hover:bg-accent/10 transition-colors"
           >
             Go home
           </a>

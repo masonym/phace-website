@@ -7,15 +7,15 @@ export function OurClinic() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
           <div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-light mb-6 md:mb-8 text-[#E4B4A6]">OUR CLINIC</h1>
-            <h2 className="text-2xl md:text-3xl font-light mb-6 md:mb-8 text-[#E4B4A6]">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-light mb-6 md:mb-8 text-heading">OUR CLINIC</h1>
+            <h2 className="text-2xl md:text-3xl font-light mb-6 md:mb-8 text-heading">
               Embrace Your Natural Beauty:<br />
               Where Small-Town Warmth<br />
               Meets Big-City Results
             </h2>
             <Link
               href="/contact"
-              className="text-[#E4B4A6] hover:text-[#d19586] transition-colors"
+              className="text-heading-strong hover:text-heading transition-colors"
             >
               Book a complimentary consultation today →
             </Link>

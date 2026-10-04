@@ -85,7 +85,7 @@ export default function TreatmentPage({ params }: Props) {
       {/* What Is Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-6xl font-light text-[#E4B4A6] text-center mb-16">
+          <h2 className="text-3xl md:text-6xl font-light text-heading text-center mb-16">
             WHAT IS<br />{treatmentNameUpper}?
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -109,7 +109,7 @@ export default function TreatmentPage({ params }: Props) {
       {/* How It Works Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-6xl font-light text-[#E4B4A6] mb-16">
+          <h2 className="text-3xl md:text-6xl font-light text-heading mb-16">
             HOW {treatmentNameUpper} WORKS
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -136,14 +136,14 @@ export default function TreatmentPage({ params }: Props) {
       {(treatment.benefits?.length || treatment.duration) && (
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl md:text-6xl font-light text-[#E4B4A6] mb-12">
+            <h2 className="text-3xl md:text-6xl font-light text-heading mb-12">
               BENEFITS
             </h2>
             {treatment.benefits && treatment.benefits.length > 0 && (
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-lg text-[#4A5568]">
                 {treatment.benefits.map((benefit) => (
                   <li key={benefit} className="flex items-start gap-3">
-                    <span className="text-[#E4B4A6]" aria-hidden="true">✓</span>
+                    <span className="text-heading-strong" aria-hidden="true">✓</span>
                     <span>{benefit}</span>
                   </li>
                 ))}

@@ -300,20 +300,20 @@ export default function ClientForm({ initialValues, onSubmit, onBack }: Props) {
                     <Button
                       isLoading={isSubmitting}
                       css={{
-                        backgroundColor: '#B09182',
+                        backgroundColor: '#8A6A5B',
                         color: 'white',
                         padding: '12px 32px',
                         borderRadius: '9999px',
                         fontSize: '16px',
                         fontWeight: 'bold',
                         '&:after': {
-                          backgroundColor: '#B09182',
+                          backgroundColor: '#8A6A5B',
                         },
                         '&:hover': {
-                          backgroundColor: '#B09182/90',
+                          backgroundColor: '#7C6052',
                         },
                         '&:active': {
-                          backgroundColor: '#B09182',
+                          backgroundColor: '#8A6A5B',
                         },
                         marginLeft: 'auto',
                         width: '40%',

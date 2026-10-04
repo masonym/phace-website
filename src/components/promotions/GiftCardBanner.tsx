@@ -10,7 +10,7 @@ export default function GiftCardBanner() {
     return (
         <>
             {/* Persistent Banner */}
-            <div className="bg-[#B09182] text-white py-3 px-4 shadow-lg mt-20">
+            <div className="bg-[#8A6A5B] text-white py-3 px-4 shadow-lg mt-20">
                 <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-3 text-center sm:text-left">
                         {/* <span className="text-2xl" aria-hidden="true">🎄</span> */}
@@ -35,7 +35,7 @@ export default function GiftCardBanner() {
                             href={squareGiftCardUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="bg-[#B09182] hover:bg-[#B09182]/90 text-white font-medium py-2 px-4 rounded-md text-sm sm:text-base transition-colors focus:outline-none focus:ring-2 focus:ring-[#B09182]/50"
+                            className="bg-[#8A6A5B] hover:bg-[#8A6A5B]/90 text-white font-medium py-2 px-4 rounded-md text-sm sm:text-base transition-colors focus:outline-none focus:ring-2 focus:ring-[#8A6A5B]/50"
                         >
                             Buy Now
                         </a>

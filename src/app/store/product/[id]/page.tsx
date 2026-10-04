@@ -248,7 +248,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                                 .map((variation: Square.CatalogObjectItemVariation) => (
                                     <div
                                         key={variation.id}
-                                        className={`border rounded-xl p-4 cursor-pointer transition-shadow duration-300 ${selectedVariation?.id === variation.id ? 'border-accent shadow-md bg-accent/10' : 'hover:shadow-sm'
+                                        className={`border rounded-xl p-4 cursor-pointer transition-shadow duration-300 ${selectedVariation?.id === variation.id ? 'border-accent-soft shadow-md bg-accent/10' : 'hover:shadow-sm'
                                             }`}
                                         onClick={() => setSelectedVariation(variation)}
                                     >

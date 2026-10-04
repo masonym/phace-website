@@ -10,7 +10,7 @@ export default function GiftCardPromoButton() {
         <>
             <button
                 onClick={() => setIsLightboxOpen(true)}
-                className="inline-flex items-center gap-2 bg-[#B09182] hover:bg-[#B09182]/90 text-white font-medium py-3 px-6 rounded-full transition-all transform hover:scale-105 shadow-lg"
+                className="inline-flex items-center gap-2 bg-[#8A6A5B] hover:bg-[#8A6A5B]/90 text-white font-medium py-3 px-6 rounded-full transition-all transform hover:scale-105 shadow-lg"
             >
                 <span>Holiday Gift Card Special</span>
             </button>

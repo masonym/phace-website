@@ -317,7 +317,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                     <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">{categoryName}</p>
                     <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-primary font-bold">
+                      <span className="text-accent font-bold">
                         ${((item.price || 0) / 100).toFixed(2)}
                         {item.variations && item.variations.length > 1 && '+'}
                       </span>
@@ -356,7 +356,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                       <p className="text-gray-600 mb-2">{service.description}</p>
                     )}
                     {service.variations && service.variations.length > 1 && (
-                      <p className="text-sm text-primary font-medium">
+                      <p className="text-sm text-accent font-medium">
                         {service.variations.length} variations available
                       </p>
                     )}
@@ -364,7 +364,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                 </div>
                 <div className="p-4">
                   <div className="flex justify-between items-center mt-2">
-                    <span className="text-primary font-bold">
+                    <span className="text-accent font-bold">
                       ${((service.price || 0) / 100).toFixed(2)}
                       {service.variations && service.variations.length > 1 && '+'}
                     </span>
@@ -394,7 +394,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                 </div>
                 <div className="p-4 border-t border-gray-100">
                   <div className="flex justify-between items-center mt-2">
-                    <span className="text-primary font-bold">
+                    <span className="text-accent font-bold">
                       ${((variation.price || 0) / 100).toFixed(2)}
                     </span>
                     <span className="text-gray-500">

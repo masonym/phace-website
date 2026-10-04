@@ -27,7 +27,7 @@ TODO:
 - [x] B9. Calendar: jump to first available date; bound month arrows; aria-labels; legend for orange (fully booked)
 - [x] B10. Waitlist prompt repeated in every state -- show once
 - [x] B11. Format slot times in America/Vancouver, not browser tz
-- [ ] B12. (needs answer from Dawn) Same-day booking excluded -- intentional? (ask Dawn)
+- [x] B12. Same-day booking excluded -- intentional, keeping tomorrow onward
 - [x] B13. Confirmation page: add-to-calendar, address/directions, policy
 - [x] B14. Category/service cards are clickable divs -> buttons
 - [x] B15. Service search across all categories on the first booking step
@@ -49,7 +49,7 @@ TODO:
 ### 5. Visual / a11y
 - [x] V1. Spinnaker font never loads (@font-face src commented out) -> next/font
 - [x] V2. .section-title clamp(5rem, 4vw, 3rem) is always 80px
-- [ ] V3.  (brand colour decision -- confirm button now uses accent; headings/accent still low contrast) Contrast: #DEC3C5/#E4B4A6 headings on cream (~1.5:1), white on accent (~2.9:1)
+- [x] V3. (headings -> #A86F62, small rose text -> #8A5B4D, accent/buttons -> #8A6A5B, borders keep #B09182 as accent-soft) Contrast: #DEC3C5/#E4B4A6 headings on cream (~1.5:1), white on accent (~2.9:1)
 - [x] V4. Mobile menu aria-expanded, active nav link, logo alt, map iframe title, testimonial alt text
 - [x] V5. error.tsx shows raw error.message
 

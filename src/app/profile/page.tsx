@@ -102,7 +102,7 @@ export default function Profile() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-accent"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-accent-soft"></div>
       </div>
     );
   }
@@ -205,7 +205,7 @@ export default function Profile() {
               </div>
               {loadingAppointments ? (
                 <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent-soft mx-auto"></div>
                 </div>
               ) : upcomingAppointments.length > 0 ? (
                 <div className="space-y-4">
@@ -251,7 +251,7 @@ export default function Profile() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Past Appointments</h3>
               {loadingAppointments ? (
                 <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent-soft mx-auto"></div>
                 </div>
               ) : pastAppointments.length > 0 ? (
                 <div className="space-y-4">

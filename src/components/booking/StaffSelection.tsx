@@ -80,7 +80,7 @@ export default function StaffSelection({ variationId, onSelect, onAutoSelect, on
           </button>
           <button
             onClick={onBack}
-            className="px-6 py-2 border border-accent text-accent rounded-full hover:bg-accent/10 transition-colors"
+            className="px-6 py-2 border border-accent-soft text-accent rounded-full hover:bg-accent/10 transition-colors"
           >
             Back
           </button>
@@ -136,7 +136,7 @@ export default function StaffSelection({ variationId, onSelect, onAutoSelect, on
             </button>
             <a
               href="/contact"
-              className="px-6 py-2 border border-accent text-accent rounded-md hover:bg-accent/10 transition-colors"
+              className="px-6 py-2 border border-accent-soft text-accent rounded-md hover:bg-accent/10 transition-colors"
             >
               Contact Us
             </a>
@@ -150,7 +150,7 @@ export default function StaffSelection({ variationId, onSelect, onAutoSelect, on
           {staff.length > 1 && (
             <button
               onClick={() => onSelect({ id: ANY_STAFF_ID, name: 'Any available provider' })}
-              className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-left border-2 border-accent/40 md:col-span-2"
+              className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-left border-2 border-accent-soft/40 md:col-span-2"
             >
               <h3 className="text-xl font-medium mb-1 text-gray-900">Any available provider</h3>
               <p className="text-gray-600">See every opening for this service and we&apos;ll match you with whoever is free.</p>

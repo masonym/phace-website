@@ -22,7 +22,7 @@ export function WhatSetsUsApart() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div>
-            <h2 className="text-6xl font-light text-[#E4B4A6] mb-8">
+            <h2 className="text-6xl font-light text-heading mb-8">
               WHAT<br />
               SETS US<br />
               APART?
@@ -31,8 +31,8 @@ export function WhatSetsUsApart() {
           <div className="space-y-12">
             {features.map((feature) => (
               <div key={feature.number} className="border-t border-[#E4B4A6] pt-8">
-                <div className="text-sm text-[#E4B4A6] mb-2">{feature.number}</div>
-                <h3 className="text-xl font-medium text-[#E4B4A6] mb-4">
+                <div className="text-sm text-heading-strong mb-2">{feature.number}</div>
+                <h3 className="text-xl font-medium text-heading-strong mb-4">
                   {feature.title}
                 </h3>
                 <p className="text-gray-600">{feature.description}</p>
