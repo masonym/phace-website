@@ -4,6 +4,7 @@ import Link from 'next/link'
 const services = [
   {
     title: 'Facials and Skin Treatments',
+    bookingCategory: 'facial',
     description: "At Phace, we are passionate about promoting skin health through personalized care and advanced, results-driven techniques. Whether you're addressing acne, aging, or pigmentation issues, our dedicated team leverages cutting-edge technology and expertise to help you achieve your aesthetic goals.",
     // longDescription: `Experience transformative skincare with our comprehensive range of facial treatments. From deep cleansing and exfoliation to advanced anti-aging solutions, our expert estheticians customize each treatment to address your unique skin concerns.
 
@@ -22,6 +23,7 @@ const services = [
   },
   {
     title: 'Injectables',
+    bookingCategory: 'injectable',
     description: "At Phace, our experienced Naturopath Physician specializes in neuromodulators and dermal fillers to provide top-notch injectable services. Focused on safety, precision, and patient satisfaction, our expert team customizes treatment plans to help you achieve natural-looking results, enhancing your beauty and boosting your confidence.",
     // longDescription: `Achieve natural-looking rejuvenation with our advanced injectable treatments. Our expert practitioners combine artistic vision with medical precision to enhance your features while maintaining a natural appearance.
 
@@ -31,6 +33,7 @@ const services = [
   },
   {
     title: "Laser Treatments",
+    bookingCategory: 'laser',
     description: "Experience the transformative power of our advanced laser services at Phace, designed for exceptional results in hair removal, facial rejuvenation, acne, and rosacea treatments. Our experienced team customizes treatment plans to address your unique concerns, ensuring optimal results and a radiant, youthful complexion.",
     // longDescription: `Experience the transformative power of our advanced laser services at Phace, designed for exceptional results in hair removal, facial rejuvenation, acne, and rosacea treatments. Our experienced team customizes treatment plans to address your unique concerns, ensuring optimal results and a radiant, youthful complexion.`,
 
@@ -39,12 +42,15 @@ const services = [
   },
   {
     title: 'IV Therapy',
+    // IV therapy consults are booked through the naturopath's Jane page, same as the IV therapy page
+    bookingUrl: 'https://drjaninemackenzie.janeapp.com/',
     description: "IV therapy at Phace is designed to support hydration, recovery, and overall wellness through medically guided care. Whether you're feeling depleted, looking to support your body during a demanding season, or simply want a more efficient way to replenish fluids and nutrients, our IV therapies are tailored with intention and oversight. The goal is simple — help you feel supported, restored and better equipped to move through life feeling your best.",
     image: '/images/iv-therapy1.webp',
     link: '/treatments/iv-therapy'
   },
   {
     title: 'Paramedical Scar Revision & Tattooing',
+    bookingCategory: 'scar',
     description: "At Phace, we specialize in paramedical scar revision and paramedical tattoo services to help you achieve smooth, flawless skin. Our expert technicians use advanced techniques for scar revision and tattooing, offering personalized treatments that restore confidence and provide natural-looking results.",
     // longDescription: `Our paramedical scar revision and tattooing services offer advanced solutions for various skin concerns. Using state-of-the-art techniques and equipment, we help minimize the appearance of scars and restore natural-looking skin texture.
 
@@ -98,7 +104,14 @@ export function Services() {
                       Learn More →
                     </Link>}
                     <Link 
-                      href="/book"
+                      href={
+                        'bookingUrl' in service && service.bookingUrl
+                          ? service.bookingUrl
+                          : 'bookingCategory' in service && service.bookingCategory
+                            ? `/book?category=${encodeURIComponent(service.bookingCategory)}`
+                            : '/book'
+                      }
+                      {...('bookingUrl' in service && service.bookingUrl ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                       className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-slate-800 bg-transparent border-2 border-slate-800 hover:bg-slate-50 rounded-md transition duration-150 ease-in-out"
                     >
                       Book Now

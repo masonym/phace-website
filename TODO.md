@@ -8,7 +8,7 @@ TODO:
 - [x] S3. discount/create only checks a "Bearer " prefix exists, never verifies
 - [x] S4. upload-url has no auth (no callers in the app)
 - [x] S5. booking/staff/blocked-time POST/DELETE have no auth
-- [ ] S6.  ⚠ run on Windows: `npm i next@14.2 eslint-config-next@14.2` then `npm run build` (not run from WSL -- would swap native binaries) Upgrade Next 14.0.0 -> latest 14.2.x (CVE-2025-29927 middleware bypass)
+- [x] S6. Upgrade Next 14.0.0 -> latest 14.2.x (CVE-2025-29927 middleware bypass)
 - [x] S7. (follow-up) other admin routes only check "valid Cognito token", but customers share the same user pool -- should also check the admin table
 
 ### 1. Presale popup (live Oct 6)
@@ -23,14 +23,14 @@ TODO:
 - [x] B5. Browser back leaves the flow (router.replace); refresh mid-flow breaks (blank addons step)
 - [x] B6. Back from staff lands on single-option "variation" screen
 - [x] B7. Addon selection + selected date lost on Back
-- [ ] B8.  (partial: single-provider services now skip the step; 'Any provider' needs multi-staff availability in squareBookingService) "Any available provider" option; auto-skip staff step when only one provider
+- [x] B8. "Any available provider" option; auto-skip staff step when only one provider
 - [x] B9. Calendar: jump to first available date; bound month arrows; aria-labels; legend for orange (fully booked)
 - [x] B10. Waitlist prompt repeated in every state -- show once
 - [x] B11. Format slot times in America/Vancouver, not browser tz
 - [ ] B12. (needs answer from Dawn) Same-day booking excluded -- intentional? (ask Dawn)
 - [x] B13. Confirmation page: add-to-calendar, address/directions, policy
 - [x] B14. Category/service cards are clickable divs -> buttons
-- [ ] B15. Service search / popular services
+- [x] B15. Service search across all categories on the first booking step
 
 ### 3. Store & checkout
 - [x] C1. Payment succeeds but /api/orders fails -> user sees error, may pay twice
@@ -40,7 +40,7 @@ TODO:
 - [x] C5. ProductGrid sidebar class string mangled (`lg: w - 1 / 5 ...`)
 - [x] C6. ProductGrid layout via windowWidth state -> CSS breakpoints (layout flash)
 - [x] C7. Store search, sort, filters in URL, empty state
-- [ ] C8. Brand vs type detection via hardcoded list
+- [x] C8. Brand vs type detection: a "Brands" parent category in Square now wins; name list kept as fallback (storeConfig)
 
 ### 4. Accounts
 - [x] A1. Profile "My Appointments" broken (GET ignores clientEmail, hardcoded 2025 date range)
@@ -58,7 +58,7 @@ TODO:
 - [x] O2. sitemap.ts + robots.ts
 - [x] O3. LocalBusiness / MedicalBusiness JSON-LD
 - [x] O4. phace-outside.webp is 6.5MB (images unoptimized)
-- [ ] O5.  (partial: product pages now get server-side title/description; slugs still TODO #4 below) Product pages client-rendered, ID URLs (see #4 below)
+- [x] O5. Product pages: server-side title/description/canonical, readable slug URLs, products in sitemap (page body still client-rendered)
 
 ### Found while fixing
 - [x] F1. Contact page phone link dialed +1 604 703 3552 while showing (778) 864-0624
@@ -68,16 +68,18 @@ TODO:
 - [x] F5. Contact form email inserted name/message as raw HTML
 - [x] F6. Checkout total didn't refresh after applying a coupon (charge != displayed total)
 - [ ] F7. Set NEXT_PUBLIC_SITE_URL in Vercel (defaults to https://phace.ca -- confirm domain)
+- [x] F9. Missing /images/placeholder.png -> products without photos showed a broken image
+- [x] F10. API test suites were broken (square mock lacked SquareEnvironment); rewritten + discount tests added
 - [ ] F8. Newsletter signups are emailed to hello@phace.ca -- move to a real list (Square Marketing / Mailchimp) later
 
 ### 7. Content / nav
 - [x] N1. Footer newsletter form does nothing
-- [x] N2. Footer: Book, Contact, socials, reviews links  (Google reviews link still needs the URL)
+- [x] N2. Footer: Book, Contact, FAQ, Instagram, Google reviews links
 - [x] N3. Hours duplicated in Footer, Location, Contact -> single source
 - [ ] N4.  (partial: benefits + duration shown; prices in data/treatments.ts not shown until confirmed current) Treatment pages: show price/duration/benefits already in data
-- [ ] N5.  (/book now supports ?step=service&categoryId=X -- need the Square category IDs per treatment) Deep-link "Book" buttons to the right category
+- [x] N5. Deep-link (/book?category=<keyword>, matched against live category names; falls back to the list) -- "Book" buttons to the right category
 - [ ] N6.  (Laser fixed -> /treatments/sharplight; Scar Revision has no page yet) Home: Laser "Learn more" goes to /treatments; Scar Revision has no link
-- [ ] N7. FAQ page
+- [x] N7. FAQ page (/faq, only facts already on the site, with FAQPage JSON-LD)
 
 ## Booking Flow Square Integration 
 
@@ -100,7 +102,7 @@ TODO:
 - [ ] 1. I feel like the way im getting products is insanely stupid but im not sure -- check later
    why is this stupid? i cant remember i wrote it last night lol. i think i meant CATEGORIES
 - [ ] 3. Fix state in booking flow page.tsx; currently when ServiceSelection gets called for the 'service' step, it resets its state so it doesn't get categories properly; temp fixed
-- [ ] 4. change store\[id] to store\[slug] where [slug] is a hyphenated version of the name
+- [x] 4. change store\[id] to store\[slug] where [slug] is a hyphenated version of the name (slug-ID, see productUrl.ts)
 - [x] 5. look into different caching strategies for square api calls. 
 
 ## OTHER WEBSITE THINGS

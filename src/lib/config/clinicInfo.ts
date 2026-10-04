@@ -14,6 +14,7 @@ export const CLINIC = {
     phoneE164: '+17788640624',
     email: 'hello@phace.ca',
     googleMapsPlaceId: 'ChIJwQQwelhHhFQRnUFtj2tusQ4',
+    googleReviewsUrl: 'https://search.google.com/local/reviews?placeid=ChIJwQQwelhHhFQRnUFtj2tusQ4',
     directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=42333+Yarrow+Central+Rd%2C+Chilliwack%2C+BC+V2R+5E1&destination_place_id=ChIJwQQwelhHhFQRnUFtj2tusQ4',
     geo: { lat: 49.1329, lng: -122.0841 },
 } as const;

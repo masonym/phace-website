@@ -2,6 +2,8 @@ export interface Treatment {
   id: number;
   name: string;
   slug: string;
+  /** Keyword matched against booking category names in Square for "Book" links */
+  bookingCategory?: string;
   description: string;
   longDescription?: string;
   benefits?: string[];
@@ -21,6 +23,7 @@ export const treatments: Treatment[] = [
     id: 1,
     name: "Sharplight Technology",
     slug: "sharplight",
+    bookingCategory: "laser",
     description: "SharpLight designs and manufactures non-invasive aesthetic medical solutions for a broad range of treatments such as hair removal, body and facial contouring, acne improvement, pigmented and vascular lesion reduction, and tattoo removal.",
     longDescription: `
     Step into the future of hair removal with SharpLight's cutting-edge technologies. Say goodbye to the traditional methods of plucking, waxing, and shaving, and welcome a new era of long-term hair reduction. The innovative Dynamic Pulse Control (DPC) and DPC Flow technologies are designed to deliver permanent results, catering to all skin types, including dark skin, throughout the year. Enjoy a swift, comfortable treatment experience that's virtually painless.
@@ -61,6 +64,7 @@ export const treatments: Treatment[] = [
     id: 2,
     name: "Dermapen DP4",
     slug: "dermapen-dp4",
+    bookingCategory: "microneedling",
     description: "Advance your skincare with the fastest microneedling device in history. The Dp4 is a small hand-held device that can create thousands of micro-punctures per second to stimulate your skin's natural ability to heal itself, signaling for collagen and elastin production.",
     longDescription: `
     Unveil the secret to youthful, radiant skin with the Dp4 by Dermapen, the pinnacle of microneedling technology. This FDA-cleared device revolutionizes skin rejuvenation by creating millions of fine, vertical micro-channels at unparalleled speeds, significantly faster than comparable devices.
@@ -105,6 +109,7 @@ export const treatments: Treatment[] = [
     id: 3,
     name: "Tixel Skin Resurfacing",
     slug: "tixel",
+    bookingCategory: "tixel",
     description: "Tixel skin resurfacing is a \"thermo-mechanical ablative treatment\" which uses heat on your skin to create controlled damage that stimulates your body to produce collagen and rejuvenate the skin.",
     longDescription: `
 Compared to some of the sophisticated sorts of technology on the market, which work off radiofrequency energy, or use focused ultrasound, or miniature lightning bolts of ‘plasma’ energy, Tixel is very straightforward.
@@ -145,6 +150,7 @@ Compared to some of the sophisticated sorts of technology on the market, which w
     id: 4,
     name: "Bela MD+",
     slug: "bela-md",
+    bookingCategory: "facial",
     description: "BELA MD+ Facials are the perfect solution to easy and accessible exfoliation. BELA MD+ combines medical-grade dermabrasion, serum infusion, microcurrent technology, and hydrogen water delivery, to create a perfectly tailored serum infusion to best suit your skin.",
     longDescription: `
     The Bela MD+ Advanced medical-grade facial is simple, fast, comfortable and effective. It’s made up of 6 distinct steps: a diamond-tip microdermabrasion, a hydrogen water infusion & antioxidant boost, an ultrasonic extraction, face and neck toning, a targeted serum infusion, and finally electroporation.

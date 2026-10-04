@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { BookingCache } from '@/lib/cache/bookingCache';
+import { ANY_STAFF_ID } from '@/lib/config/booking';
 
 interface Staff {
   id: string;
@@ -146,6 +147,15 @@ export default function StaffSelection({ variationId, onSelect, onAutoSelect, on
       {/* Staff Grid */}
       {staff.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {staff.length > 1 && (
+            <button
+              onClick={() => onSelect({ id: ANY_STAFF_ID, name: 'Any available provider' })}
+              className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-left border-2 border-accent/40 md:col-span-2"
+            >
+              <h3 className="text-xl font-medium mb-1 text-gray-900">Any available provider</h3>
+              <p className="text-gray-600">See every opening for this service and we&apos;ll match you with whoever is free.</p>
+            </button>
+          )}
           {staff.map((member) => (
             <button
               key={member.id}

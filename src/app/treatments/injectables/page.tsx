@@ -14,7 +14,7 @@ export default function InjectablesPage() {
     <main>
       <InjectablesHero />
       <InjectablesContent />
-      <BookAppointment />
+      <BookAppointment link="/book?category=injectable" />
     </main>
   );
 }

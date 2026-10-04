@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { BookingCache } from '@/lib/cache/bookingCache';
-import { HIDDEN_CATEGORY_IDS } from '@/lib/config/storeConfig';
+import { isBookableCategory } from '@/lib/config/booking';
 
 interface ServiceVariation {
   id: string;
@@ -40,11 +40,46 @@ interface Props {
   categoryId?: string;
   service?: Service;
   onSelect: (item: any) => void;
+  /** Category step only: a service picked from search, with the category it belongs to */
+  onSelectService?: (selection: ServiceSelectionResult, categoryId: string) => void;
   onBack?: () => void;
   preloadStaffForServices?: (services: Service[]) => void;
 }
 
-export default function ServiceSelection({ mode, categoryId, service, onSelect, onBack, preloadStaffForServices }: Props) {
+export type ServiceSelectionResult =
+  | { type: 'service'; service: Service }
+  | { type: 'variation'; service: Service; variation: ServiceVariation };
+
+/** Multi-variation services go to the variation step; others are picked with their only variation */
+function selectionFor(service: Service): ServiceSelectionResult {
+  if (service.variations && service.variations.length > 1) {
+    return { type: 'service', service };
+  }
+  const variation = service.variations && service.variations.length === 1
+    ? service.variations[0]
+    : {
+      id: service.variationId || service.id,
+      name: 'Standard',
+      price: service.price,
+      duration: service.duration,
+      isActive: true
+    };
+  return { type: 'variation', service, variation };
+}
+
+const fetchServicesFor = (catId: string): Promise<Service[]> =>
+  BookingCache.getServicesByCategory(catId, async () => {
+    const response = await fetch(`/api/booking/services?categoryId=${encodeURIComponent(catId)}`);
+    if (!response.ok) throw new Error('Failed to fetch services');
+    const data = await response.json();
+
+    if (data && data.length > 0 && Array.isArray(data[0].services)) {
+      return data[0].services;
+    }
+    return [];
+  });
+
+export default function ServiceSelection({ mode, categoryId, service, onSelect, onSelectService, onBack, preloadStaffForServices }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [variations, setVariations] = useState<ServiceVariation[]>([]);
@@ -60,16 +95,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
       console.log("Fetching services for category:", catId);
 
       // Use the BookingCache to get services (either from cache or fresh)
-      const services = await BookingCache.getServicesByCategory(catId, async () => {
-        const response = await fetch(`/api/booking/services?categoryId=${encodeURIComponent(catId)}`);
-        if (!response.ok) throw new Error('Failed to fetch services');
-        const data = await response.json();
-
-        if (data && data.length > 0 && Array.isArray(data[0].services)) {
-          return data[0].services;
-        }
-        return [];
-      });
+      const services = await fetchServicesFor(catId);
 
       console.log("Services returned:", services.length);
       setServices(services);
@@ -99,17 +125,8 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
         return await response.json();
       });
 
-      // Only show active categories if the isActive property exists
-      const activeCategories = allCategories.filter((category: any) =>
-        category.isActive !== false // Consider undefined or true as active
-      ).filter((category: any) => {
-        // filter out categories like "Add-ons", "Gift Cards", and "Retail"
-        const excludedCategories = ['add-ons', 'add-ons', 'gift cards', 'retail', 'black friday service packages', 'buy 2 get 1 free', 'paz retail'];
-        const categoryNameLower = category.name.toLowerCase().trim();
-        const isExcluded = excludedCategories.includes(categoryNameLower) || HIDDEN_CATEGORY_IDS.includes(category.id);
-
-        return !isExcluded;
-      });
+      // Hide inactive categories and ones used for retail/promos ("Add-ons", "Gift Cards", "Retail", ...)
+      const activeCategories = allCategories.filter(isBookableCategory);
 
       console.log("Active categories:", activeCategories.length);
       setCategories(activeCategories);
@@ -169,6 +186,35 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
     }
   }, [mode, service]);
 
+  // Search across every category from the first step
+  const [query, setQuery] = useState('');
+  const [allServices, setAllServices] = useState<{ service: Service; categoryId: string; categoryName: string }[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const trimmedQuery = query.trim().toLowerCase();
+
+  useEffect(() => {
+    if (mode !== 'category' || trimmedQuery.length < 2 || allServices || searchLoading || categories.length === 0) return;
+    setSearchLoading(true);
+    Promise.all(categories.map(async (category) => {
+      try {
+        const list = await fetchServicesFor(category.id);
+        return list
+          .filter((item) => item.isActive !== false)
+          .map((item) => ({ service: item, categoryId: category.id, categoryName: category.name }));
+      } catch {
+        return [];
+      }
+    }))
+      .then((lists) => setAllServices(lists.flat()))
+      .finally(() => setSearchLoading(false));
+  }, [mode, trimmedQuery, allServices, searchLoading, categories]);
+
+  const searchResults = trimmedQuery.length >= 2 && allServices
+    ? allServices.filter(({ service: item }) =>
+        item.name.toLowerCase().includes(trimmedQuery) ||
+        (item.description ?? '').toLowerCase().includes(trimmedQuery))
+    : [];
+
   // Cards are clickable divs (they contain headings), so give them button semantics for keyboard users
   const cardProps = (onActivate: () => void) => ({
     role: 'button' as const,
@@ -220,6 +266,19 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
               ? `Select a Service from ${selectedCategoryName}`
               : `Select a ${selectedServiceName} Variation`}
         </h2>
+        {mode === 'category' && onSelectService && (
+          <div className="mt-4">
+            <label htmlFor="service-search" className="sr-only">Search all services</label>
+            <input
+              id="service-search"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search all services (e.g. facial, lash lift, laser)"
+              className="w-full px-4 py-3 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -239,7 +298,36 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {mode === 'category' && categories.length > 0 ? (
+          {mode === 'category' && trimmedQuery.length >= 2 ? (
+            searchLoading || !allServices ? (
+              <p className="text-center text-gray-600 py-8">Searching services...</p>
+            ) : searchResults.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600 mb-3">No services match &ldquo;{query.trim()}&rdquo;.</p>
+                <button onClick={() => setQuery('')} className="text-accent underline">Browse all categories</button>
+              </div>
+            ) : (
+              searchResults.map(({ service: item, categoryId: itemCategoryId, categoryName }) => (
+                <div
+                  key={`${itemCategoryId}-${item.id}`}
+                  className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  {...cardProps(() => onSelectService?.(selectionFor(item), itemCategoryId))}
+                >
+                  <div className="p-4">
+                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">{categoryName}</p>
+                    <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-primary font-bold">
+                        ${((item.price || 0) / 100).toFixed(2)}
+                        {item.variations && item.variations.length > 1 && '+'}
+                      </span>
+                      <span className="text-gray-500">{formatDuration(item.duration)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )
+          ) : mode === 'category' && categories.length > 0 ? (
             categories.map((category) => (
               <div
                 key={category.id}
@@ -259,29 +347,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
               <div
                 key={service.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                {...cardProps(() => {
-                  // If service has multiple variations, go to variation selection
-                  if (service.variations && service.variations.length > 1) {
-                    onSelect({ type: 'service', service });
-                  } else {
-                    // Otherwise, select the service directly with its default variation
-                    const defaultVariation = service.variations && service.variations.length === 1
-                      ? service.variations[0]
-                      : {
-                        id: service.variationId || service.id,
-                        name: 'Standard',
-                        price: service.price,
-                        duration: service.duration,
-                        isActive: true
-                      };
-
-                    onSelect({
-                      type: 'variation',
-                      service,
-                      variation: defaultVariation
-                    });
-                  }
-                })}
+                {...cardProps(() => onSelect(selectionFor(service)))}
               >
                 <div className="">
                   <div className="p-4">

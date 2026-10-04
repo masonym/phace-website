@@ -24,11 +24,14 @@ import WaitlistForm from './WaitlistForm';
 import { showToast } from "@/components/ui/Toast";
 import { BookingCache } from '@/lib/cache/bookingCache';
 import { formatClinicTime, isOutsideClinicTimeZone } from '@/lib/utils/clinicTime';
+import { ANY_STAFF_ID } from '@/lib/config/booking';
 
 interface TimeSlot {
   startTime: string;
   endTime: string;
   available: boolean;
+  staffId?: string;
+  staffName?: string;
 }
 
 interface AvailabilityResponse {
@@ -44,7 +47,7 @@ interface DateTimeSelectionProps {
   addons: string[];
   /** Previously chosen slot, so going back keeps the same day selected */
   initialDateTime?: string;
-  onSelect: (dateTime: string) => void;
+  onSelect: (dateTime: string, slot?: { staffId?: string; staffName?: string }) => void;
   onBack: () => void;
 }
 
@@ -461,7 +464,7 @@ export default function DateTimeSelection({
                     {availableTimeSlots.map((slot, index) => (
                       <button
                         key={index}
-                        onClick={() => onSelect(slot.startTime)}
+                        onClick={() => onSelect(slot.startTime, { staffId: slot.staffId, staffName: slot.staffName })}
                         className={`py-3 px-4 rounded-lg text-center transition-colors ${
                           initialDateTime === slot.startTime
                             ? 'bg-accent text-white'
@@ -469,6 +472,9 @@ export default function DateTimeSelection({
                         }`}
                       >
                         {formatClinicTime(slot.startTime, 'h:mm a')}
+                        {staffId === ANY_STAFF_ID && slot.staffName && (
+                          <span className="block text-xs opacity-80">with {slot.staffName.split(' ')[0]}</span>
+                        )}
                       </button>
                     ))}
                   </div>

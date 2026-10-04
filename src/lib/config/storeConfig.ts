@@ -15,3 +15,44 @@ export const HIDDEN_CATEGORY_IDS: string[] = [
     "I3UFN36WO3SYONZM2GUJVLRD", // Paz Retail
     "JOCFMCTA5Y7B2PRPIWMST26F", // Link Only (items sold via Square payment links, not the storefront)
 ];
+
+/**
+ * Store filter grouping.
+ *
+ * Preferred: in Square, put brand categories under a parent category named "Brands".
+ * Those are listed under "Filter by Brand" and everything else under "Browse by Type".
+ *
+ * Until that exists, categories whose name contains one of these brand names are treated as brands.
+ */
+export const BRAND_PARENT_CATEGORY_NAMES = ['brands', 'brand', 'shop by brand'];
+
+export const BRAND_NAME_FALLBACK: string[] = [
+    "Aphina",
+    "G.M. Collin",
+    "Kala",
+    "DMK",
+    "Elle Hall",
+    "Mifa",
+    "Is Clinical",
+    "Alumier",
+    "Beautifi",
+    "Bion",
+    "Botanical Skincare",
+    "Celluma",
+    "Cheekbone",
+    "Clarion",
+    "ClearChoice",
+    "ColorScience",
+    "Colorescience",
+    "DermaSpark",
+    "DP4",
+    "Freezpen",
+    "Jessica",
+    "Pura",
+    "See You Sundae",
+    "Sharplight",
+    "Tizo",
+    "Zena",
+    "Phace",
+    "Bushbalm",
+];

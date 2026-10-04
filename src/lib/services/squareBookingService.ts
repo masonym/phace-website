@@ -1,4 +1,5 @@
 import { SquareClient, SquareEnvironment } from "square";
+import { ANY_STAFF_ID } from '@/lib/config/booking';
 import { Square } from "square";
 import { randomUUID } from 'crypto';
 import { nanoid } from 'nanoid';
@@ -171,6 +172,9 @@ interface TimeSlot {
     startTime: string;
     endTime: string;
     available: boolean;
+    /** Which provider the slot is with (set when searching across all providers) */
+    staffId?: string;
+    staffName?: string;
 }
 
 /**
@@ -1503,6 +1507,13 @@ export class SquareBookingService {
 
         const locationId = await this.getLocationId();
 
+        const isAnyStaff = staffId === ANY_STAFF_ID;
+        let staffIds = [staffId];
+        if (isAnyStaff) {
+            staffIds = (await this.getStaffMembers(vid)).map(member => member.id);
+            if (staffIds.length === 0) return [];
+        }
+
         // NOTE: We assume no bookable appointments occur between 11pm–1am PT.
         // This lets us safely hardcode the UTC day boundaries without handling DST.
         // 07:00Z = 00:00 PT during daylight time, 23:00 PT during standard time
@@ -1523,7 +1534,7 @@ export class SquareBookingService {
                     segmentFilters: [
                         {
                             serviceVariationId: vid,
-                            teamMemberIdFilter: { any: [staffId] }
+                            teamMemberIdFilter: { any: staffIds }
                         }
                     ]
                 }
@@ -1549,7 +1560,7 @@ export class SquareBookingService {
                 }
             }
 
-            return availabilities.map(a => {
+            const slots: TimeSlot[] = availabilities.map(a => {
                 const start = new Date(a.startAt!);
                 const end = new Date(start);
 
@@ -1561,9 +1572,27 @@ export class SquareBookingService {
                 return {
                     startTime: start.toISOString(),
                     endTime: end.toISOString(),
-                    available: true
+                    available: true,
+                    staffId: segment?.teamMemberId ?? (isAnyStaff ? undefined : staffId),
                 };
             });
+
+            if (!isAnyStaff) return slots;
+
+            // Several providers can be free at the same time; offer each time once
+            const byStart = new Map<string, TimeSlot>();
+            for (const slot of slots) {
+                if (slot.staffId && !byStart.has(slot.startTime)) byStart.set(slot.startTime, slot);
+            }
+            const uniqueSlots = Array.from(byStart.values())
+                .sort((x, y) => x.startTime.localeCompare(y.startTime));
+
+            const names = new Map<string, string>();
+            await Promise.all(Array.from(new Set(uniqueSlots.map(slot => slot.staffId!))).map(async id => {
+                const member = await this.getStaffById(id);
+                if (member) names.set(id, member.name);
+            }));
+            return uniqueSlots.map(slot => ({ ...slot, staffName: names.get(slot.staffId!) }));
         } catch (err) {
             console.error('Availability fetch failed:', err);
             

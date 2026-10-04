@@ -93,6 +93,7 @@ export function Footer() {
               <li><Link href="/treatments" className="hover:text-accent">TREATMENTS</Link></li>
               <li><Link href="/store" className="hover:text-accent">SHOP</Link></li>
               <li><Link href="/contact" className="hover:text-accent">CONTACT</Link></li>
+              <li><Link href="/faq" className="hover:text-accent">FAQ</Link></li>
               <li><Link href="/book" className="hover:text-accent font-medium">BOOK NOW</Link></li>
             </ul>
           </div>
@@ -120,6 +121,16 @@ export function Footer() {
                 className="hover:text-accent"
               >
                 Instagram: @phace.ca
+              </a>
+            </p>
+            <p className="mt-2">
+              <a
+                href={CLINIC.googleReviewsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-accent"
+              >
+                Read our Google reviews
               </a>
             </p>
           </div>

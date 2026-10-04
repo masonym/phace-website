@@ -4,13 +4,21 @@
 import { NextRequest } from 'next/server'
 import { POST } from '../calculate-order/route'
 
-// Mock Square client
-jest.mock('square', () => ({
-  SquareClient: jest.fn().mockImplementation(() => ({
-    orders: {
-      calculate: jest.fn()
-    }
-  }))
+// One shared client so the route and the tests see the same mocks
+jest.mock('square', () => {
+  const client = {
+    orders: { calculate: jest.fn() },
+    catalog: { batchGet: jest.fn().mockResolvedValue({ objects: [], relatedObjects: [] }) },
+  }
+  return {
+    SquareClient: jest.fn(() => client),
+    SquareEnvironment: { Production: 'production', Sandbox: 'sandbox' },
+    __mockClient: client,
+  }
+})
+
+jest.mock('@/lib/services/simpleCouponService', () => ({
+  SimpleCouponService: { validateCoupon: jest.fn(), calculateDiscount: jest.fn(), applyCoupon: jest.fn() },
 }))
 
 describe('/api/calculate-order', () => {
@@ -78,8 +86,7 @@ describe('/api/calculate-order', () => {
 
     it('should accept items with valid prices', async () => {
       // Mock successful Square response
-      const { SquareClient } = require('square')
-      const mockSquareClient = new SquareClient()
+      const mockSquareClient = require('square').__mockClient
       mockSquareClient.orders.calculate.mockResolvedValue({
         order: {
           lineItems: [
@@ -123,8 +130,7 @@ describe('/api/calculate-order', () => {
 
   describe('Response Structure', () => {
     it('should return order with lineItems for subtotal calculation', async () => {
-      const { SquareClient } = require('square')
-      const mockSquareClient = new SquareClient()
+      const mockSquareClient = require('square').__mockClient
       mockSquareClient.orders.calculate.mockResolvedValue({
         order: {
           lineItems: [

@@ -16,11 +16,11 @@ export default function BrowsLashesNailsPage() {
     <main className="min-h-screen">
       <BrowsLashesNailsHero />
       <BrowsSection />
-      <BookAppointment text="Book Appointment" />
+      <BookAppointment text="Book a Brow Appointment" link="/book?category=brow" />
       <LashesSection />
-      <BookAppointment text="Book Appointment" />
+      <BookAppointment text="Book a Lash Appointment" link="/book?category=lash" />
       <NailsSection />
-      <BookAppointment text="Book Nail Appointment" />
+      <BookAppointment text="Book Nail Appointment" link="/book?category=nail" />
     </main>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useCartContext } from '@/components/providers/CartProvider';
 import { Square } from 'square';
 import Image from 'next/image';
+import { productPath } from '@/lib/utils/productUrl';
 
 interface ProductQuickAddModalProps {
     productId: string;
@@ -166,7 +167,7 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
 
                         {/* View Details Link */}
                         <a
-                            href={`/store/product/${product.id}`}
+                            href={productPath(product.id, product.itemData?.name)}
                             className="text-sm text-blue-600 underline hover:text-blue-800 text-center block"
                         >
                             View More Details

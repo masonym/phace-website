@@ -207,8 +207,17 @@ export class ProductService {
 
             if (!categories.objects) throw new Error("Categories not found");
 
-            console.log(categories.objects);
-            return categories.objects;
+            // Include parent categories so the store can group by them (e.g. a "Brands" parent in Square)
+            const known = new Set(categories.objects.map((c) => c.id));
+            const parentIds = Array.from(new Set(
+                categories.objects
+                    .map((c) => (c.type === 'CATEGORY' ? c.categoryData?.parentCategory?.id : undefined))
+                    .filter((id): id is string => !!id && !known.has(id))
+            ));
+            if (parentIds.length === 0) return categories.objects;
+
+            const parents = await client.catalog.batchGet({ objectIds: parentIds });
+            return [...categories.objects, ...(parents.objects ?? [])];
         } catch (error) {
             console.error("Error fetching categories:", error);
             throw error;

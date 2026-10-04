@@ -93,7 +93,7 @@ export default function Cart() {
                         >
                             <div className="relative h-24 w-24">
                                 <Image
-                                    src={item.product.itemData!.imageIds?.[0] || '/images/placeholder.jpg'}
+                                    src={item.product.itemData!.imageIds?.[0] || '/images/placeholder.png'}
                                     alt={item.product.itemData!.name || 'Product Image'}
                                     fill
                                     className="object-cover"

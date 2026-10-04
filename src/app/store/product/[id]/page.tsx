@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import parse from 'html-react-parser';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { productIdFromParam } from '@/lib/utils/productUrl';
 
 const formatMoney = (amount: number | bigint, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -67,6 +68,7 @@ interface ProductPageProps {
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
+    const productId = productIdFromParam(params.id);
     const { addToCart, openCart } = useCartContext();
     const router = useRouter();
     const [quantity, setQuantity] = useState(1);
@@ -79,7 +81,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     useEffect(() => {
         const fetchProduct = async () => {
             try {
-                const response = await fetch(`/api/products/${params.id}`);
+                const response = await fetch(`/api/products/${productId}`);
                 if (!response.ok) throw new Error('Product not found');
                 const data = await response.json();
                 setProduct(data);
@@ -95,7 +97,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             }
         };
         fetchProduct();
-    }, [params.id, router]);
+    }, [productId, router]);
 
     // Fetch discount previews for product variations
     useEffect(() => {

@@ -4,39 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import ProductCard from './ProductCard';
 import { useProducts } from '@/hooks/useProducts';
 import type { Square } from 'square';
-
-// List of known brand names
-const BRAND_NAMES = [
-    "Aphina",
-    "G.M. Collin",
-    "Kala",
-    "DMK",
-    "Elle Hall",
-    "Mifa",
-    "Is Clinical",
-    "Alumier",
-    "Beautifi",
-    "Bion",
-    "Botanical Skincare",
-    "Celluma",
-    "Cheekbone",
-    "Clarion",
-    "ClearChoice",
-    "ColorScience",
-    "DermaSpark",
-    "DMK",
-    "DP4",
-    "Freezpen",
-    "Jessica",
-    "Pura",
-    "See You Sundae",
-    "Sharplight",
-    "Tizo",
-    "Zena",
-    "Phace",
-    "Bushbalm",
-    "Colorescience"
-];
+import { BRAND_NAME_FALLBACK, BRAND_PARENT_CATEGORY_NAMES } from '@/lib/config/storeConfig';
 
 // Skeleton loading component for product grid
 function ProductGridSkeleton() {
@@ -338,8 +306,14 @@ export default function ProductGrid() {
         if (category?.type === 'CATEGORY' && category.categoryData?.name && !category.categoryData.isTopLevel) {
             const categoryName = category.categoryData.name;
 
-            // Check if this category is a brand
-            if (BRAND_NAMES.some(brand => categoryName.toLowerCase().includes(brand.toLowerCase()))) {
+            // A "Brands" parent category in Square wins; otherwise fall back to known brand names
+            const parentId = category.categoryData.parentCategory?.id;
+            const parent = parentId ? categoryNames.find(cat => cat.id === parentId) : undefined;
+            const parentName = parent?.type === 'CATEGORY' ? parent.categoryData?.name?.trim().toLowerCase() ?? '' : '';
+            const isBrand = BRAND_PARENT_CATEGORY_NAMES.includes(parentName) ||
+                BRAND_NAME_FALLBACK.some(brand => categoryName.toLowerCase().includes(brand.toLowerCase()));
+
+            if (isBrand) {
                 brandCategories.push(categoryId);
             } else {
                 // If not a brand, it's a product type

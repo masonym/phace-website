@@ -14,6 +14,8 @@ import { showToast } from '@/components/ui/Toast';
 import { BookingCacheProvider } from '@/lib/cache/BookingCacheContext';
 import CacheControls from '@/components/booking/CacheControls';
 import { BookingPreloader } from '@/lib/preload/BookingPreloader';
+import { ANY_STAFF_ID, isBookableCategory } from '@/lib/config/booking';
+import { BookingCache } from '@/lib/cache/bookingCache';
 
 type BookingStep =
   | 'category'
@@ -69,6 +71,8 @@ export interface BookingData {
   variationName?: string;
   staffId?: string;
   staffName?: string;
+  /** Picked "any available provider"; staffId is filled in from the chosen time slot */
+  anyProvider?: boolean;
   dateTime?: string;
   addons?: Addon[];
   clientName?: string;
@@ -86,6 +90,35 @@ interface StoredProgress {
   bookingData: BookingData;
   availableAddons: Addon[];
   hasLoadedAddons: boolean;
+}
+
+const words = (value: string) => value.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+/**
+ * Finds the booking category for a link like /book?category=laser. Names live in Square
+ * and differ between environments, so links use keywords rather than category IDs.
+ */
+async function findCategoryByKeyword(keyword: string): Promise<string | null> {
+  try {
+    const categories: { id: string; name: string; isActive?: boolean }[] = await BookingCache.getCategories(async () => {
+      const response = await fetch('/api/booking/services');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return await response.json();
+    });
+    const wanted = words(keyword);
+    if (wanted.length === 0) return null;
+    const bookable = categories.filter(isBookableCategory);
+    // Prefer an exact name match, then any category whose name contains every keyword word
+    const exact = bookable.find(category => words(category.name ?? '').join(' ') === wanted.join(' '));
+    const match = exact ?? bookable.find(category => {
+      const nameWords = words(category.name ?? '');
+      return wanted.every(w => nameWords.some(n => n === w || n === `${w}s` || `${n}s` === w));
+    });
+    return match?.id ?? null;
+  } catch (error) {
+    console.error('Could not resolve booking category link:', error);
+    return null;
+  }
 }
 
 /**
@@ -162,6 +195,22 @@ function BookingPageContent() {
     let data: BookingData = stored?.bookingData ?? {};
     let loadedAddons = stored?.hasLoadedAddons ?? false;
 
+    // A link from a treatment page, e.g. /book?category=laser, starts a fresh booking in that category
+    const categoryKeyword = searchParams.get('category');
+    if (categoryKeyword) {
+      findCategoryByKeyword(categoryKeyword).then(categoryId => {
+        const fresh: BookingData = categoryId ? { categoryId } : {};
+        setBookingData(fresh);
+        setAvailableAddons([]);
+        setHasLoadedAddons(false);
+        const step: BookingStep = categoryId ? 'service' : 'category';
+        router.replace(buildUrl(step, fresh), { scroll: false });
+        navStack.current = [step];
+        setRestored(true);
+      });
+      return;
+    }
+
     // A deep link such as /book?step=service&categoryId=X wins over stored progress
     const urlCategoryId = searchParams.get('categoryId');
     if (urlCategoryId && urlCategoryId !== data.categoryId) {
@@ -236,9 +285,9 @@ function BookingPageContent() {
     goToStep('service', data);
   };
 
-  const selectService = (service: Service, variation?: ServiceVariation) => {
+  const selectService = (service: Service, variation?: ServiceVariation, categoryIdOverride?: string) => {
     const data: BookingData = {
-      categoryId: bookingData.categoryId,
+      categoryId: categoryIdOverride ?? bookingData.categoryId,
       serviceId: service.id,
       serviceName: service.name,
       service,
@@ -278,7 +327,12 @@ function BookingPageContent() {
 
   const selectStaff = async (staff: { id: string; name: string }, options?: { replace?: boolean }) => {
     const { addons, dateTime, ...rest } = bookingData;
-    const data: BookingData = { ...rest, staffId: staff.id, staffName: staff.name };
+    const data: BookingData = {
+      ...rest,
+      staffId: staff.id,
+      staffName: staff.name,
+      anyProvider: staff.id === ANY_STAFF_ID,
+    };
     setBookingData(data);
 
     let addonsArray: Addon[] = [];
@@ -374,6 +428,14 @@ function BookingPageContent() {
               <ServiceSelection
                 mode="category"
                 onSelect={(category) => selectCategory(category.id)}
+                onSelectService={(selection, categoryId) => {
+                  // Picked from search: skip straight past the category and service steps
+                  if (selection.type === 'variation') {
+                    selectService(selection.service, selection.variation, categoryId);
+                  } else {
+                    selectService(selection.service, undefined, categoryId);
+                  }
+                }}
               />
             )}
             {currentStep === 'service' && (
@@ -439,11 +501,16 @@ function BookingPageContent() {
               <DateTimeSelection
                 serviceId={bookingData.serviceId!}
                 variationId={bookingData.variationId}
-                staffId={bookingData.staffId!}
+                staffId={bookingData.anyProvider ? ANY_STAFF_ID : bookingData.staffId!}
                 addons={(bookingData.addons || []).map(addon => addon.id)}
                 initialDateTime={bookingData.dateTime}
-                onSelect={(dateTime) => {
-                  const data = { ...bookingData, dateTime };
+                onSelect={(dateTime, slot) => {
+                  const data: BookingData = { ...bookingData, dateTime };
+                  if (bookingData.anyProvider && slot?.staffId) {
+                    // Book with whichever provider this time belongs to
+                    data.staffId = slot.staffId;
+                    data.staffName = slot.staffName || 'Your provider';
+                  }
                   setBookingData(data);
                   goToStepAfter('datetime', data);
                 }}

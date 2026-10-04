@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import ProductQuickAddModal from './ProductQuickAddModal';
+import { productPath } from '@/lib/utils/productUrl';
 
 
 interface ProductCardProps {
@@ -53,7 +54,7 @@ export default function ProductCard({ product, discountPreview }: ProductCardPro
 
     return (
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full">
-            <Link href={`/store/product/${product.id}`} className="flex-grow">
+            <Link href={productPath(product.id, product.name)} className="flex-grow">
                 <div className="relative h-64 w-full">
                     <Image
                         src={product.images![0] || '/images/placeholder.png'}

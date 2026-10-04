@@ -20,7 +20,7 @@ export function generateMetadata({ params }: Props): Metadata {
   const treatment = treatments.find((t) => t.slug === params.slug)
   if (!treatment) return {}
   return {
-    title: `${treatment.name} in Chilliwack | Phace Medical Aesthetics`,
+    title: `${treatment.name} in Chilliwack`,
     description: treatment.description.length > 160
       ? `${treatment.description.slice(0, 157).trimEnd()}...`
       : treatment.description,
@@ -35,6 +35,10 @@ export default function TreatmentPage({ params }: Props) {
   }
 
   const treatmentNameUpper = treatment.name.toUpperCase()
+  // Opens booking on the matching category when one exists in Square, otherwise the category list
+  const bookHref = treatment.bookingCategory
+    ? `/book?category=${encodeURIComponent(treatment.bookingCategory)}`
+    : "/book"
 
   return (
     <div className="min-h-screen bg-[#F8E7E1]">
@@ -57,7 +61,7 @@ export default function TreatmentPage({ params }: Props) {
             </h1>
             <div className="absolute bottom-12 right-12">
               <Link
-                href="/book"
+                href={bookHref}
                 className="bg-[#FDF3E7] text-[#4A5568] px-8 py-4 rounded-full text-lg hover:bg-[#F8E7E1] transition-colors"
               >
                 Book a Treatment
@@ -158,7 +162,7 @@ export default function TreatmentPage({ params }: Props) {
       <section className="py-20 bg-white text-center">
         <h2 className="text-3xl font-light text-[#4A5568] mb-6">Ready to book {treatment.name}?</h2>
         <Link
-          href="/book"
+          href={bookHref}
           className="inline-block bg-accent text-white px-8 py-4 rounded-full text-lg hover:bg-accent/90 transition-colors"
         >
           Book an Appointment
