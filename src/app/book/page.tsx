@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceSelection from '@/components/booking/ServiceSelection';
@@ -12,7 +12,6 @@ import ConsentForms from '@/components/booking/ConsentForms';
 import BookingSummary from '@/components/booking/BookingSummary';
 import { showToast } from '@/components/ui/Toast';
 import { BookingCacheProvider } from '@/lib/cache/BookingCacheContext';
-import { useAuth } from '@/lib/hooks/useAuth';
 import CacheControls from '@/components/booking/CacheControls';
 import { BookingPreloader } from '@/lib/preload/BookingPreloader';
 
@@ -26,6 +25,11 @@ type BookingStep =
   | 'client'
   | 'consent'
   | 'summary';
+
+const ALL_STEPS: BookingStep[] = ['category', 'service', 'variation', 'staff', 'addons', 'datetime', 'client', 'consent', 'summary'];
+
+// Progress is kept for the browser tab so a refresh or a trip to the policy page doesn't lose it
+const STORAGE_KEY = 'phace-booking-progress';
 
 interface Addon {
   id: string;
@@ -78,158 +82,255 @@ export interface BookingData {
   paymentNonce?: string;
 }
 
-// Wrapper component that provides the BookingCacheContext
+interface StoredProgress {
+  bookingData: BookingData;
+  availableAddons: Addon[];
+  hasLoadedAddons: boolean;
+}
+
+/**
+ * Returns the furthest step the given data actually supports, so a refresh or a
+ * stale link can't land someone on a step whose earlier choices are missing.
+ */
+function furthestValidStep(requested: BookingStep, data: BookingData, hasAddons: boolean): BookingStep {
+  const requirements: [BookingStep, boolean][] = [
+    ['service', !!data.categoryId],
+    ['variation', !!data.service],
+    ['staff', !!data.variationId && !!data.serviceId],
+    ['addons', !!data.staffId],
+    ['datetime', !!data.staffId],
+    ['client', !!data.dateTime],
+    // The card token is never stored, so after a refresh the card has to be re-entered
+    ['consent', !!data.clientName && !!data.paymentNonce],
+    ['summary', !!data.clientName && !!data.paymentNonce],
+  ];
+
+  const requestedIndex = ALL_STEPS.indexOf(requested);
+  let valid: BookingStep = 'category';
+  for (const [step, ok] of requirements) {
+    if (ALL_STEPS.indexOf(step) > requestedIndex) break;
+    // The add-ons step only exists when the service has add-ons
+    if (step === 'addons' && !hasAddons) continue;
+    if (!ok) break;
+    valid = step;
+  }
+  return valid;
+}
+
 function BookingPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<BookingStep>('category');
   const [bookingData, setBookingData] = useState<BookingData>({});
   const [availableAddons, setAvailableAddons] = useState<Addon[]>([]);
   const [hasLoadedAddons, setHasLoadedAddons] = useState(false);
-  const [preloadedCategories, setPreloadedCategories] = useState(false);
-  const [initializedFromUrl, setInitializedFromUrl] = useState(false);
+  const [restored, setRestored] = useState(false);
+  // Steps visited in this tab, mirroring browser history, so our Back button can use history.back()
+  const navStack = useRef<BookingStep[]>([]);
 
-  // sync URL with current state
-  const updateUrl = useCallback((step: BookingStep, data: BookingData) => {
+  const urlStep = searchParams.get('step') as BookingStep | null;
+  const currentStep: BookingStep = urlStep && ALL_STEPS.includes(urlStep) ? urlStep : 'category';
+
+  const buildUrl = useCallback((step: BookingStep, data: BookingData) => {
     const params = new URLSearchParams();
     params.set('step', step);
     if (data.categoryId) params.set('categoryId', data.categoryId);
     if (data.serviceId) params.set('serviceId', data.serviceId);
     if (data.variationId) params.set('variationId', data.variationId);
-    router.replace(`/book?${params.toString()}`, { scroll: false });
-  }, [router]);
+    return `/book?${params.toString()}`;
+  }, []);
 
-  // initialize from URL params on mount
-  useEffect(() => {
-    if (initializedFromUrl) return;
-    
-    const stepParam = searchParams.get('step') as BookingStep | null;
-    const categoryId = searchParams.get('categoryId');
-    const serviceId = searchParams.get('serviceId');
-    const variationId = searchParams.get('variationId');
-
-    const newBookingData: BookingData = {};
-    if (categoryId) newBookingData.categoryId = categoryId;
-    if (serviceId) newBookingData.serviceId = serviceId;
-    if (variationId) newBookingData.variationId = variationId;
-
-    if (Object.keys(newBookingData).length > 0) {
-      setBookingData(prev => ({ ...prev, ...newBookingData }));
-    }
-
-    if (stepParam && ['category', 'service', 'variation', 'staff', 'datetime', 'addons', 'client', 'consent', 'summary'].includes(stepParam)) {
-      setCurrentStep(stepParam);
-    }
-
-    setInitializedFromUrl(true);
-  }, [searchParams, initializedFromUrl]);
-
-  // update URL when step or booking data changes (after initial load)
-  useEffect(() => {
-    if (!initializedFromUrl) return;
-    updateUrl(currentStep, bookingData);
-  }, [currentStep, bookingData.categoryId, bookingData.serviceId, bookingData.variationId, initializedFromUrl, updateUrl]);
-
-  // Dynamically determine the steps based on whether addons are available
-  const getSteps = () => {
-    // If we've loaded addons and there are none, or we haven't loaded them yet but are past the staff step
-    const shouldSkipAddons = (hasLoadedAddons && availableAddons.length === 0);
-    
-    if (shouldSkipAddons) {
-      return ['category', 'service', 'variation', 'staff', 'datetime', 'client', 'consent', 'summary'] as BookingStep[];
+  const goToStep = useCallback((step: BookingStep, data: BookingData, options?: { replace?: boolean }) => {
+    if (options?.replace) {
+      // The replaced entry is gone from history, so drop it from our mirror too
+      navStack.current.pop();
+      router.replace(buildUrl(step, data), { scroll: false });
     } else {
-      return ['category', 'service', 'variation', 'staff', 'addons', 'datetime', 'client', 'consent', 'summary'] as BookingStep[];
+      router.push(buildUrl(step, data), { scroll: false });
     }
-  };
+  }, [router, buildUrl]);
 
-  const steps = getSteps();
-  const currentStepIndex = steps.indexOf(currentStep);
-
-  const goToNextStep = () => {
-    const nextIndex = currentStepIndex + 1;
-    if (nextIndex < steps.length) {
-      setCurrentStep(steps[nextIndex]);
+  // Restore progress once on load (refresh, or coming back from another page in the same tab)
+  useEffect(() => {
+    let stored: StoredProgress | null = null;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) stored = JSON.parse(raw);
+    } catch {
+      // Storage unavailable or corrupt; start fresh
     }
-  };
+
+    let data: BookingData = stored?.bookingData ?? {};
+    let loadedAddons = stored?.hasLoadedAddons ?? false;
+
+    // A deep link such as /book?step=service&categoryId=X wins over stored progress
+    const urlCategoryId = searchParams.get('categoryId');
+    if (urlCategoryId && urlCategoryId !== data.categoryId) {
+      data = { categoryId: urlCategoryId };
+      loadedAddons = false;
+    }
+
+    const storedAddons = loadedAddons ? stored?.availableAddons ?? [] : [];
+    setBookingData(data);
+    setAvailableAddons(storedAddons);
+    setHasLoadedAddons(loadedAddons);
+
+    const valid = furthestValidStep(currentStep, data, storedAddons.length > 0);
+    if (valid !== currentStep) {
+      router.replace(buildUrl(valid, data), { scroll: false });
+    }
+    navStack.current = [valid];
+    setRestored(true);
+    // Only runs on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist progress (without the single-use card token)
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      const { paymentNonce, ...safeData } = bookingData;
+      const progress: StoredProgress = { bookingData: safeData, availableAddons, hasLoadedAddons };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    } catch {
+      // Ignore storage errors; progress just won't survive a refresh
+    }
+  }, [bookingData, availableAddons, hasLoadedAddons, restored]);
+
+  // Keep the history mirror in sync with browser back/forward
+  useEffect(() => {
+    if (!restored) return;
+    const stack = navStack.current;
+    if (stack.length >= 2 && stack[stack.length - 2] === currentStep) {
+      stack.pop();
+    } else if (stack[stack.length - 1] !== currentStep) {
+      stack.push(currentStep);
+    }
+  }, [currentStep, restored]);
+
+  const steps: BookingStep[] = hasLoadedAddons && availableAddons.length === 0
+    ? ALL_STEPS.filter(step => step !== 'addons')
+    : ALL_STEPS;
+  const currentStepIndex = Math.max(0, steps.indexOf(currentStep));
 
   const goToPreviousStep = () => {
-    const prevIndex = currentStepIndex - 1;
-    if (prevIndex >= 0) {
-      setCurrentStep(steps[prevIndex]);
+    if (navStack.current.length >= 2) {
+      router.back();
+      return;
+    }
+    // Arrived here directly (deep link / refresh): step back through the flow instead
+    const prev = steps[currentStepIndex - 1];
+    if (prev) goToStep(prev, bookingData, { replace: true });
+  };
+
+  const goToStepAfter = (step: BookingStep, data: BookingData, options?: { replace?: boolean }) => {
+    const next = steps[steps.indexOf(step) + 1];
+    if (next) goToStep(next, data, options);
+  };
+
+  // Each selection clears the choices that depended on the earlier one
+  const selectCategory = (categoryId: string) => {
+    const data: BookingData = { categoryId };
+    setBookingData(data);
+    setAvailableAddons([]);
+    setHasLoadedAddons(false);
+    goToStep('service', data);
+  };
+
+  const selectService = (service: Service, variation?: ServiceVariation) => {
+    const data: BookingData = {
+      categoryId: bookingData.categoryId,
+      serviceId: service.id,
+      serviceName: service.name,
+      service,
+      ...(variation && {
+        variationId: variation.id,
+        variationName: variation.name,
+        variation,
+      }),
+    };
+    setBookingData(data);
+    setAvailableAddons([]);
+    setHasLoadedAddons(false);
+
+    if (variation) {
+      BookingPreloader.preloadStaffForService(variation.id);
+      goToStep('staff', data);
+    } else {
+      service.variations?.forEach(v => BookingPreloader.preloadStaffForService(v.id));
+      goToStep('variation', data);
     }
   };
 
-  const updateBookingData = (data: Partial<BookingData>) => {
-    setBookingData(prev => ({ ...prev, ...data }));
+  const selectVariation = (variation: ServiceVariation) => {
+    const data: BookingData = {
+      categoryId: bookingData.categoryId,
+      serviceId: bookingData.serviceId,
+      serviceName: bookingData.serviceName,
+      service: bookingData.service,
+      variationId: variation.id,
+      variationName: variation.name,
+      variation,
+    };
+    setBookingData(data);
+    BookingPreloader.preloadStaffForService(variation.id);
+    goToStep('staff', data);
   };
 
-  // Immediately pre-load categories when the page loads
-  useEffect(() => {
-    if (!preloadedCategories) {
-      BookingPreloader.preloadCategories();
-      setPreloadedCategories(true);
+  const selectStaff = async (staff: { id: string; name: string }, options?: { replace?: boolean }) => {
+    const { addons, dateTime, ...rest } = bookingData;
+    const data: BookingData = { ...rest, staffId: staff.id, staffName: staff.name };
+    setBookingData(data);
+
+    let addonsArray: Addon[] = [];
+    if (data.serviceId) {
+      try {
+        const result = await BookingPreloader.preloadAddonsForService(data.serviceId);
+        addonsArray = Array.isArray(result) ? result : [];
+      } catch (err) {
+        console.error('Error fetching addons:', err);
+      }
     }
-  }, [preloadedCategories]);
-  
+    setAvailableAddons(addonsArray);
+    setHasLoadedAddons(true);
+
+    if (addonsArray.length > 0) {
+      goToStep('addons', data, options);
+    } else {
+      if (data.serviceId) {
+        const today = new Date().toISOString().split('T')[0];
+        BookingPreloader.preloadAvailability(data.serviceId, staff.id, today, data.variationId);
+      }
+      goToStep('datetime', data, options);
+    }
+  };
+
   // Scroll to top when step changes and trigger pre-loading for next steps
   useEffect(() => {
-    // Scroll to top
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-    
-    // Pre-load data for upcoming steps
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     if (currentStep === 'category') {
-      // Categories are already pre-loaded when the page loads
-    } else if (currentStep === 'service' && bookingData.categoryId) {
-      // When on service selection, pre-load staff for popular services
-      const preloadPopularServices = async () => {
-        try {
-          const response = await fetch(`/api/booking/services?categoryId=${bookingData.categoryId}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.length > 0 && Array.isArray(data[0].services)) {
-              // Pre-load staff for the first 2 services (most popular)
-              const popularServices = data[0].services.slice(0, 2);
-              for (const service of popularServices) {
-                BookingPreloader.preloadStaffForService(service.variationId || service.id);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error pre-loading staff for popular services:', error);
-        }
-      };
-      preloadPopularServices();
-    } else if (currentStep === 'service' || currentStep === 'variation') {
-      // No specific pre-loading needed here
+      BookingPreloader.preloadCategories();
     } else if (currentStep === 'staff' && bookingData.serviceId) {
       // Pre-load addons for this service while selecting staff
       BookingPreloader.preloadAddonsForService(bookingData.serviceId);
     } else if (currentStep === 'addons' && bookingData.serviceId && bookingData.staffId) {
       // Pre-load availability for today and tomorrow while selecting addons
+      const formatDate = (date: Date) => date.toISOString().split('T')[0];
       const today = new Date();
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      const formatDate = (date: Date) => date.toISOString().split('T')[0];
-      
-      BookingPreloader.preloadAvailability(
-        bookingData.serviceId,
-        bookingData.staffId,
-        formatDate(today),
-        bookingData.variationId
-      );
-      
-      BookingPreloader.preloadAvailability(
-        bookingData.serviceId,
-        bookingData.staffId,
-        formatDate(tomorrow),
-        bookingData.variationId
-      );
+      BookingPreloader.preloadAvailability(bookingData.serviceId, bookingData.staffId, formatDate(today), bookingData.variationId);
+      BookingPreloader.preloadAvailability(bookingData.serviceId, bookingData.staffId, formatDate(tomorrow), bookingData.variationId);
     }
-  }, [currentStep, bookingData.categoryId, bookingData.serviceId, bookingData.staffId, bookingData.variationId]);
+  }, [currentStep, bookingData.serviceId, bookingData.staffId, bookingData.variationId]);
+
+  if (!restored) {
+    return (
+      <main className="min-h-screen bg-[#FFFBF0] pt-24 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent" aria-label="Loading" />
+      </main>
+    );
+  }
 
   return (
     <>
@@ -244,7 +345,13 @@ function BookingPageContent() {
               Step {currentStepIndex + 1} of {steps.length}
             </div>
           </div>
-          <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-[#F8E7E1]">
+          <div
+            className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-[#F8E7E1]"
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={steps.length}
+            aria-valuenow={currentStepIndex + 1}
+          >
             <div
               style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
               className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-accent transition-all duration-500"
@@ -266,13 +373,7 @@ function BookingPageContent() {
             {currentStep === 'category' && (
               <ServiceSelection
                 mode="category"
-                onSelect={(category) => {
-                  console.log("Selected category:", category);
-                  updateBookingData({
-                    categoryId: category.id,
-                  });
-                  goToNextStep();
-                }}
+                onSelect={(category) => selectCategory(category.id)}
               />
             )}
             {currentStep === 'service' && (
@@ -280,57 +381,24 @@ function BookingPageContent() {
                 mode="service"
                 categoryId={bookingData.categoryId}
                 preloadStaffForServices={(services: Service[]) => {
-                  console.log("Pre-loading staff for", services.length, "services");
                   // Pre-load staff for the first few services (likely to be selected)
                   services.slice(0, 3).forEach((service: Service) => {
-                    // For services with variations, pre-load for each variation
                     if (service.variations && service.variations.length > 0) {
                       service.variations.forEach((variation: ServiceVariation) => {
-                        console.log(`Pre-loading staff for variation ${variation.id} of service ${service.id}`);
                         BookingPreloader.preloadStaffForService(variation.id);
                       });
                     } else {
-                      // For services without explicit variations, use the variation ID or service ID
-                      const variationId = service.variationId || service.id;
-                      console.log(`Pre-loading staff for service ${service.id} with variationId ${variationId}`);
-                      BookingPreloader.preloadStaffForService(variationId);
+                      BookingPreloader.preloadStaffForService(service.variationId || service.id);
                     }
                   });
                 }}
                 onSelect={(selection) => {
-                  console.log("Service selection:", selection);
-
                   if (selection.type === 'service') {
-                    // If this is a service with multiple variations, store the service and go to variation selection
-                    updateBookingData({
-                      serviceId: selection.service.id,
-                      serviceName: selection.service.name,
-                      service: selection.service
-                    });
-                    
-                    // Pre-load staff for all variations of this service
-                    if (selection.service.variations) {
-                      selection.service.variations.forEach((variation: ServiceVariation) => {
-                        BookingPreloader.preloadStaffForService(variation.id);
-                      });
-                    }
-                    
-                    setCurrentStep('variation');
+                    // Multiple variations: choose one on the next step
+                    selectService(selection.service);
                   } else if (selection.type === 'variation') {
-                    // If this is a service with only one variation, store both and skip variation selection
-                    updateBookingData({
-                      serviceId: selection.service.id,
-                      serviceName: selection.service.name,
-                      service: selection.service,
-                      variationId: selection.variation.id,
-                      variationName: selection.variation.name,
-                      variation: selection.variation
-                    });
-                    
-                    // Pre-load staff for this variation
-                    BookingPreloader.preloadStaffForService(selection.variation.id);
-                    
-                    setCurrentStep('staff');
+                    // Single variation: skip straight to staff
+                    selectService(selection.service, selection.variation);
                   }
                 }}
                 onBack={goToPreviousStep}
@@ -340,85 +408,29 @@ function BookingPageContent() {
               <ServiceSelection
                 mode="variation"
                 service={bookingData.service}
-                onSelect={(selection) => {
-                  console.log("Selected variation:", selection);
-                  updateBookingData({
-                    variationId: selection.variation.id,
-                    variationName: selection.variation.name,
-                    variation: selection.variation
-                  });
-                  
-                  // Pre-load staff for this variation
-                  BookingPreloader.preloadStaffForService(selection.variation.id);
-                  
-                  goToNextStep();
-                }}
+                onSelect={(selection) => selectVariation(selection.variation)}
                 onBack={goToPreviousStep}
               />
             )}
             {currentStep === 'staff' && (
               <StaffSelection
                 variationId={bookingData.variationId!}
-                onSelect={(staff) => {
-                  console.log("Selected staff:", staff);
-                  updateBookingData({
-                    staffId: staff.id,
-                    staffName: staff.name,
-                  });
-                  
-                  // Fetch addons for this service to determine if we should show the addons step
-                  if (bookingData.serviceId) {
-                    // We'll use the BookingPreloader to load addons, which also handles caching
-                    BookingPreloader.preloadAddonsForService(bookingData.serviceId)
-                      .then(data => {
-                        const addonsArray = Array.isArray(data) ? data : [];
-                        setAvailableAddons(addonsArray);
-                        setHasLoadedAddons(true);
-                        
-                        // If no addons available, skip the addon step
-                        if (addonsArray.length === 0) {
-                          // Find next step after 'addons'
-                          const addonIndex = steps.indexOf('addons');
-                          if (addonIndex !== -1 && addonIndex + 1 < steps.length) {
-                            // Skip directly to the step after addons
-                            setCurrentStep(steps[addonIndex + 1]);
-                            
-                            // Pre-load availability for today
-                            if (bookingData.staffId && bookingData.serviceId) {
-                              const today = new Date().toISOString().split('T')[0];
-                              BookingPreloader.preloadAvailability(
-                                bookingData.serviceId,
-                                bookingData.staffId,
-                                today,
-                                bookingData.variationId
-                              );
-                            }
-                          } else {
-                            goToNextStep();
-                          }
-                        } else {
-                          goToNextStep();
-                        }
-                      })
-                      .catch(err => {
-                        console.error('Error fetching addons:', err);
-                        goToNextStep();
-                      });
-                  } else {
-                    goToNextStep();
-                  }
-                }}
+                onSelect={(staff) => selectStaff(staff)}
+                onAutoSelect={(staff) => selectStaff(staff, { replace: true })}
                 onBack={goToPreviousStep}
-                onBackToStart={() => setCurrentStep('category')}
+                onBackToStart={() => goToStep('category', {})}
               />
             )}
-            {currentStep === 'addons' && availableAddons.length > 0 && (
+            {currentStep === 'addons' && (
               <AddonSelection
                 serviceId={bookingData.serviceId!}
+                initialSelectedIds={(bookingData.addons || []).map(addon => addon.id)}
                 onSelect={(selectedAddonsData) => {
-                  console.log("Selected addons:", selectedAddonsData);
-                  updateBookingData({ addons: selectedAddonsData });
-                  goToNextStep();
+                  // Duration changes with add-ons, so any previously picked time is cleared
+                  const { dateTime, ...rest } = bookingData;
+                  const data = { ...rest, addons: selectedAddonsData };
+                  setBookingData(data);
+                  goToStepAfter('addons', data);
                 }}
                 onBack={goToPreviousStep}
               />
@@ -429,16 +441,23 @@ function BookingPageContent() {
                 variationId={bookingData.variationId}
                 staffId={bookingData.staffId!}
                 addons={(bookingData.addons || []).map(addon => addon.id)}
+                initialDateTime={bookingData.dateTime}
                 onSelect={(dateTime) => {
-                  console.log("Selected datetime:", dateTime);
-                  updateBookingData({ dateTime });
-                  goToNextStep();
+                  const data = { ...bookingData, dateTime };
+                  setBookingData(data);
+                  goToStepAfter('datetime', data);
                 }}
                 onBack={goToPreviousStep}
               />
             )}
             {currentStep === 'client' && (
               <ClientForm
+                initialValues={{
+                  name: bookingData.clientName,
+                  email: bookingData.clientEmail,
+                  phone: bookingData.clientPhone,
+                  notes: bookingData.notes,
+                }}
                 onSubmit={async (clientData) => {
                   try {
                     // Handle account creation if requested
@@ -460,7 +479,6 @@ function BookingPageContent() {
                         throw new Error(errorData.error || 'Failed to create account');
                       }
 
-                      // Show success message about verification email
                       showToast({
                         title: "Account Created!",
                         description: "Please check your email to verify your account. You can continue with your booking and sign in after verification.",
@@ -469,16 +487,17 @@ function BookingPageContent() {
                       });
                     }
 
-                    // Update booking data and continue regardless of account status
-                    updateBookingData({
+                    const data: BookingData = {
+                      ...bookingData,
                       clientName: clientData.name,
                       clientEmail: clientData.email,
                       clientPhone: clientData.phone,
                       notes: clientData.notes,
                       createAccount: clientData.createAccount,
                       paymentNonce: clientData.paymentNonce,
-                    });
-                    goToNextStep();
+                    };
+                    setBookingData(data);
+                    goToStepAfter('client', data);
                   } catch (error: any) {
                     console.error('Error during client form submission:', error);
                     showToast({
@@ -497,17 +516,15 @@ function BookingPageContent() {
                 serviceId={bookingData.serviceId!}
                 categoryId={bookingData.categoryId}
                 onSubmit={(consentData) => {
-                  // Using setBookingData directly to ensure state update
-                  setBookingData(prevData => {
-                    const newData = {
-                      ...prevData,
-                      consentForms: consentData
-                    };
-
-                    console.log("Booking data after client form submission:", bookingData);
-                    return newData;
-                  });
-                  goToNextStep();
+                  const data = { ...bookingData, consentForms: consentData };
+                  setBookingData(data);
+                  goToStepAfter('consent', data);
+                }}
+                onNoForms={() => {
+                  // Nothing to sign for this service; skip the step without leaving it in history
+                  const data = { ...bookingData, consentForms: { consentFormResponses: [] } };
+                  setBookingData(data);
+                  goToStepAfter('consent', data, { replace: true });
                 }}
                 onBack={goToPreviousStep}
               />
@@ -516,44 +533,43 @@ function BookingPageContent() {
               <BookingSummary
                 bookingData={bookingData}
                 onConfirm={async () => {
-                  try {
-                    const requestBody = {
-                      serviceId: bookingData.serviceId,
-                      serviceName: bookingData.serviceName,
-                      variationId: bookingData.variationId,
-                      variationName: bookingData.variationName,
-                      staffId: bookingData.staffId,
-                      staffName: bookingData.staffName,
-                      startTime: bookingData.dateTime,
-                      clientName: bookingData.clientName,
-                      clientEmail: bookingData.clientEmail,
-                      clientPhone: bookingData.clientPhone,
-                      notes: bookingData.notes,
-                      addons: (bookingData.addons || []).map(addon => addon.id),
-                      consentFormResponses: bookingData.consentForms?.consentFormResponses || [],
-                      paymentNonce: bookingData.paymentNonce,
-                    };
-                    console.log('Sending appointment request:', requestBody);
+                  const requestBody = {
+                    serviceId: bookingData.serviceId,
+                    serviceName: bookingData.serviceName,
+                    variationId: bookingData.variationId,
+                    variationName: bookingData.variationName,
+                    staffId: bookingData.staffId,
+                    staffName: bookingData.staffName,
+                    startTime: bookingData.dateTime,
+                    clientName: bookingData.clientName,
+                    clientEmail: bookingData.clientEmail,
+                    clientPhone: bookingData.clientPhone,
+                    notes: bookingData.notes,
+                    addons: (bookingData.addons || []).map(addon => addon.id),
+                    consentFormResponses: bookingData.consentForms?.consentFormResponses || [],
+                    paymentNonce: bookingData.paymentNonce,
+                  };
 
-                    const response = await fetch('/api/booking/appointments', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify(requestBody),
-                    });
+                  const response = await fetch('/api/booking/appointments', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                  });
 
-                    if (!response.ok) {
-                      const errorData = await response.json();
-                      throw new Error(errorData.error || 'Failed to create booking');
-                    }
-
-                    const data = await response.json();
-                    // Redirect to confirmation page
-                    window.location.href = `/booking-confirmed?id=${data.id}`;
-                  } catch (error: any) {
-                    throw new Error(error.message || 'Failed to create booking');
+                  if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to create booking');
                   }
+
+                  const data = await response.json();
+                  try {
+                    sessionStorage.removeItem(STORAGE_KEY);
+                  } catch {
+                    // Ignore storage errors
+                  }
+                  window.location.href = `/booking-confirmed?id=${data.id}`;
                 }}
                 onBack={goToPreviousStep}
               />

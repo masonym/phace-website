@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SquareService } from '@/lib/services/squareService';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 interface CreateDiscountRequest {
   code: string;
@@ -13,13 +14,8 @@ interface CreateDiscountRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 401 }
-      );
-    }
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
 
     const body: CreateDiscountRequest = await request.json();
 

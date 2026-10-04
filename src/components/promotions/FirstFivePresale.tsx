@@ -11,12 +11,26 @@ const PRESALE_END = new Date('2026-10-11T00:00:00-07:00').getTime();
 const LAST_SHOWN_KEY = 'first-five-presale-last-shown';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+// Don't interrupt people who are mid-booking, mid-checkout or signing in
+const SUPPRESSED_PATH_PREFIXES = [
+    '/admin',
+    '/book',
+    '/booking-confirmed',
+    '/checkout',
+    '/forms',
+    '/login',
+    '/signup',
+    '/forgot-password',
+    '/reset-password',
+    '/verify',
+];
+
 export default function FirstFivePresale() {
     const [showLightbox, setShowLightbox] = useState(false);
     const pathname = usePathname();
 
     useEffect(() => {
-        if (pathname?.startsWith('/admin')) return;
+        if (pathname && SUPPRESSED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return;
 
         const now = Date.now();
         // Add ?preview=presale to any page to see the popup outside the sale window

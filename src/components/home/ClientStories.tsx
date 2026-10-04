@@ -40,7 +40,7 @@ export function ClientStories() {
               <div className="relative w-48 h-48 mx-auto mb-6 oval-image">
                 <Image
                   src={story.image}
-                  alt={story.title}
+                  alt=""
                   fill
                   className="object-cover"
                 />

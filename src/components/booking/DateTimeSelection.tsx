@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   format,
@@ -23,6 +23,7 @@ import {
 import WaitlistForm from './WaitlistForm';
 import { showToast } from "@/components/ui/Toast";
 import { BookingCache } from '@/lib/cache/bookingCache';
+import { formatClinicTime, isOutsideClinicTimeZone } from '@/lib/utils/clinicTime';
 
 interface TimeSlot {
   startTime: string;
@@ -41,6 +42,8 @@ interface DateTimeSelectionProps {
   variationId?: string;
   staffId: string;
   addons: string[];
+  /** Previously chosen slot, so going back keeps the same day selected */
+  initialDateTime?: string;
   onSelect: (dateTime: string) => void;
   onBack: () => void;
 }
@@ -56,18 +59,24 @@ export default function DateTimeSelection({
   variationId,
   staffId,
   addons,
+  initialDateTime,
   onSelect,
   onBack,
 }: DateTimeSelectionProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() =>
+    initialDateTime ? startOfDay(parseISO(initialDateTime)) : null
+  );
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([]);
   const [fullyBookedDates, setFullyBookedDates] = useState<Set<string>>(new Set());
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [checkingDates, setCheckingDates] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(() => {
+    if (initialDateTime) {
+      return startOfMonth(parseISO(initialDateTime));
+    }
     const today = new Date();
     const lastDayOfMonth = endOfMonth(today);
 
@@ -88,6 +97,13 @@ export default function DateTimeSelection({
   const calendarEnd = endOfWeek(monthEnd);
   const dates = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   const maxDate = addMonths(startOfDay(new Date()), 4);
+  const canGoToPrevMonth = isAfter(currentMonth, startOfMonth(new Date()));
+  const canGoToNextMonth = isBefore(addMonths(currentMonth, 1), maxDate);
+
+  // Until the person picks a month themselves, open on the first day that has openings
+  const autoPick = useRef(!initialDateTime);
+  const autoAdvanceCount = useRef(0);
+  const [noAvailabilityFound, setNoAvailabilityFound] = useState(false);
 
   // Fetch available dates for the current month range
   useEffect(() => {
@@ -223,6 +239,30 @@ export default function DateTimeSelection({
     }
   }, [selectedDate]);
 
+  useEffect(() => {
+    if (!autoPick.current || checkingDates) return;
+    if (!checkedMonths.has(format(currentMonth, 'yyyy-MM'))) return;
+
+    const firstAvailable = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) })
+      .find(date => availableDates.has(format(date, 'yyyy-MM-dd')));
+
+    if (firstAvailable) {
+      autoPick.current = false;
+      setSelectedDate(firstAvailable);
+    } else if (canGoToNextMonth && autoAdvanceCount.current < 4) {
+      autoAdvanceCount.current += 1;
+      setCurrentMonth(prev => addMonths(prev, 1));
+    } else {
+      autoPick.current = false;
+      setNoAvailabilityFound(true);
+    }
+  }, [checkingDates, checkedMonths, currentMonth, availableDates, canGoToNextMonth]);
+
+  const changeMonth = (delta: number) => {
+    autoPick.current = false;
+    setCurrentMonth(prev => addMonths(prev, delta));
+  };
+
   const isDateSelectable = (date: Date) => {
     const today = startOfDay(new Date());
 
@@ -272,7 +312,7 @@ export default function DateTimeSelection({
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            {addons && addons.length > 0 ? 'Back to Add-on Selection' : 'Back to Service Selection'}
+            Back
           </button>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -301,14 +341,18 @@ export default function DateTimeSelection({
                 </h2>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => setCurrentMonth(prev => addMonths(prev, -1))}
-                    className="p-2 hover:bg-gray-100 rounded-full"
+                    onClick={() => changeMonth(-1)}
+                    disabled={!canGoToPrevMonth}
+                    aria-label="Previous month"
+                    className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
                     ←
                   </button>
                   <button
-                    onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
-                    className="p-2 hover:bg-gray-100 rounded-full"
+                    onClick={() => changeMonth(1)}
+                    disabled={!canGoToNextMonth}
+                    aria-label="Next month"
+                    className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
                     →
                   </button>
@@ -359,6 +403,15 @@ export default function DateTimeSelection({
                 })}
               </div>
 
+              <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600" aria-hidden="true">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-full border border-gray-300 bg-white" /> Available
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-full bg-orange-100 border border-orange-200" /> Fully booked (join the waitlist)
+                </span>
+              </div>
+
               <div className="mt-4 text-sm text-gray-600">
                 {error && (
                   <div className="mt-2 p-2 bg-red-50 text-red-600 rounded">
@@ -374,155 +427,78 @@ export default function DateTimeSelection({
                 {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Select a Date'}
               </h2>
 
-              {selectedDate ? (
-                loading ? (
-                  <div className="text-center py-8">
-                    <p className="mb-3">Loading time slots...</p>
-                    <div className="text-sm bg-accent text-white px-2 py-1 rounded">
-                      <span>Don't see a date & time that works for you?</span><br></br>{' '}
-                      {WAITLIST_URL ? (
-                        <a
-                          href={WAITLIST_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-white underline"
-                        >
-                          Join the waitlist
-                        </a>
-                      ) : (
-                        <button
-                          onClick={() => setShowWaitlist(true)}
-                          className="text-white underline"
-                        >
-                          Join the waitlist
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-8">
-                    <p className="text-red-600 mb-3">{error}</p>
-                    <div className="text-sm bg-accent text-white px-2 py-1 rounded">
-                      <span>Don't see a date & time that works for you?</span><br></br>{' '}
-                      {WAITLIST_URL ? (
-                        <a
-                          href={WAITLIST_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gray-800 underline"
-                        >
-                          Join the waitlist
-                        </a>
-                      ) : (
-                        <button
-                          onClick={() => setShowWaitlist(true)}
-                          className="text-accent underline"
-                        >
-                          Join the waitlist
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ) : isDateFullyBooked(selectedDate) ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600 mb-4">This date is fully booked.</p>
-                    {WAITLIST_URL ? (
-                      <a
-                        href={WAITLIST_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
-                      >
-                        Join the waitlist
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => setShowWaitlist(true)}
-                        className="bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
-                      >
-                        Join the waitlist for this date
-                      </button>
-                    )}
-                  </div>
-                ) : availableTimeSlots.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p className="mb-4">No available time slots for this date.</p>
-                    {WAITLIST_URL ? (
-                      <a
-                        href={WAITLIST_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
-                      >
-                        Join the waitlist
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => setShowWaitlist(true)}
-                        className="bg-accent text-white px-6 py-2 rounded-md hover:bg-accent/90 transition-colors"
-                      >
-                        Join the waitlist for this date
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-2">
-                      {availableTimeSlots.map((slot, index) => (
-                        <button
-                          key={index}
-                          onClick={() => onSelect(slot.startTime)}
-                          className="py-3 px-4 rounded-lg text-center bg-[#F8E7E1] text-gray-900 hover:bg-blue-500 hover:text-white transition-colors"
-                        >
-                          {format(parseISO(slot.startTime), 'h:mm a')}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-6 text-center text-sm bg-accent text-white px-2 py-1 rounded">
-                      <span>Don't see a date & time that works for you?</span><br></br>{' '}
-                      {WAITLIST_URL ? (
-                        <a
-                          href={WAITLIST_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-white underline"
-                        >
-                          Join the waitlist
-                        </a>
-                      ) : (
-                        <button
-                          onClick={() => setShowWaitlist(true)}
-                          className="text-white underline"
-                        >
-                          Join the waitlist
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )
-              ) : (
+              {!selectedDate ? (
                 <div className="text-center py-8 text-gray-500">
-                  <p className="mb-4">Please select a date to view available time slots</p>
-                  <div className="text-sm bg-accent text-white px-2 py-1 rounded">
-                    <span>Don't see a date & time that works for you?</span><br></br>{' '}
-                    {WAITLIST_URL ? (
-                      <a
-                        href={WAITLIST_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-white underline"
-                      >
-                        Join the waitlist
-                      </a>
-                    ) : (
+                  {noAvailabilityFound ? (
+                    <p>We don&apos;t have any openings in the next few months for this service.</p>
+                  ) : checkingDates ? (
+                    <p>Finding the next available date...</p>
+                  ) : (
+                    <p>Please select a date to view available time slots</p>
+                  )}
+                </div>
+              ) : loading ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Loading time slots...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-red-600 mb-3">{error}</p>
+                  <button
+                    onClick={() => fetchTimeSlots(selectedDate)}
+                    className="text-accent underline"
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : isDateFullyBooked(selectedDate) || availableTimeSlots.length === 0 ? (
+                <div className="text-center py-8 text-gray-600">
+                  <p>{isDateFullyBooked(selectedDate) ? 'This date is fully booked.' : 'No available time slots for this date.'}</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableTimeSlots.map((slot, index) => (
                       <button
-                        onClick={() => setShowWaitlist(true)}
-                        className="text-white underline"
+                        key={index}
+                        onClick={() => onSelect(slot.startTime)}
+                        className={`py-3 px-4 rounded-lg text-center transition-colors ${
+                          initialDateTime === slot.startTime
+                            ? 'bg-accent text-white'
+                            : 'bg-[#F8E7E1] text-gray-900 hover:bg-accent hover:text-white'
+                        }`}
                       >
-                        Join the waitlist
+                        {formatClinicTime(slot.startTime, 'h:mm a')}
                       </button>
-                    )}
+                    ))}
                   </div>
+                  {isOutsideClinicTimeZone() && (
+                    <p className="mt-3 text-xs text-gray-500 text-center">Times are shown in Pacific Time.</p>
+                  )}
+                </>
+              )}
+
+              {/* One waitlist prompt for every state, once there's something to react to */}
+              {(selectedDate || noAvailabilityFound) && !loading && (
+                <div className="mt-6 text-center text-sm text-gray-700 border-t border-gray-100 pt-4">
+                  <span>Don&apos;t see a date &amp; time that works for you? </span>
+                  {WAITLIST_URL ? (
+                    <a
+                      href={WAITLIST_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent font-medium underline"
+                    >
+                      Join the waitlist
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => setShowWaitlist(true)}
+                      className="text-accent font-medium underline"
+                    >
+                      Join the waitlist
+                    </button>
+                  )}
                 </div>
               )}
             </div>

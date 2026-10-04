@@ -155,7 +155,10 @@ export default function CheckoutPage() {
         }, 800);
 
         return () => clearTimeout(debounceTimer);
-    }, [cart, shippingAddress, fulfillmentMethod]); // Remove appliedDiscount dependency to break circular issue
+        // Depend on the code (a string), not the discount object, so applying or removing a
+        // coupon refreshes the Square total without re-running on every render
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cart, shippingAddress, fulfillmentMethod, appliedDiscount?.code]);
 
     const validateShippingAddress = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -165,6 +168,11 @@ export default function CheckoutPage() {
         if (!shippingAddress.name.trim()) return 'Name is required';
         if (!emailRegex.test(shippingAddress.email)) return 'Invalid email address';
         if (!phoneRegex.test(shippingAddress.phone)) return 'Invalid phone number (format: 123-456-7890)';
+
+        // Local pickup paid by card doesn't need an address
+        const needsAddress = fulfillmentMethod === 'shipping' || paymentMethod === 'afterpay';
+        if (!needsAddress) return null;
+
         if (!shippingAddress.street.trim()) return 'Street is required';
         if (!shippingAddress.city.trim()) return 'City is required';
         if (!shippingAddress.state.trim()) return 'Province is required';
@@ -310,38 +318,73 @@ export default function CheckoutPage() {
                 }),
             });
 
-            if (!response.ok) throw new Error('Failed to process payment');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error
+                    ? `Your payment didn't go through: ${errorData.error}`
+                    : 'Your payment didn\'t go through. Please check your card details and try again.');
+            }
             const { payment } = await response.json();
 
-            const orderResponse = await fetch('/api/orders', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                },
-                body: JSON.stringify({
-                    items: cart.map(item => ({
-                        productId: item.product.id,
-                        variationId: item.selectedVariation?.id || null,
-                        quantity: item.quantity,
-                        name: item.product.itemData!.name!,
-                        variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
-                        price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
-                    })),
-                    totalAmount: finalAmount,
-                    currency: 'CAD',
-                    locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
-                    customerId: null, // Could be set if user is logged in
-                    originalTotal: getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0),
-                    discount: getCombinedDiscount(),
-                    shippingAddress,
+            // From here on the card has been charged, so nothing below may surface as a checkout error
+            let orderResponse: Response | null = null;
+            try {
+                orderResponse = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+                    },
+                    body: JSON.stringify({
+                        items: cart.map(item => ({
+                            productId: item.product.id,
+                            variationId: item.selectedVariation?.id || null,
+                            quantity: item.quantity,
+                            name: item.product.itemData!.name!,
+                            variationName: item.selectedVariation?.itemVariationData?.name || 'Default',
+                            price: Number(item.selectedVariation?.itemVariationData?.priceMoney?.amount || 0) / 100,
+                        })),
+                        totalAmount: finalAmount,
+                        currency: 'CAD',
+                        locationId: process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID,
+                        customerId: null, // Could be set if user is logged in
+                        originalTotal: getCartTotal() + (fulfillmentMethod === 'shipping' ? 25 : 0),
+                        discount: getCombinedDiscount(),
+                        shippingAddress,
+                        paymentId: payment.id,
+                        notes: `${fulfillmentMethod === 'shipping' ? 'Shipping' : 'Pickup'} order${appliedDiscount ? ` with ${appliedDiscount.code} discount` : ''}${b2g1DiscountAmount > 0 ? ' with Buy 2 Get 1 Free promo' : ''}`,
+                    }),
+                });
+            } catch (orderError) {
+                console.error('Payment succeeded but the order record request failed', orderError);
+            }
+
+            if (orderResponse && !orderResponse.ok) {
+                // The card has already been charged and the order exists in Square, so don't
+                // show an error (people would pay again). Just log it for follow-up.
+                console.error('Payment succeeded but saving the order record failed', {
                     paymentId: payment.id,
-                    notes: `${fulfillmentMethod === 'shipping' ? 'Shipping' : 'Pickup'} order${appliedDiscount ? ` with ${appliedDiscount.code} discount` : ''}${b2g1DiscountAmount > 0 ? ' with Buy 2 Get 1 Free promo' : ''}`,
+                    status: orderResponse.status,
+                });
+            }
 
-                }),
-            });
-
-            if (!orderResponse.ok) throw new Error('Failed to create order');
+            try {
+                sessionStorage.setItem('phace-last-order', JSON.stringify({
+                    orderId: payment.orderId ?? null,
+                    receiptUrl: payment.receiptUrl ?? null,
+                    receiptNumber: payment.receiptNumber ?? null,
+                    total: finalAmount,
+                    fulfillmentMethod,
+                    email: shippingAddress.email,
+                    items: cart.map(item => ({
+                        name: item.product.itemData?.name ?? 'Item',
+                        variationName: item.selectedVariation?.itemVariationData?.name ?? null,
+                        quantity: item.quantity,
+                    })),
+                }));
+            } catch {
+                // The success page just shows less detail without it
+            }
             router.push('/checkout/success');
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
@@ -393,92 +436,139 @@ export default function CheckoutPage() {
                         </div>
 
                         <div className="bg-white p-6 rounded-lg shadow">
-                            <h2 className="text-xl font-semibold mb-4">Billing/Shipping Address</h2>
+                            <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
                             <div className="grid grid-cols-1 gap-4">
-                                <input
-                                    type="text"
-                                    name="name"
-                                    placeholder="Full Name"
-                                    required
-                                    className="w-full px-3 py-2 border rounded"
-                                    value={shippingAddress.name}
-                                    onChange={handleAddressChange}
-                                />
-                                <input
-                                    type="text"
-                                    name="email"
-                                    placeholder="Email Address"
-                                    required
-                                    className="w-full px-3 py-2 border rounded"
-                                    value={shippingAddress.email}
-                                    onChange={handleAddressChange}
-                                />
-                                <div className="flex items-center gap-2">
-                                    <span className="border rounded px-3 py-2 flex items-center gap-1">
-                                        <img src="/images/canada-flag-icon.svg" alt="CA" className="w-5 h-5" />
-                                        +1
-                                    </span>
+                                <div>
+                                    <label htmlFor="checkout-name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                                     <input
-                                        type="tel"
-                                        name="phone"
-                                        placeholder="Phone Number"
-                                        required
-                                        className="w-full px-3 py-2 border rounded"
-                                        value={formatPhoneNumber(shippingAddress.phone)}
-                                        onChange={(e) => {
-                                            const raw = e.target.value.replace(/\D/g, ''); // strip non-digits
-                                            setShippingAddress(prev => ({ ...prev, phone: raw }));
-                                        }}
-                                    />
-                                </div>
-                                <input
-                                    type="text"
-                                    name="street"
-                                    placeholder="Street Address"
-                                    required
-                                    className="w-full px-3 py-2 border rounded"
-                                    value={shippingAddress.street}
-                                    onChange={handleAddressChange}
-                                />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input
+                                        id="checkout-name"
                                         type="text"
-                                        name="city"
-                                        placeholder="City"
+                                        name="name"
+                                        autoComplete="name"
                                         required
                                         className="w-full px-3 py-2 border rounded"
-                                        value={shippingAddress.city}
-                                        onChange={handleAddressChange}
-                                    />
-                                    <input
-                                        type="text"
-                                        name="state"
-                                        placeholder="Province"
-                                        required
-                                        className="w-full px-3 py-2 border rounded"
-                                        value={shippingAddress.state}
+                                        value={shippingAddress.name}
                                         onChange={handleAddressChange}
                                     />
                                 </div>
+                                <div>
+                                    <label htmlFor="checkout-email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                                    <input
+                                        id="checkout-email"
+                                        type="email"
+                                        name="email"
+                                        autoComplete="email"
+                                        inputMode="email"
+                                        required
+                                        className="w-full px-3 py-2 border rounded"
+                                        value={shippingAddress.email}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="checkout-phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="border rounded px-3 py-2 flex items-center gap-1">
+                                            <img src="/images/canada-flag-icon.svg" alt="" className="w-5 h-5" />
+                                            +1
+                                        </span>
+                                        <input
+                                            id="checkout-phone"
+                                            type="tel"
+                                            name="phone"
+                                            autoComplete="tel-national"
+                                            required
+                                            className="w-full px-3 py-2 border rounded"
+                                            value={formatPhoneNumber(shippingAddress.phone)}
+                                            onChange={(e) => {
+                                                const raw = e.target.value.replace(/\D/g, '').slice(-10); // strip non-digits
+                                                setShippingAddress(prev => ({ ...prev, phone: raw }));
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-lg shadow">
+                            <h2 className="text-xl font-semibold mb-1">
+                                {fulfillmentMethod === 'shipping' ? 'Shipping Address' : 'Billing Address'}
+                            </h2>
+                            {fulfillmentMethod === 'pickup' && (
+                                <p className="text-sm text-gray-500 mb-4">
+                                    Optional when paying by card. Only needed if you pay with Afterpay.
+                                </p>
+                            )}
+                            <div className={`grid grid-cols-1 gap-4 ${fulfillmentMethod === 'shipping' ? 'mt-3' : ''}`}>
+                                <div>
+                                    <label htmlFor="checkout-street" className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                                    <input
+                                        id="checkout-street"
+                                        type="text"
+                                        name="street"
+                                        autoComplete="address-line1"
+                                        required={fulfillmentMethod === 'shipping'}
+                                        className="w-full px-3 py-2 border rounded"
+                                        value={shippingAddress.street}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <input
-                                        type="text"
-                                        name="zipCode"
-                                        placeholder="Postal Code"
-                                        required
-                                        className="w-full px-3 py-2 border rounded"
-                                        value={shippingAddress.zipCode}
-                                        onChange={handleAddressChange}
-                                    />
-                                    <input
-                                        type="text"
-                                        name="country"
-                                        placeholder="Country"
-                                        required
-                                        className="w-full px-3 py-2 border rounded"
-                                        value={shippingAddress.country}
-                                        onChange={handleAddressChange}
-                                    />
+                                    <div>
+                                        <label htmlFor="checkout-city" className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                        <input
+                                            id="checkout-city"
+                                            type="text"
+                                            name="city"
+                                            autoComplete="address-level2"
+                                            required={fulfillmentMethod === 'shipping'}
+                                            className="w-full px-3 py-2 border rounded"
+                                            value={shippingAddress.city}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="checkout-state" className="block text-sm font-medium text-gray-700 mb-1">Province</label>
+                                        <input
+                                            id="checkout-state"
+                                            type="text"
+                                            name="state"
+                                            autoComplete="address-level1"
+                                            required={fulfillmentMethod === 'shipping'}
+                                            className="w-full px-3 py-2 border rounded"
+                                            value={shippingAddress.state}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label htmlFor="checkout-zip" className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                                        <input
+                                            id="checkout-zip"
+                                            type="text"
+                                            name="zipCode"
+                                            autoComplete="postal-code"
+                                            placeholder="A1A 1A1"
+                                            required={fulfillmentMethod === 'shipping'}
+                                            className="w-full px-3 py-2 border rounded"
+                                            value={shippingAddress.zipCode}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="checkout-country" className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                                        <input
+                                            id="checkout-country"
+                                            type="text"
+                                            name="country"
+                                            autoComplete="country-name"
+                                            required={fulfillmentMethod === 'shipping'}
+                                            className="w-full px-3 py-2 border rounded"
+                                            value={shippingAddress.country}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>

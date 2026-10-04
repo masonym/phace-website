@@ -8,14 +8,18 @@ interface ConsentFormsProps {
   serviceId: string;
   categoryId?: string; // Add categoryId prop
   onSubmit: (data: Record<string, any>) => void;
+  /** Called when this service has no consent forms, so the step can be skipped */
+  onNoForms?: () => void;
   onBack: () => void;
 }
 
-export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }: ConsentFormsProps) {
+export default function ConsentForms({ serviceId, categoryId, onSubmit, onNoForms, onBack }: ConsentFormsProps) {
   const [forms, setForms] = useState<ConsentForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const handleFormChange = (formId: string, responses: Record<string, any>) => {
     setFormResponses(prev => ({
@@ -26,12 +30,18 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
 
   useEffect(() => {
     const fetchForms = async () => {
+      setLoading(true);
+      setLoadError(null);
       try {
         const response = await fetch(`/api/booking/consent-forms?serviceId=${serviceId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch consent forms');
         }
         const data = await response.json();
+        if (Array.isArray(data) && data.length === 0 && onNoForms) {
+          onNoForms();
+          return;
+        }
         // Transform the data to match the ConsentForm type
         setForms(data.map((form: any) => ({
           id: form.id,
@@ -77,14 +87,17 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
           })),
         })));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch consent forms');
+        console.error('Error fetching consent forms:', err);
+        setLoadError('We couldn\'t load the consent forms for this service.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchForms();
-  }, [serviceId]);
+    // onNoForms is a fresh function each render; only refetch when the service changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceId, reloadKey]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,9 +116,10 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
     });
 
     if (!allFormsAgreed) {
-      setError('Please complete all required fields in the consent forms');
+      setValidationError('Please complete all required fields in the consent forms.');
       return;
     }
+    setValidationError(null);
 
     // Format the responses to include form and question context
     const formattedResponses = forms.map(form => {
@@ -200,11 +214,36 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
   };
 
   if (loading) {
-    return <div>Loading consent forms...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-lg">Loading consent forms...</div>
+      </div>
+    );
   }
 
-  if (error) {
-    return <div className="text-red-500">{error}</div>;
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center">
+        <p className="text-red-600">{loadError}</p>
+        <p className="text-gray-600">
+          Please try again, or <a href="/contact" className="text-accent underline">contact us</a> to finish your booking.
+        </p>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="px-6 py-2 bg-accent text-white rounded-full hover:bg-accent/90 transition-colors"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={onBack}
+            className="px-6 py-2 border border-accent text-accent rounded-full hover:bg-accent/10 transition-colors"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -251,6 +290,9 @@ export default function ConsentForms({ serviceId, categoryId, onSubmit, onBack }
           );
         })}
 
+        {validationError && (
+          <p role="alert" className="text-red-600 text-right">{validationError}</p>
+        )}
         <div className="flex justify-end pt-4">
           <button
             type="submit"

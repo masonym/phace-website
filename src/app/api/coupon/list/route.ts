@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { SimpleCouponService } from '@/lib/services/simpleCouponService';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const coupons = await SimpleCouponService.listCoupons();
     

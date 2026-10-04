@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -15,6 +16,17 @@ export function generateStaticParams() {
   }))
 }
 
+export function generateMetadata({ params }: Props): Metadata {
+  const treatment = treatments.find((t) => t.slug === params.slug)
+  if (!treatment) return {}
+  return {
+    title: `${treatment.name} in Chilliwack | Phace Medical Aesthetics`,
+    description: treatment.description.length > 160
+      ? `${treatment.description.slice(0, 157).trimEnd()}...`
+      : treatment.description,
+  }
+}
+
 export default function TreatmentPage({ params }: Props) {
   const treatment = treatments.find((t) => t.slug === params.slug)
 
@@ -25,7 +37,7 @@ export default function TreatmentPage({ params }: Props) {
   const treatmentNameUpper = treatment.name.toUpperCase()
 
   return (
-    <main className="min-h-screen bg-[#F8E7E1]">
+    <div className="min-h-screen bg-[#F8E7E1]">
       {/* Hero Section */}
       <section className="relative h-screen">
         <div className="absolute inset-0">
@@ -72,7 +84,7 @@ export default function TreatmentPage({ params }: Props) {
           <h2 className="text-3xl md:text-6xl font-light text-[#E4B4A6] text-center mb-16">
             WHAT IS<br />{treatmentNameUpper}?
           </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {treatment.cards?.map((card, index) => (
               <div
                 key={index}
@@ -116,15 +128,42 @@ export default function TreatmentPage({ params }: Props) {
         </div>
       </section>
 
+      {/* Benefits Section */}
+      {(treatment.benefits?.length || treatment.duration) && (
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl md:text-6xl font-light text-[#E4B4A6] mb-12">
+              BENEFITS
+            </h2>
+            {treatment.benefits && treatment.benefits.length > 0 && (
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-lg text-[#4A5568]">
+                {treatment.benefits.map((benefit) => (
+                  <li key={benefit} className="flex items-start gap-3">
+                    <span className="text-[#E4B4A6]" aria-hidden="true">✓</span>
+                    <span>{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {treatment.duration && (
+              <p className="mt-8 text-[#4A5568]">
+                <span className="font-medium">Typical treatment time:</span> {treatment.duration}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Book Appointment Section */}
-      <section className="py-20 bg-[#F8E7E1] text-center">
+      <section className="py-20 bg-white text-center">
+        <h2 className="text-3xl font-light text-[#4A5568] mb-6">Ready to book {treatment.name}?</h2>
         <Link
           href="/book"
-          className="text-2xl text-[#4A5568] hover:text-[#2D3748] transition-colors"
+          className="inline-block bg-accent text-white px-8 py-4 rounded-full text-lg hover:bg-accent/90 transition-colors"
         >
-          Book Appointment ↓
+          Book an Appointment
         </Link>
       </section>
-    </main>
+    </div>
   )
 }

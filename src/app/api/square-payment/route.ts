@@ -1,6 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ProductService } from '@/lib/services/productService';
+import { resolveOrderDiscount } from '@/lib/services/orderDiscountService';
+import { SimpleCouponService } from '@/lib/services/simpleCouponService';
 import { EmailService } from '@/lib/services/emailService';
 import { SquareClient, SquareEnvironment } from "square";
 
@@ -38,14 +40,15 @@ export async function POST(req: NextRequest) {
                 })),
         };
 
-        // Add discount if provided
-        if (discount && discount.discountAmount > 0) {
+        // Only the coupon code is taken from the browser; the amount is worked out here
+        const resolvedDiscount = await resolveOrderDiscount(items, discount?.code);
+        if (resolvedDiscount) {
             order.discounts = [
                 {
-                    name: `${discount.name} (${discount.code})`,
+                    name: `${resolvedDiscount.name} (${resolvedDiscount.code})`,
                     type: 'FIXED_AMOUNT',
                     amountMoney: {
-                        amount: BigInt(Math.round(discount.discountAmount * 100)), // discount amount in cents
+                        amount: BigInt(Math.round(resolvedDiscount.discountAmount * 100)), // discount amount in cents
                         currency,
                     },
                     scope: 'ORDER',
@@ -108,6 +111,17 @@ export async function POST(req: NextRequest) {
             throw new Error('Failed to create order with Square or retrieve total amount');
         }
 
+        // Pickup orders paid by card may come without an address
+        const address = shippingAddress.street?.trim()
+            ? {
+                addressLine1: shippingAddress.street,
+                locality: shippingAddress.city,
+                administrativeDistrictLevel1: shippingAddress.state,
+                postalCode: shippingAddress.zipCode,
+                country: 'CA' as any,
+            }
+            : undefined;
+
         // Create or retrieve Square customer for receipt email and customer history
         const nameParts = shippingAddress.name.split(' ').filter(Boolean);
         const givenName = nameParts[0] || '';
@@ -119,13 +133,7 @@ export async function POST(req: NextRequest) {
             givenName,
             familyName,
             phoneNumber: shippingAddress.phone ? `+1${shippingAddress.phone.replace(/\D/g, '')}` : undefined,
-            address: {
-                addressLine1: shippingAddress.street,
-                locality: shippingAddress.city,
-                administrativeDistrictLevel1: shippingAddress.state,
-                postalCode: shippingAddress.zipCode,
-                country: 'CA',
-            },
+            address,
         });
 
         const customerId = customerResponse.customer?.id;
@@ -143,16 +151,15 @@ export async function POST(req: NextRequest) {
             locationId,
             orderId,
             customerId,
-            shippingAddress: {
-                addressLine1: shippingAddress.street,
-                locality: shippingAddress.city,
-                administrativeDistrictLevel1: shippingAddress.state,
-                postalCode: shippingAddress.zipCode,
-                country: 'CA' as any,
-            },
+            shippingAddress: fulfillmentMethod === 'shipping' ? address : undefined,
             note: `Purchase of ${items.length} item(s)`,
             autocomplete: true,
         });
+
+        if (resolvedDiscount?.couponCode) {
+            // Count the use so coupon usage limits are enforced
+            await SimpleCouponService.applyCoupon(resolvedDiscount.couponCode);
+        }
 
         // Send branded confirmation email via AWS SES
         try {

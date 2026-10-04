@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProductService } from '@/lib/services/productService';
+import { resolveOrderDiscount } from '@/lib/services/orderDiscountService';
 import { SquareClient, SquareEnvironment } from "square";
 
 const client = new SquareClient({
@@ -78,14 +79,15 @@ export async function POST(req: NextRequest) {
             })),
         };
 
-        // Add discount if provided
-        if (discount && discount.discountAmount > 0) {
+        // Only the coupon code is taken from the browser; the amount is worked out here
+        const resolvedDiscount = await resolveOrderDiscount(items, discount?.code);
+        if (resolvedDiscount) {
             order.discounts = [
                 {
-                    name: `${discount.name} (${discount.code})`,
+                    name: `${resolvedDiscount.name} (${resolvedDiscount.code})`,
                     type: 'FIXED_AMOUNT',
                     amountMoney: {
-                        amount: BigInt(Math.round(discount.discountAmount * 100)), // discount amount in cents
+                        amount: BigInt(Math.round(resolvedDiscount.discountAmount * 100)), // discount amount in cents
                         currency: effectiveCurrency,
                     },
                     scope: 'ORDER',

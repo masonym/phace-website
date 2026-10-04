@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { S3Service } from '@/lib/services/s3Service';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export async function POST(request: Request) {
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
+
     try {
         const { fileName, contentType } = await request.json();
 

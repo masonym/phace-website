@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server';
 import { SquareBookingService } from "@/lib/services/squareBookingService";
-import { CognitoJwtVerifier } from "aws-jwt-verify";
+import { adminVerifier } from '@/lib/auth/requireAdmin';
 
-// Create a verifier that expects valid ID tokens
-const verifier = CognitoJwtVerifier.create({
-  userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
-  tokenUse: "id",
-  clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
-});
+// Only users in the admin table pass (customers share the Cognito pool)
+const verifier = adminVerifier;
 
 export async function GET() {
   try {

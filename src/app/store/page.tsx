@@ -3,7 +3,7 @@ import ProductGrid from '@/components/store/ProductGrid';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-    title: 'Store | Phace',
+    title: 'Shop Skincare',
     description: 'Shop our curated collection of premium skincare and beauty products.',
 };
 

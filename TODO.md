@@ -1,5 +1,84 @@
 TODO:
 
+## SITE REVIEW (2026-10-03)
+
+### 0. Security / money
+- [x] S1. square-payment trusts client-sent `discount.discountAmount` -- recompute coupon + B2G1 server-side
+- [x] S2. coupon/create + coupon/list have no auth
+- [x] S3. discount/create only checks a "Bearer " prefix exists, never verifies
+- [x] S4. upload-url has no auth (no callers in the app)
+- [x] S5. booking/staff/blocked-time POST/DELETE have no auth
+- [ ] S6.  ⚠ run on Windows: `npm i next@14.2 eslint-config-next@14.2` then `npm run build` (not run from WSL -- would swap native binaries) Upgrade Next 14.0.0 -> latest 14.2.x (CVE-2025-29927 middleware bypass)
+- [x] S7. (follow-up) other admin routes only check "valid Cognito token", but customers share the same user pool -- should also check the admin table
+
+### 1. Presale popup (live Oct 6)
+- [x] P1. Don't show on /book, /checkout, /booking-confirmed, /login etc.
+- [x] P2. Close on backdrop click
+
+### 2. Booking flow
+- [x] B1. Explain card on ClientForm ("won't be charged now") + link booking policy
+- [x] B2. Confirm Booking button contrast (white on #DEC3C5) + undefined hover:bg-primary-dark
+- [x] B3. Show cancellation policy on summary
+- [x] B4. Consent step: auto-skip when no forms; error state needs retry + back
+- [x] B5. Browser back leaves the flow (router.replace); refresh mid-flow breaks (blank addons step)
+- [x] B6. Back from staff lands on single-option "variation" screen
+- [x] B7. Addon selection + selected date lost on Back
+- [ ] B8.  (partial: single-provider services now skip the step; 'Any provider' needs multi-staff availability in squareBookingService) "Any available provider" option; auto-skip staff step when only one provider
+- [x] B9. Calendar: jump to first available date; bound month arrows; aria-labels; legend for orange (fully booked)
+- [x] B10. Waitlist prompt repeated in every state -- show once
+- [x] B11. Format slot times in America/Vancouver, not browser tz
+- [ ] B12. (needs answer from Dawn) Same-day booking excluded -- intentional? (ask Dawn)
+- [x] B13. Confirmation page: add-to-calendar, address/directions, policy
+- [x] B14. Category/service cards are clickable divs -> buttons
+- [ ] B15. Service search / popular services
+
+### 3. Store & checkout
+- [x] C1. Payment succeeds but /api/orders fails -> user sees error, may pay twice
+- [x] C2. Pickup still requires full shipping address
+- [x] C3. Success page: order number/summary; pickup-aware copy
+- [x] C4. Checkout inputs: labels + autoComplete
+- [x] C5. ProductGrid sidebar class string mangled (`lg: w - 1 / 5 ...`)
+- [x] C6. ProductGrid layout via windowWidth state -> CSS breakpoints (layout flash)
+- [x] C7. Store search, sort, filters in URL, empty state
+- [ ] C8. Brand vs type detection via hardcoded list
+
+### 4. Accounts
+- [x] A1. Profile "My Appointments" broken (GET ignores clientEmail, hardcoded 2025 date range)
+- [x] A2. Remove/protect /bookings and /test-gift-card debug pages
+
+### 5. Visual / a11y
+- [x] V1. Spinnaker font never loads (@font-face src commented out) -> next/font
+- [x] V2. .section-title clamp(5rem, 4vw, 3rem) is always 80px
+- [ ] V3.  (brand colour decision -- confirm button now uses accent; headings/accent still low contrast) Contrast: #DEC3C5/#E4B4A6 headings on cream (~1.5:1), white on accent (~2.9:1)
+- [x] V4. Mobile menu aria-expanded, active nav link, logo alt, map iframe title, testimonial alt text
+- [x] V5. error.tsx shows raw error.message
+
+### 6. SEO / performance
+- [x] O1. Per-page metadata (titles/descriptions) incl. treatment pages
+- [x] O2. sitemap.ts + robots.ts
+- [x] O3. LocalBusiness / MedicalBusiness JSON-LD
+- [x] O4. phace-outside.webp is 6.5MB (images unoptimized)
+- [ ] O5.  (partial: product pages now get server-side title/description; slugs still TODO #4 below) Product pages client-rendered, ID URLs (see #4 below)
+
+### Found while fixing
+- [x] F1. Contact page phone link dialed +1 604 703 3552 while showing (778) 864-0624
+- [x] F2. Consent-form validation error replaced the whole form with red text
+- [x] F3. GET /api/booking/appointments/[id] returned notes + consent answers publicly
+- [x] F4. Coupon usage never counted (applyCoupon never called) -> usage limits not enforced
+- [x] F5. Contact form email inserted name/message as raw HTML
+- [x] F6. Checkout total didn't refresh after applying a coupon (charge != displayed total)
+- [ ] F7. Set NEXT_PUBLIC_SITE_URL in Vercel (defaults to https://phace.ca -- confirm domain)
+- [ ] F8. Newsletter signups are emailed to hello@phace.ca -- move to a real list (Square Marketing / Mailchimp) later
+
+### 7. Content / nav
+- [x] N1. Footer newsletter form does nothing
+- [x] N2. Footer: Book, Contact, socials, reviews links  (Google reviews link still needs the URL)
+- [x] N3. Hours duplicated in Footer, Location, Contact -> single source
+- [ ] N4.  (partial: benefits + duration shown; prices in data/treatments.ts not shown until confirmed current) Treatment pages: show price/duration/benefits already in data
+- [ ] N5.  (/book now supports ?step=service&categoryId=X -- need the Square category IDs per treatment) Deep-link "Book" buttons to the right category
+- [ ] N6.  (Laser fixed -> /treatments/sharplight; Scar Revision has no page yet) Home: Laser "Learn more" goes to /treatments; Scar Revision has no link
+- [ ] N7. FAQ page
+
 ## Booking Flow Square Integration 
 
 - [x] 8. Need to make sure certain categories don't show up in the booking flow step 1 (Addons, Gift Cards, etc) -- i think we can do this with some stuff related to top-level categories

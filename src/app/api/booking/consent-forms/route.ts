@@ -7,7 +7,7 @@ import {
     PutCommand,
     DeleteCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { CognitoJwtVerifier } from 'aws-jwt-verify';
+import { adminVerifier } from '@/lib/auth/requireAdmin';
 import { v4 as uuidv4 } from 'uuid';
 
 const dynamoClient = new DynamoDBClient({ 
@@ -19,11 +19,8 @@ const dynamoClient = new DynamoDBClient({
 });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
-const verifier = CognitoJwtVerifier.create({
-    userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
-    clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!,
-    tokenUse: 'id',
-});
+// Only users in the admin table pass (customers share the Cognito pool)
+const verifier = adminVerifier;
 
 // GET /api/booking/consent-forms?id={formId} — fetch single form by ID (public, no auth)
 // GET /api/booking/consent-forms?serviceId={serviceId} — fetch forms for a service

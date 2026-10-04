@@ -121,7 +121,9 @@ export default function ProductGrid() {
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [selectedBrand, setSelectedBrand] = useState<string>('all');
     const [categoryNames, setCategoryNames] = useState<Square.CatalogObject[]>([]);
-    const [windowWidth, setWindowWidth] = useState<number>(0);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'name'>('featured');
+    const [filtersRestored, setFiltersRestored] = useState(false);
     const [discountPreviews, setDiscountPreviews] = useState<Map<string, { minSalePriceCents: number | null; discountPercent: number | null }>>(new Map());
 
     // Refs
@@ -274,29 +276,47 @@ export default function ProductGrid() {
         fetchCategoryNames();
     }, [products]);
 
-    // Handle window resize for responsive layout
+    // Restore filters from the URL so coming back from a product page keeps them
     useEffect(() => {
-        // Only run on client side
-        if (typeof window === 'undefined') return;
-
-        // Set initial width
-        setWindowWidth(window.innerWidth);
-
-        // Update width on resize
-        const handleResize = () => {
-            setWindowWidth(window.innerWidth);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        const params = new URLSearchParams(window.location.search);
+        setSelectedCategory(params.get('type') || 'all');
+        setSelectedBrand(params.get('brand') || 'all');
+        setSearchQuery(params.get('q') || '');
+        const sort = params.get('sort');
+        if (sort === 'price-asc' || sort === 'price-desc' || sort === 'name') setSortBy(sort);
+        setFiltersRestored(true);
     }, []);
+
+    useEffect(() => {
+        if (!filtersRestored) return;
+        const params = new URLSearchParams(window.location.search);
+        const setOrDelete = (key: string, value: string, defaultValue: string) => {
+            if (value && value !== defaultValue) params.set(key, value);
+            else params.delete(key);
+        };
+        setOrDelete('type', selectedCategory, 'all');
+        setOrDelete('brand', selectedBrand, 'all');
+        setOrDelete('q', searchQuery.trim(), '');
+        setOrDelete('sort', sortBy, 'featured');
+        const query = params.toString();
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+    }, [selectedCategory, selectedBrand, searchQuery, sortBy, filtersRestored]);
 
     // Loading and error states
     if (isLoading) return <ProductGridSkeleton />;
-    if (error) return <div className="container mx-auto px-4 py-8 text-center text-red-600">Error loading products: {String(error)}</div>;
-
-    // Derived values
-    const isDesktop = windowWidth >= 1024;
+    if (error) {
+        return (
+            <div className="container mx-auto px-4 py-8 text-center">
+                <p className="text-red-600 mb-4">We couldn&apos;t load our products right now.</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
 
     // Get all unique category IDs
     const allCategoryIds = new Set<string>();
@@ -340,8 +360,40 @@ export default function ProductGrid() {
         const matchesBrand = selectedBrand === 'all' ||
             product.itemData.categories?.some(cat => cat.id === selectedBrand);
 
-        return matchesCategory && matchesBrand;
+        const query = searchQuery.trim().toLowerCase();
+        const matchesSearch = !query ||
+            (product.itemData.name ?? '').toLowerCase().includes(query) ||
+            (product.itemData.description ?? '').toLowerCase().includes(query);
+
+        return matchesCategory && matchesBrand && matchesSearch;
     });
+
+    const lowestPriceCents = (product: Square.CatalogObject) => {
+        if (product.type !== 'ITEM') return Infinity;
+        const prices = (product.itemData?.variations ?? [])
+            .filter(v => v.type === 'ITEM_VARIATION' && v.itemVariationData?.pricingType === 'FIXED_PRICING')
+            .map(v => Number((v as any).itemVariationData?.priceMoney?.amount ?? 0));
+        const sale = discountPreviews.get(product.id)?.minSalePriceCents;
+        const base = prices.length ? Math.min(...prices) : Infinity;
+        return typeof sale === 'number' ? Math.min(sale, base) : base;
+    };
+    const productName = (product: Square.CatalogObject) =>
+        product.type === 'ITEM' ? product.itemData?.name ?? '' : '';
+
+    const sortedProducts = sortBy === 'featured'
+        ? filteredProducts
+        : [...filteredProducts].sort((a, b) => {
+            if (sortBy === 'name') return productName(a).localeCompare(productName(b));
+            const diff = lowestPriceCents(a) - lowestPriceCents(b);
+            return sortBy === 'price-asc' ? diff : -diff;
+        });
+
+    const hasActiveFilters = selectedCategory !== 'all' || selectedBrand !== 'all' || searchQuery.trim() !== '';
+    const clearFilters = () => {
+        setSelectedCategory('all');
+        setSelectedBrand('all');
+        setSearchQuery('');
+    };
 
     // Render category buttons
     const renderCategoryButtons = (categories: string[], isActive: string, setActive: (id: string) => void) => {
@@ -351,10 +403,10 @@ export default function ProductGrid() {
                 <button
                     key={categoryId}
                     onClick={() => setActive(categoryId)}
+                    aria-pressed={isActive === categoryId}
                     className={`px-4 py-2 rounded-md capitalize whitespace-nowrap ${isActive === categoryId
                         ? 'bg-black text-white'
-                        : 'bg-[#FDECC2] hover:bg-[#FDECC2]/60'}
-                        }`}
+                        : 'bg-[#FDECC2] hover:bg-[#FDECC2]/60'}`}
                 >
                     {categoryId === 'all'
                         ? 'All'
@@ -365,9 +417,9 @@ export default function ProductGrid() {
     };
 
     return (
-        <div className={`${isDesktop ? 'lg:flex lg:gap-8' : ''}`}>
-            {/* Desktop Sidebar - always render but use CSS to hide/show */}
-            <div className={`${isDesktop ? 'block' : 'hidden'} lg: w - 1 / 5 lg: min - w - [200px] lg: sticky lg: top - 24 lg: self - start lg: h - fit`}>
+        <div className="lg:flex lg:gap-8">
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:block lg:w-1/5 lg:min-w-[200px] lg:sticky lg:top-24 lg:self-start lg:h-fit">
                 <div className="mb-8">
                     <h3 className="text-xl font-semibold mb-4">Browse by Type</h3>
                     <div className="flex flex-col gap-2">
@@ -383,9 +435,34 @@ export default function ProductGrid() {
                 </div>
             </div>
 
-            <div className={`${isDesktop ? 'lg:w-4/5' : 'w-full'}`}>
-                {/* Mobile Horizontal Scrolling Categories - always render but use CSS to hide/show */}
-                <div className={`${isDesktop ? 'hidden' : 'block'} relative mb - 8`}>
+            <div className="w-full lg:w-4/5">
+                {/* Search and sort */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                    <label htmlFor="store-search" className="sr-only">Search products</label>
+                    <input
+                        id="store-search"
+                        type="search"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search products"
+                        className="flex-1 px-4 py-2 border rounded-md bg-white"
+                    />
+                    <label htmlFor="store-sort" className="sr-only">Sort products</label>
+                    <select
+                        id="store-sort"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                        className="px-4 py-2 border rounded-md bg-white"
+                    >
+                        <option value="featured">Featured</option>
+                        <option value="price-asc">Price: Low to High</option>
+                        <option value="price-desc">Price: High to Low</option>
+                        <option value="name">Name: A to Z</option>
+                    </select>
+                </div>
+
+                {/* Mobile Horizontal Scrolling Categories */}
+                <div className="lg:hidden relative mb-8">
                     <h4 className="font-medium mb-2">Browse by Type</h4>
                     <div
                         className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar"
@@ -405,13 +482,32 @@ export default function ProductGrid() {
                 </div>
 
                 {/* Product Count */}
-                <div className="mb-6">
-                    <p className="text-gray-600">{filteredProducts.length} products</p>
+                <div className="mb-6 flex items-center gap-4">
+                    <p className="text-gray-600" aria-live="polite">
+                        {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
+                    </p>
+                    {hasActiveFilters && (
+                        <button onClick={clearFilters} className="text-sm underline text-gray-700 hover:text-black">
+                            Clear filters
+                        </button>
+                    )}
                 </div>
+
+                {filteredProducts.length === 0 && (
+                    <div className="text-center py-16 bg-white rounded-lg">
+                        <p className="text-gray-700 mb-4">No products match your filters.</p>
+                        <button
+                            onClick={clearFilters}
+                            className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800"
+                        >
+                            Show all products
+                        </button>
+                    </div>
+                )}
 
                 {/* Product Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
-                    {filteredProducts.map(product => {
+                    {sortedProducts.map(product => {
                         if (product.type !== "ITEM" || !product.itemData) return null;
 
                         const variations = product.itemData.variations

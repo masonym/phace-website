@@ -12,13 +12,15 @@ interface Addon {
 
 interface Props {
   serviceId: string;
+  /** Add-ons picked earlier, so going back doesn't lose them */
+  initialSelectedIds?: string[];
   onSelect: (selectedAddonsData: Addon[]) => void;
   onBack: () => void;
 }
 
-export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
+export default function AddonSelection({ serviceId, initialSelectedIds = [], onSelect, onBack }: Props) {
   const [addons, setAddons] = useState<Addon[]>([]);
-  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(initialSelectedIds);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -64,11 +66,29 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-red-600">Error: {error}</div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center">
+        <p className="text-red-600">We couldn&apos;t load add-ons for this service.</p>
+        <div className="flex gap-4">
+          <button
+            onClick={() => onSelect([])}
+            className="px-6 py-2 bg-accent text-white rounded-full hover:bg-accent/90 transition-colors"
+          >
+            Continue without add-ons
+          </button>
+          <button
+            onClick={onBack}
+            className="px-6 py-2 border border-accent text-accent rounded-full hover:bg-accent/10 transition-colors"
+          >
+            Back
+          </button>
+        </div>
       </div>
     );
   }
+
+  const selectedTotal = addons
+    .filter(addon => selectedAddonIds.includes(addon.id))
+    .reduce((total, addon) => total + addon.price, 0);
 
   const formatDuration = (durationMs: number) => {
     // Convert from milliseconds to minutes if needed
@@ -103,7 +123,7 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Back to Staff Selection
+        Back
       </button>
 
       {/* Add-ons Grid */}
@@ -140,7 +160,12 @@ export default function AddonSelection({ serviceId, onSelect, onBack }: Props) {
       </div>
 
       {/* Continue Button */}
-      <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
+        {selectedAddonIds.length > 0 && (
+          <p className="text-gray-700" aria-live="polite">
+            {selectedAddonIds.length} add-on{selectedAddonIds.length === 1 ? '' : 's'} selected: +${(selectedTotal / 100).toFixed(2)}
+          </p>
+        )}
         <button
           onClick={handleContinue}
           className="bg-accent text-white px-8 py-3 rounded-full hover:bg-accent/90 transition-colors"

@@ -169,6 +169,19 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
     }
   }, [mode, service]);
 
+  // Cards are clickable divs (they contain headings), so give them button semantics for keyboard users
+  const cardProps = (onActivate: () => void) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: onActivate,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onActivate();
+      }
+    },
+  });
+
   const formatDuration = (durationMs: number) => {
     // Convert from milliseconds to minutes if needed
     const minutes = durationMs >= 1000 ? durationMs / 60000 : durationMs;
@@ -230,8 +243,8 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
             categories.map((category) => (
               <div
                 key={category.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform duration-200 hover:scale-105"
-                onClick={() => onSelect(category)}
+                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transform transition-transform duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                {...cardProps(() => onSelect(category))}
               >
                 <div className="p-4">
                   <h3 className="text-xl font-semibold mb-2">{category.name}</h3>
@@ -245,8 +258,8 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
             services.map((service) => (
               <div
                 key={service.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105"
-                onClick={() => {
+                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                {...cardProps(() => {
                   // If service has multiple variations, go to variation selection
                   if (service.variations && service.variations.length > 1) {
                     onSelect({ type: 'service', service });
@@ -268,7 +281,7 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
                       variation: defaultVariation
                     });
                   }
-                }}
+                })}
               >
                 <div className="">
                   <div className="p-4">
@@ -300,12 +313,12 @@ export default function ServiceSelection({ mode, categoryId, service, onSelect, 
             variations.map((variation) => (
               <div
                 key={variation.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105"
-                onClick={() => onSelect({
+                className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer flex flex-col justify-between transform transition-transform duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                {...cardProps(() => onSelect({
                   type: 'variation',
                   service,
                   variation
-                })}
+                }))}
               >
                 <div className="p-4">
                   <h3 className="text-xl font-semibold mb-2">{variation.name}</h3>

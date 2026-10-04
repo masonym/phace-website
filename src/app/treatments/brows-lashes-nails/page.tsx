@@ -4,6 +4,13 @@ import LashesSection from "@/components/brows-lashes-nails/LashesSection";
 import NailsSection from "@/components/brows-lashes-nails/NailsSection";
 import BookAppointment from "@/components/shared/BookAppointment";
 
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Brows, Lashes & Nails',
+  description: 'Brow, lash and nail services at Phace Medical Aesthetics in Chilliwack, BC.',
+}
+
 export default function BrowsLashesNailsPage() {
   return (
     <main className="min-h-screen">

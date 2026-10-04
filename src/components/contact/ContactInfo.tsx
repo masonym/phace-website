@@ -1,26 +1,32 @@
+import { CLINIC, OPENING_HOURS, formatOpeningHours } from '@/lib/config/clinicInfo'
+
 export function ContactInfo() {
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-light text-[#4A5568] mb-4">Location</h2>
         <p className="text-gray-600">
-          42333 Yarrow Central Rd
+          {CLINIC.street}
           <br />
-          Chilliwack, BC V2R 5E1
+          {CLINIC.city}, {CLINIC.province} {CLINIC.postalCode}
         </p>
+        <a
+          href={CLINIC.directionsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-2 text-accent underline hover:text-[#4A5568] transition-colors"
+        >
+          Get directions
+        </a>
       </div>
 
       <div>
         <h2 className="text-2xl font-light text-[#4A5568] mb-4">Hours</h2>
         <div className="space-y-2 text-gray-600">
           <ul className="space-y-2">
-            <li>Monday: Closed</li>
-            <li>Tuesday: 10 AM - 7 PM</li>
-            <li>Wednesday: 10 AM - 4 PM</li>
-            <li>Thursday: 10 AM - 7 PM</li>
-            <li>Friday: 10 AM - 4 PM</li>
-            <li>Saturday: 10 AM - 2 PM</li>
-            <li>Sunday: Closed</li>
+            {OPENING_HOURS.map((hours) => (
+              <li key={hours.day}>{formatOpeningHours(hours)}</li>
+            ))}
           </ul>
         </div>
       </div>
@@ -31,19 +37,19 @@ export function ContactInfo() {
           <p className="text-gray-600">
             Phone:{' '}
             <a
-              href="tel:+16047033552"
-              className="text-[#E4B4A6] hover:text-[#4A5568] transition-colors"
+              href={CLINIC.phoneHref}
+              className="text-accent hover:text-[#4A5568] transition-colors"
             >
-              (778) 864-0624
+              {CLINIC.phoneDisplay}
             </a>
           </p>
           <p className="text-gray-600">
             Email:{' '}
             <a
-              href="mailto:hello@phace.ca"
-              className="text-[#E4B4A6] hover:text-[#4A5568] transition-colors"
+              href={`mailto:${CLINIC.email}`}
+              className="text-accent hover:text-[#4A5568] transition-colors"
             >
-              hello@phace.ca
+              {CLINIC.email}
             </a>
           </p>
         </div>
@@ -53,7 +59,8 @@ export function ContactInfo() {
         <h2 className="text-2xl font-light text-[#4A5568] mb-4">Map</h2>
         <div className="aspect-w-16 aspect-h-9 rounded-2xl overflow-hidden shadow-lg">
           <iframe
-            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=PHACE+Medical+Aesthetics,+Skincare+%26+Spa`}
+            title={`Map showing ${CLINIC.name}`}
+            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=place_id:${CLINIC.googleMapsPlaceId}`}
             width="600"
             height="450"
             style={{ border: 0 }}

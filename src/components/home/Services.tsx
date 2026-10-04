@@ -1,4 +1,3 @@
-import { loadBindings } from 'next/dist/build/swc';
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -36,7 +35,7 @@ const services = [
     // longDescription: `Experience the transformative power of our advanced laser services at Phace, designed for exceptional results in hair removal, facial rejuvenation, acne, and rosacea treatments. Our experienced team customizes treatment plans to address your unique concerns, ensuring optimal results and a radiant, youthful complexion.`,
 
     image: '/images/laser-treatments.webp',
-    link: '/treatments',
+    link: '/treatments/sharplight',
   },
   {
     title: 'IV Therapy',

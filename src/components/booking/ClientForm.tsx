@@ -19,15 +19,23 @@ interface ClientFormData {
 }
 
 interface Props {
+  /** Details entered earlier in this booking, so going back doesn't wipe them */
+  initialValues?: Partial<Pick<ClientFormData, 'name' | 'email' | 'phone' | 'notes'>>;
   onSubmit: (data: ClientFormData) => void | Promise<void>;
   onBack: () => void;
 }
 
-export default function ClientForm({ onSubmit, onBack }: Props) {
+export default function ClientForm({ initialValues, onSubmit, onBack }: Props) {
   const [wantAccount, setWantAccount] = useState(false);
   const { user, isAuthenticated } = useAuth();
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<ClientFormData>({
+  const { register, handleSubmit, formState: { errors }, setValue, getValues } = useForm<ClientFormData>({
     mode: 'onTouched',
+    defaultValues: {
+      name: initialValues?.name ?? '',
+      email: initialValues?.email ?? '',
+      phone: initialValues?.phone ?? '',
+      notes: initialValues?.notes ?? '',
+    },
   });
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,11 +65,12 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      setValue('name', user.name || '');
-      setValue('email', user.email || '');
-      setValue('phone', user.phone || '');
+      // Fill from the account, but don't overwrite anything already typed
+      if (!getValues('name')) setValue('name', user.name || '');
+      if (!getValues('email')) setValue('email', user.email || '');
+      if (!getValues('phone')) setValue('phone', user.phone || '');
     }
-  }, [isAuthenticated, user, setValue]);
+  }, [isAuthenticated, user, setValue, getValues]);
 
   const onFormSubmit = async (data: ClientFormData) => {
     try {
@@ -254,8 +263,19 @@ export default function ClientForm({ onSubmit, onBack }: Props) {
           {/* Payment Section */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Payment Information
+              Card to Hold Your Appointment
             </label>
+            <div className="mb-4 rounded-lg bg-[#FFFBF0] border border-[#DEC3C5] p-4 text-sm text-gray-700">
+              <p className="font-medium text-gray-900">You won&apos;t be charged today.</p>
+              <p className="mt-1">
+                Your card is kept on file to hold your appointment.
+                Cancellations or changes with less than 24 hours&apos; notice are charged 50% of the
+                service price, and missed appointments are charged in full.{' '}
+                <a href="/booking-policy" target="_blank" rel="noopener noreferrer" className="text-accent underline">
+                  Read our booking policy
+                </a>
+              </p>
+            </div>
             <PaymentForm
               applicationId={process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID!}
               locationId={process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID!}

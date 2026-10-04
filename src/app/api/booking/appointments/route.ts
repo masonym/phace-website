@@ -164,24 +164,6 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url);
-
-        let bookings;
-
-        bookings = await SquareBookingService.listBookings(); // fetch all if no filters
-
-        return NextResponse.json(SquareBookingService.safeStringify(bookings));
-    } catch (error) {
-        console.error('Error fetching bookings:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to fetch bookings' },
-            { status: 500 }
-        );
-    }
-}
-
 //export async function PUT(request: Request) {
 //    try {
 //        const data = await request.json();

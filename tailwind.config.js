@@ -15,7 +15,7 @@ module.exports = {
         background: 'var(--background)',
       },
       fontFamily: {
-        spinnaker: ['Spinnaker', 'sans-serif'],
+        spinnaker: ['var(--font-spinnaker)', 'Spinnaker', 'sans-serif'],
       },
     },
   },

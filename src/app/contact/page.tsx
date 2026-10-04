@@ -1,6 +1,13 @@
 import { ContactForm } from '@/components/contact/ContactForm'
 import { ContactInfo } from '@/components/contact/ContactInfo'
 
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Contact Us',
+  description: 'Get in touch with Phace Medical Aesthetics at 42333 Yarrow Central Rd, Chilliwack, BC. Call (778) 864-0624 or send us a message.',
+}
+
 export default function ContactPage() {
   return (
     <div className="min-h-screen pt-20 bg-[#FFFBF0]">

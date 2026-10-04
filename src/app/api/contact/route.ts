@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
+import { escapeHtml } from '@/lib/utils/escapeHtml'
 
 export async function POST(request: Request) {
   try {
     const { name, email, phone, message } = await request.json()
+
+    if (!name || !email || !message) {
+      return NextResponse.json({ error: 'Name, email and message are required' }, { status: 400 })
+    }
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -30,12 +35,12 @@ ${message}
       `,
       html: `
 <h2>New Contact Form Submission</h2>
-<p><strong>Name:</strong> ${name}</p>
-<p><strong>Email:</strong> ${email}</p>
-<p><strong>Phone:</strong> ${phone}</p>
+<p><strong>Name:</strong> ${escapeHtml(name)}</p>
+<p><strong>Email:</strong> ${escapeHtml(email)}</p>
+<p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
 <br/>
 <p><strong>Message:</strong></p>
-<p>${message.replace(/\n/g, '<br/>')}</p>
+<p>${escapeHtml(message).replace(/\n/g, '<br/>')}</p>
       `,
     }
 

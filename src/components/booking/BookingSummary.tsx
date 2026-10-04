@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
+import Link from 'next/link';
+import { formatClinicTime } from '@/lib/utils/clinicTime';
 import { showToast } from '@/components/ui/Toast';
 import { BookingData } from '@/app/book/page';
 
@@ -53,15 +54,13 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
 
   // Format date for display
   const formattedDate = bookingData.dateTime
-    ? format(new Date(bookingData.dateTime), 'EEEE, MMMM d, yyyy')
+    ? formatClinicTime(bookingData.dateTime, 'cccc, LLLL d, yyyy')
     : 'Not selected';
 
   // Format time for display
   const formattedTime = bookingData.dateTime
-    ? format(new Date(bookingData.dateTime), 'h:mm a')
+    ? `${formatClinicTime(bookingData.dateTime, 'h:mm a')} (Pacific Time)`
     : 'Not selected';
-
-  console.log(bookingData);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
@@ -176,6 +175,17 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
             </div>
           </div>
 
+          <div className="mt-6 rounded-lg bg-[#FFFBF0] border border-[#DEC3C5] p-4 text-sm text-gray-700">
+            <p>
+              Your card won&apos;t be charged today. Please give us at least 24 hours&apos; notice to cancel or
+              reschedule. Late changes are charged 50% of the service price, and missed appointments are
+              charged in full.{' '}
+              <Link href="/booking-policy" target="_blank" className="text-accent underline">
+                Booking policy
+              </Link>
+            </p>
+          </div>
+
           <div className="mt-8 flex flex-col md:flex-row gap-4">
             <button
               onClick={onBack}
@@ -186,7 +196,7 @@ export default function BookingSummary({ bookingData, onConfirm, onBack }: Props
             <button
               onClick={handleConfirm}
               disabled={isSubmitting}
-              className={`px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex-1 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+              className={`px-6 py-3 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent flex-1 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
             >
               {isSubmitting ? 'Confirming...' : 'Confirm Booking'}

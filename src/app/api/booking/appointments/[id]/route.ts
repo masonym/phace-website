@@ -15,7 +15,17 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(appointment);
+    // This route is public (anyone with the booking ID), so only return what the
+    // confirmation page shows -- never notes or consent form answers
+    return NextResponse.json({
+      id: appointment.id,
+      serviceNames: appointment.serviceNames,
+      staffName: appointment.staffName,
+      startTime: appointment.startTime,
+      totalDuration: appointment.totalDuration,
+      totalPrice: appointment.totalPrice,
+      status: appointment.status,
+    });
   } catch (error: any) {
     console.error('Error fetching appointment:', error);
     return NextResponse.json(

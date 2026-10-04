@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { BookingCache } from '@/lib/cache/bookingCache';
 
@@ -14,17 +14,23 @@ interface Staff {
 interface Props {
   variationId: string;
   onSelect: (staff: Staff) => void;
+  /** Called instead of onSelect when only one provider offers the service */
+  onAutoSelect?: (staff: Staff) => void;
   onBack: () => void;
   onBackToStart?: () => void;
 }
 
-export default function StaffSelection({ variationId, onSelect, onBack, onBackToStart }: Props) {
+export default function StaffSelection({ variationId, onSelect, onAutoSelect, onBack, onBackToStart }: Props) {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const autoSelected = useRef(false);
 
   useEffect(() => {
     const fetchStaff = async () => {
+      setLoading(true);
+      setError('');
       try {
         // Use the BookingCache to get staff (either from cache or fresh)
         const staffMembers = await BookingCache.getStaffForService(variationId, async () => {
@@ -42,20 +48,42 @@ export default function StaffSelection({ variationId, onSelect, onBack, onBackTo
     };
 
     fetchStaff();
-  }, [variationId]);
+  }, [variationId, reloadKey]);
 
-  if (loading) {
+  // Nothing to choose when only one provider offers this service
+  useEffect(() => {
+    if (!loading && staff.length === 1 && onAutoSelect && !autoSelected.current) {
+      autoSelected.current = true;
+      onAutoSelect(staff[0]);
+    }
+  }, [loading, staff, onAutoSelect]);
+
+  if (loading || (staff.length === 1 && onAutoSelect)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">Loading staff...</div>
+        <div className="text-lg">Finding available providers...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-red-600">Error: {error}</div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center">
+        <p className="text-red-600">We couldn&apos;t load providers for this service. Please try again.</p>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="px-6 py-2 bg-accent text-white rounded-full hover:bg-accent/90 transition-colors"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={onBack}
+            className="px-6 py-2 border border-accent text-accent rounded-full hover:bg-accent/10 transition-colors"
+          >
+            Back
+          </button>
+        </div>
       </div>
     );
   }

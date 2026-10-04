@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SimpleCouponService } from '@/lib/services/simpleCouponService';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 interface CreateCouponRequest {
   code: string;
@@ -11,6 +12,9 @@ interface CreateCouponRequest {
 }
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const body: CreateCouponRequest = await request.json();
 

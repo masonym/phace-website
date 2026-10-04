@@ -25,8 +25,8 @@ export function OurClinic() {
               <Image
                 src="/images/phace-outside.webp"
                 alt="Phace Medical Spa Exterior"
-                width={800}
-                height={600}
+                width={1200}
+                height={1800}
                 className="object-contain w-full h-auto"
                 priority
               />

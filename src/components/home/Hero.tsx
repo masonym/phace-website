@@ -36,6 +36,7 @@ export function Hero() {
             <Link
               href="https://www.beautifi.com/doctors/phace-medical-aesthetics-and-skincare/"
               target='_blank'
+              rel="noopener noreferrer"
               className="border-2 border-white text-white px-8 py-4 rounded-full hover:bg-white hover:text-accent transition-colors text-lg font-medium"
             >
               Finance with Beautifi

@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 const client = new DynamoDBClient({ 
   region: process.env.AWS_REGION 
@@ -9,6 +10,9 @@ const client = new DynamoDBClient({
 const docClient = DynamoDBDocumentClient.from(client);
 
 export async function GET(request: Request) {
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(request.url);
     const staffId = searchParams.get('staffId');
@@ -46,6 +50,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const {
@@ -131,6 +138,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(request.url);
     const staffId = searchParams.get('staffId');

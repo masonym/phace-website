@@ -1,8 +1,77 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { CLINIC, OPENING_HOURS, formatOpeningHours } from '@/lib/config/clinicInfo'
+
+function NewsletterSignup() {
+  const [email, setEmail] = useState('')
+  const [consent, setConsent] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [message, setMessage] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setStatus('loading')
+    setMessage('')
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, consent }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'Something went wrong. Please try again.')
+      setStatus('success')
+      setEmail('')
+      setConsent(false)
+    } catch (error) {
+      setStatus('error')
+      setMessage(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
+    }
+  }
+
+  if (status === 'success') {
+    return <p role="status">Thanks for signing up! Watch your inbox for news and offers from Phace.</p>
+  }
+
+  return (
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <label htmlFor="newsletter-email" className="sr-only">Email address</label>
+      <input
+        id="newsletter-email"
+        type="email"
+        required
+        autoComplete="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email Address"
+        className="w-full px-4 py-2 rounded-full bg-white/50 border border-accent/20 focus:outline-none focus:border-accent"
+      />
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          required
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          className="rounded text-accent"
+        />
+        <span className="text-sm">Yes, subscribe me to your newsletter.</span>
+      </label>
+      <button
+        type="submit"
+        disabled={status === 'loading'}
+        className="w-full bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-colors disabled:opacity-70"
+      >
+        {status === 'loading' ? 'Signing up...' : 'Submit'}
+      </button>
+      {status === 'error' && (
+        <p role="alert" className="text-sm text-red-700">{message}</p>
+      )}
+    </form>
+  )
+}
 
 export function Footer() {
   const pathname = usePathname()
@@ -23,54 +92,54 @@ export function Footer() {
               <li><Link href="/about" className="hover:text-accent">ABOUT</Link></li>
               <li><Link href="/treatments" className="hover:text-accent">TREATMENTS</Link></li>
               <li><Link href="/store" className="hover:text-accent">SHOP</Link></li>
+              <li><Link href="/contact" className="hover:text-accent">CONTACT</Link></li>
+              <li><Link href="/book" className="hover:text-accent font-medium">BOOK NOW</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="text-lg font-medium mb-4">OUR ADDRESS</h3>
             <address className="not-italic">
-              <p>42333 Yarrow Central Rd</p>
-              <p>Chilliwack</p>
-              <p>BC V2R 5E1</p>
+              <p>{CLINIC.street}</p>
+              <p>{CLINIC.city}</p>
+              <p>{CLINIC.province} {CLINIC.postalCode}</p>
             </address>
+            <a
+              href={CLINIC.directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-2 underline hover:text-accent"
+            >
+              Get directions
+            </a>
+            <p className="mt-4">
+              <a
+                href="https://instagram.com/phace.ca"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-accent"
+              >
+                Instagram: @phace.ca
+              </a>
+            </p>
           </div>
 
           <div>
             <h3 className="text-lg font-medium mb-4">OPEN HOURS</h3>
             <ul className="space-y-2">
-              <li>Monday: Closed</li>
-              <li>Tuesday: 10 AM - 7 PM</li>
-              <li>Wednesday: 10 AM - 4 PM</li>
-              <li>Thursday: 10 AM - 7 PM</li>
-              <li>Friday: 10 AM - 4 PM</li>
-              <li>Saturday: 10 AM - 2 PM</li>
-              <li>Sunday: Closed</li>
+              {OPENING_HOURS.map((hours) => (
+                <li key={hours.day}>{formatOpeningHours(hours)}</li>
+              ))}
             </ul>
             <div className="mt-4">
-              <p><a href="tel:+17788640624" className="hover:text-accent">(778) 864-0624</a></p>
-              <p><a href="mailto:hello@phace.ca" className="hover:text-accent">hello@phace.ca</a></p>
+              <p><a href={CLINIC.phoneHref} className="hover:text-accent">{CLINIC.phoneDisplay}</a></p>
+              <p><a href={`mailto:${CLINIC.email}`} className="hover:text-accent">{CLINIC.email}</a></p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-medium mb-4">DON'T MISS AN UPDATE</h3>
-            <form className="space-y-4">
-              <input
-                type="email"
-                placeholder="Email Address"
-                className="w-full px-4 py-2 rounded-full bg-white/50 border border-accent/20 focus:outline-none focus:border-accent"
-              />
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded text-accent" />
-                <span className="text-sm">Yes, subscribe me to your newsletter.</span>
-              </label>
-              <button
-                type="submit"
-                className="w-full bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-colors"
-              >
-                Submit
-              </button>
-            </form>
+            <h3 className="text-lg font-medium mb-4">DON&apos;T MISS AN UPDATE</h3>
+            <NewsletterSignup />
           </div>
         </div>
 

@@ -68,6 +68,10 @@ export default function FirstFivePresaleLightbox({ isOpen, onClose }: FirstFiveP
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="first-five-title"
+                    onClick={(e) => {
+                        // Close when the dimmed backdrop itself is clicked
+                        if (e.target === e.currentTarget) onClose();
+                    }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

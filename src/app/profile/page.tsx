@@ -38,7 +38,10 @@ export default function Profile() {
       
       setLoadingAppointments(true);
       try {
-        const response = await fetch(`/api/booking/appointments?clientEmail=${encodeURIComponent(user.email)}`);
+        const idToken = await getIdToken();
+        const response = await fetch('/api/booking/my-appointments', {
+          headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
+        });
         if (!response.ok) throw new Error('Failed to fetch appointments');
         const data = await response.json();
         
@@ -57,6 +60,8 @@ export default function Profile() {
     if (user?.email) {
       fetchAppointments();
     }
+    // getIdToken is stable for a signed-in session
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
 
   useEffect(() => {

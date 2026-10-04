@@ -34,6 +34,15 @@ export function calculateB2G1Discount(cart: CartItem[], categoryId: string): num
         }
     }
 
+    return calculateB2G1DiscountFromPrices(qualifyingPrices);
+}
+
+/**
+ * Core B2G1 rule over a flat list of qualifying unit prices (one entry per unit).
+ * Shared by the client cart preview and the server-side payment calculation.
+ */
+export function calculateB2G1DiscountFromPrices(unitPrices: number[]): number {
+    const qualifyingPrices = [...unitPrices];
     if (qualifyingPrices.length < 3) return 0;
 
     // sort descending: most expensive first

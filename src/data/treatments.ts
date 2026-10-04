@@ -52,7 +52,7 @@ export const treatments: Treatment[] = [
         description: "The Sharplight RapidDPC technology allows for faster treatment times without compromising on quality or pain levels."
       },
       {
-        title: "Results Tailed to Your Needs",
+        title: "Results Tailored to Your Needs",
         description: "Sharplight's proprietary Dynamic Pulse Control technology allows us to automatically configure laser treatments to guarantee the best outcomes for your unique needs."
       }
     ]

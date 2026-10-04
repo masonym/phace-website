@@ -5,13 +5,6 @@
 /* Import custom animations for smooth UI transitions */
 @import '../styles/animations.css';
 
-@font-face {
-  font-family: 'Spinnaker';
-  /*src: url('/fonts/Spinnaker-Regular.ttf') format('truetype');*/
-  font-weight: normal;
-  font-style: normal;
-}
-
 :root {
   --primary: #DEC3C5;
   --secondary: #EBE5D5;
@@ -21,7 +14,7 @@
 }
 
 body {
-  font-family: 'Spinnaker', sans-serif;
+  font-family: var(--font-spinnaker), 'Spinnaker', sans-serif;
   background-color: var(--background);
   color: var(--text);
 }
@@ -33,7 +26,9 @@ body {
 }
 
 .section-title {
-  font-size: clamp(5rem, 4vw, 3rem);
+  /* 48px on phones up to 80px on wide screens */
+  font-size: clamp(3rem, 8vw, 5rem);
+  line-height: 1.1;
   color: var(--primary);
   margin-bottom: 2rem;
 }

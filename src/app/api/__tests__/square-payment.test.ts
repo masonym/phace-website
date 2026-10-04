@@ -12,6 +12,9 @@ jest.mock('square', () => ({
     },
     payments: {
       create: jest.fn()
+    },
+    catalog: {
+      batchGet: jest.fn().mockResolvedValue({ objects: [], relatedObjects: [] })
     }
   }))
 }))
