@@ -12,6 +12,7 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
   const router = useRouter();
   const { signIn, changePassword, getIdToken } = useAuth();
@@ -128,22 +129,35 @@ export default function AdminLogin() {
           </div>
 
           {isNewPasswordRequired && (
-            <div>
+            <div className="relative">
               <label htmlFor="new-password" className="sr-only">
                 New Password
               </label>
               <input
                 id="new-password"
                 name="new-password"
-                type="password"
+                type={showNewPassword ? 'text' : 'password'}
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-accent focus:border-accent focus:z-10 sm:text-sm"
+                className="appearance-none relative block w-full pl-3 pr-10 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-accent focus:border-accent focus:z-10 sm:text-sm"
                 placeholder="New Password"
                 minLength={8}
                 autoFocus
               />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((prev) => !prev)}
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showNewPassword}
+                className="absolute inset-y-0 right-0 z-20 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:text-accent"
+              >
+                {showNewPassword ? (
+                  <EyeSlashIcon className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" aria-hidden="true" />
+                )}
+              </button>
             </div>
           )}
 
