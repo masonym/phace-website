@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -10,6 +11,7 @@ export default function AdminLogin() {
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
   const router = useRouter();
   const { signIn, changePassword, getIdToken } = useAuth();
@@ -93,22 +95,35 @@ export default function AdminLogin() {
                 placeholder="Email address"
               />
             </div>
-            <div>
+            <div className="relative">
               <label htmlFor="password" className="sr-only">
                 Password
               </label>
               <input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 autoComplete={isNewPasswordRequired ? "new-password" : "current-password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isNewPasswordRequired}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-accent focus:border-accent focus:z-10 sm:text-sm disabled:bg-gray-100"
+                className="appearance-none rounded-none relative block w-full pl-3 pr-10 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-accent focus:border-accent focus:z-10 sm:text-sm disabled:bg-gray-100"
                 placeholder="Password"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-0 z-20 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:text-accent"
+              >
+                {showPassword ? (
+                  <EyeSlashIcon className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" aria-hidden="true" />
+                )}
+              </button>
             </div>
           </div>
 
