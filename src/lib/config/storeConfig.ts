@@ -56,3 +56,14 @@ export const BRAND_NAME_FALLBACK: string[] = [
     "Phace",
     "Bushbalm",
 ];
+
+/**
+ * "Coming Soon" products.
+ *
+ * Any product in a Square category with one of these names (case-insensitive) is shown
+ * in the store with a "Join the Waitlist" form instead of Add to Cart. Signups are
+ * emailed to the clinic and listed under Admin > Product Waitlist.
+ *
+ * To launch a product, remove it from the category in Square.
+ */
+export const COMING_SOON_CATEGORY_NAMES = ['coming soon'];

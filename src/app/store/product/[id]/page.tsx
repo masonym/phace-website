@@ -11,6 +11,7 @@ import parse from 'html-react-parser';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { productIdFromParam } from '@/lib/utils/productUrl';
+import ProductWaitlistForm from '@/components/store/ProductWaitlistForm';
 
 const formatMoney = (amount: number | bigint, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -200,6 +201,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     if (error || !product) return null;
 
     const sections = extractSections(product.itemData!.descriptionHtml!);
+    const isComingSoon = Boolean((product.itemData as any).coming_soon);
 
     let buttonLabel = isAlumierProduct ? 'Shop with AlumierMD' : 'Add to Cart';
     if (!selectedVariation) {
@@ -292,49 +294,53 @@ export default function ProductPage({ params }: ProductPageProps) {
                     </div>
                 )}
 
-                <div>
-                    <label htmlFor="quantity" className="block text-lg font-medium text-gray-800 mb-2">
-                        Quantity
-                    </label>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition-all"
-                        >
-
-                            -
-                        </button>
-                        <input
-                            id="quantity"
-                            type="number"
-                            min="1"
-                            value={quantity}
-                            onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                            className="border rounded-lg px-4 py-2 w-24 focus:ring-accent focus:border-accent"
-                        />
-                        <button
-                            onClick={() => setQuantity(quantity + 1)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition-all"
-                        >
-
-                            +
-                        </button>
-                        {isAlumierProduct ? (
+                {isComingSoon ? (
+                    <ProductWaitlistForm productId={product.id} variationId={selectedVariation?.id} />
+                ) : (
+                    <div>
+                        <label htmlFor="quantity" className="block text-lg font-medium text-gray-800 mb-2">
+                            Quantity
+                        </label>
+                        <div className="flex items-center gap-4">
                             <button
-                                onClick={handleAlumierRedirect}
-                                className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all"
+                                onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition-all"
                             >
-                                {buttonLabel}
+
+                                -
                             </button>
-                        ) : (
+                            <input
+                                id="quantity"
+                                type="number"
+                                min="1"
+                                value={quantity}
+                                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                                className="border rounded-lg px-4 py-2 w-24 focus:ring-accent focus:border-accent"
+                            />
                             <button
-                                onClick={handleAddToCart}
-                                disabled={buttonLabel !== 'Add to Cart'}
-                                className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                onClick={() => setQuantity(quantity + 1)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-300 transition-all"
                             >
-                                {buttonLabel}
+
+                                +
                             </button>
-                        )}
+                            {isAlumierProduct ? (
+                                <button
+                                    onClick={handleAlumierRedirect}
+                                    className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all"
+                                >
+                                    {buttonLabel}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleAddToCart}
+                                    disabled={buttonLabel !== 'Add to Cart'}
+                                    className="bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    {buttonLabel}
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* collapsible sections */}
                 {Object.entries(sections)

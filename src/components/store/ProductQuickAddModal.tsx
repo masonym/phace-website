@@ -5,6 +5,7 @@ import { useCartContext } from '@/components/providers/CartProvider';
 import { Square } from 'square';
 import Image from 'next/image';
 import { productPath } from '@/lib/utils/productUrl';
+import ProductWaitlistForm from './ProductWaitlistForm';
 
 interface ProductQuickAddModalProps {
     productId: string;
@@ -69,6 +70,8 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
             </div>
         );
     }
+
+    const isComingSoon = Boolean((product.itemData as any).coming_soon);
 
     let buttonLabel = 'Add to Cart';
     if (!selectedVariation) {
@@ -141,6 +144,12 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
                             </div>
                         )}
 
+                        {isComingSoon ? (
+                            <div className="mb-4">
+                                <ProductWaitlistForm productId={product.id} variationId={selectedVariationId} />
+                            </div>
+                        ) : (
+                        <>
                         {/* Quantity Input */}
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Quantity</label>
@@ -164,6 +173,8 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
                         >
                             {buttonLabel}
                         </button>
+                        </>
+                        )}
 
                         {/* View Details Link */}
                         <a

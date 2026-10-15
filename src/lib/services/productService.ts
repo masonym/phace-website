@@ -1,6 +1,6 @@
 import { Square } from "square";
 import { SquareClient, SquareEnvironment } from "square";
-import { HIDDEN_CATEGORY_IDS } from "@/lib/config/storeConfig";
+import { COMING_SOON_CATEGORY_NAMES, HIDDEN_CATEGORY_IDS } from "@/lib/config/storeConfig";
 
 const client = new SquareClient({
     token: process.env.SQUARE_ACCESS_TOKEN!,
@@ -9,6 +9,9 @@ const client = new SquareClient({
             ? SquareEnvironment.Production
             : SquareEnvironment.Sandbox,
 });
+
+const COMING_SOON_CACHE_MS = 5 * 60 * 1000;
+let comingSoonCache: { ids: Set<string>; fetchedAt: number } | null = null;
 
 export class ProductService {
 
@@ -80,6 +83,32 @@ export class ProductService {
         return imageUrls;
     }
 
+    /**
+     * IDs of the Square categories that mark a product as "Coming Soon" (matched by name)
+     */
+    static async getComingSoonCategoryIds(): Promise<Set<string>> {
+        if (comingSoonCache && Date.now() - comingSoonCache.fetchedAt < COMING_SOON_CACHE_MS) {
+            return comingSoonCache.ids;
+        }
+
+        const names = new Set(COMING_SOON_CATEGORY_NAMES.map((n) => n.toLowerCase()));
+        const ids = new Set<string>();
+        const page = await client.catalog.list({ types: "CATEGORY" });
+        for await (const obj of page) {
+            if (obj.type !== 'CATEGORY' || !obj.id) continue;
+            const name = obj.categoryData?.name?.trim().toLowerCase();
+            if (name && names.has(name)) ids.add(obj.id);
+        }
+
+        comingSoonCache = { ids, fetchedAt: Date.now() };
+        return ids;
+    }
+
+    static isComingSoon(item: Square.CatalogObject, comingSoonIds: Set<string>): boolean {
+        if (item.type !== 'ITEM' || comingSoonIds.size === 0) return false;
+        return item.itemData?.categories?.some((cat) => !!cat.id && comingSoonIds.has(cat.id)) ?? false;
+    }
+
     static async listProducts(category?: string): Promise<Square.CatalogObject[]> {
         try {
             // step 1: get products (ITEMs + ITEM_VARIATIONs)
@@ -108,6 +137,7 @@ export class ProductService {
             const relatedObjects = catalogResponse.objects || [];
 
             const hiddenCategoryIds = new Set(HIDDEN_CATEGORY_IDS);
+            const comingSoonIds = await this.getComingSoonCategoryIds();
 
             // step 3: build products with options
             const products: Square.CatalogObject[] = itemsResult.items
@@ -129,7 +159,8 @@ export class ProductService {
                             ...item.itemData,
                             variations: item.itemData?.variations || [],
                             // Add image URLs to the item data
-                            ecom_image_uris: imageUrls
+                            ecom_image_uris: imageUrls,
+                            coming_soon: this.isComingSoon(item, comingSoonIds)
                         },
                     };
                 });
@@ -169,6 +200,7 @@ export class ProductService {
             
             // Get image URLs from related objects
             const imageUrls = this.getImageUrlsForItem(item, relatedObjects);
+            const comingSoonIds = await this.getComingSoonCategoryIds();
 
             return {
                 type: item.type,
@@ -186,7 +218,8 @@ export class ProductService {
                             itemVariationData: variation.itemVariationData,
                         })),
                     // Add image URLs to the item data
-                    ecom_image_uris: imageUrls
+                    ecom_image_uris: imageUrls,
+                    coming_soon: this.isComingSoon(item, comingSoonIds)
                 },
                 // Add related_objects with a different property name to avoid conflicts with Square types
                 _relatedObjects: relatedObjects

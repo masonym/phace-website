@@ -21,6 +21,7 @@ interface ProductCardProps {
         // Batch discount preview across variations
         variationIds?: string[];
         minOriginalPriceCents?: number;
+        comingSoon?: boolean;
     };
     // Pass batched discount data to prevent individual API calls
     discountPreview?: {
@@ -62,6 +63,11 @@ export default function ProductCard({ product, discountPreview }: ProductCardPro
                         fill
                         className="object-cover"
                     />
+                    {product.comingSoon && (
+                        <span className="absolute top-3 left-3 bg-accent text-white text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full">
+                            Coming Soon
+                        </span>
+                    )}
                 </div>
                 <div className="p-4">
                     <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
@@ -125,7 +131,7 @@ export default function ProductCard({ product, discountPreview }: ProductCardPro
                         onClick={() => setIsModalOpen(true)}
                         className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition-colors block text-center"
                     >
-                        Add to Cart
+                        {product.comingSoon ? 'Join the Waitlist' : 'Add to Cart'}
                     </button>
                 )}
             </div>

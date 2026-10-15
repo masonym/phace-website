@@ -121,6 +121,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 >
                   Waitlist Manager
                 </Link>
+                <Link
+                  href="/admin/product-waitlist"
+                  className="border-transparent text-gray-500 hover:border-accent hover:text-accent inline-flex items-center px-3 py-2 text-sm font-medium whitespace-nowrap"
+                >
+                  Product Waitlist
+                </Link>
 
                 {/* Desktop sign out button */}
                 <button
@@ -174,6 +180,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
               >
                 Waitlist Manager
+              </Link>
+              <Link
+                href="/admin/product-waitlist"
+                className="block px-3 py-2 text-base font-medium text-gray-500 hover:text-accent hover:bg-gray-50 whitespace-nowrap"
+              >
+                Product Waitlist
               </Link>
               <button
                 onClick={() => {

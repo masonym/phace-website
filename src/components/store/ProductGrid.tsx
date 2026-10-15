@@ -516,6 +516,7 @@ export default function ProductGrid() {
                                     // For discount preview (batch across variations)
                                     variationIds,
                                     minOriginalPriceCents,
+                                    comingSoon: Boolean((product.itemData as any).coming_soon),
                                 }}
                                 discountPreview={discountPreviews.get(product.id)}
                             />

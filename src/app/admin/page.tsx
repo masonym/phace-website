@@ -13,6 +13,7 @@ import {
     Tag,
     ShoppingBag,
     ClipboardList,
+    BellRing,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -71,6 +72,12 @@ const sections: AdminSection[] = [
         title: 'Waitlist',
         description: 'View and manage customer waitlist entries by service and staff member.',
         icon: ClipboardList,
+    },
+    {
+        href: '/admin/product-waitlist',
+        title: 'Product Waitlist',
+        description: 'See who is waiting on "Coming Soon" products in the store.',
+        icon: BellRing,
     },
 ];
 
