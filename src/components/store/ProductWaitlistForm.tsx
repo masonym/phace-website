@@ -5,9 +5,11 @@ import { FormEvent, useState } from 'react';
 interface ProductWaitlistFormProps {
     productId: string;
     variationId?: string | null;
+    // Stack the fields for narrow spaces like the quick-add modal
+    stacked?: boolean;
 }
 
-export default function ProductWaitlistForm({ productId, variationId }: ProductWaitlistFormProps) {
+export default function ProductWaitlistForm({ productId, variationId, stacked = false }: ProductWaitlistFormProps) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState<'idle' | 'submitting' | 'done'>('idle');
@@ -46,7 +48,7 @@ export default function ProductWaitlistForm({ productId, variationId }: ProductW
             <p className="text-gray-700">
                 <span className="font-medium">Coming soon.</span> Join the waitlist and we'll email you when it's available.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className={`flex flex-col gap-3 ${stacked ? '' : 'sm:flex-row'}`}>
                 <input
                     type="text"
                     value={name}
@@ -69,7 +71,7 @@ export default function ProductWaitlistForm({ productId, variationId }: ProductW
             <button
                 type="submit"
                 disabled={status === 'submitting'}
-                className="w-full sm:w-auto bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className={`w-full ${stacked ? '' : 'sm:w-auto'} bg-accent text-white px-6 py-2 rounded-full hover:bg-accent/90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed`}
             >
                 {status === 'submitting' ? 'Joining...' : 'Join the Waitlist'}
             </button>

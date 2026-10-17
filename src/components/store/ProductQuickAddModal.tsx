@@ -146,7 +146,7 @@ export default function ProductQuickAddModal({ productId, onClose }: ProductQuic
 
                         {isComingSoon ? (
                             <div className="mb-4">
-                                <ProductWaitlistForm productId={product.id} variationId={selectedVariationId} />
+                                <ProductWaitlistForm productId={product.id} variationId={selectedVariationId} stacked />
                             </div>
                         ) : (
                         <>
