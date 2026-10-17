@@ -4,6 +4,9 @@ import { ProductService } from '@/lib/services/productService';
 import { ProductWaitlistService } from '@/lib/services/productWaitlistService';
 import { escapeHtml } from '@/lib/utils/escapeHtml';
 
+// The Square SDK uses fetch, which Next caches by default; product data must always be current
+export const fetchCache = 'force-no-store';
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {

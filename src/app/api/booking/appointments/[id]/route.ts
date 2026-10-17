@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SquareBookingService } from "@/lib/services/squareBookingService";
 
+// The Square SDK uses fetch, which Next caches by default; booking data must always be current
+export const fetchCache = 'force-no-store';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import { ProductService } from '@/lib/services/productService'
 import { productIdFromParam, productPath } from '@/lib/utils/productUrl'
 
+// Refresh the Square-sourced title and description hourly instead of caching them forever
+export const revalidate = 3600
+
 // The product page itself loads in the browser, so give search engines and link previews
 // a real title and description from the server
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {

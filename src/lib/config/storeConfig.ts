@@ -65,6 +65,6 @@ export const BRAND_NAME_FALLBACK: string[] = [
  * of Add to Cart, even if it is also in a HIDDEN_CATEGORY_IDS category. Signups are
  * emailed to the clinic and listed under Admin > Product Waitlist.
  *
- * To launch a product, remove it from the category in Square.
+ * To launch a product, remove it from the category in Square. Changes show within a minute.
  */
 export const COMING_SOON_CATEGORY_NAMES = ['coming soon'];

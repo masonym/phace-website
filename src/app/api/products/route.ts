@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { ProductService } from '@/lib/services/productService';
 
+// The Square SDK uses fetch, which Next caches by default; product data must always be current
+export const fetchCache = 'force-no-store';
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);

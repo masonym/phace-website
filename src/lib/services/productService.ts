@@ -10,7 +10,7 @@ const client = new SquareClient({
             : SquareEnvironment.Sandbox,
 });
 
-const COMING_SOON_CACHE_MS = 5 * 60 * 1000;
+const COMING_SOON_CACHE_MS = 60 * 1000;
 let comingSoonCache: { ids: Set<string>; fetchedAt: number } | null = null;
 
 // "Coming Soon!" and "coming  soon" both become "coming soon"

@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { ProductService } from '@/lib/services/productService';
 import { adminVerifier } from '@/lib/auth/requireAdmin';
 
+// The Square SDK uses fetch, which Next caches by default; product data must always be current
+export const fetchCache = 'force-no-store';
+
 // Only users in the admin table pass (customers share the Cognito pool)
 const verifier = adminVerifier;
 
