@@ -13,6 +13,10 @@ const client = new SquareClient({
 const COMING_SOON_CACHE_MS = 5 * 60 * 1000;
 let comingSoonCache: { ids: Set<string>; fetchedAt: number } | null = null;
 
+// "Coming Soon!" and "coming  soon" both become "coming soon"
+const normalizeCategoryName = (name: string) =>
+    name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
 export class ProductService {
 
     /**
@@ -91,13 +95,13 @@ export class ProductService {
             return comingSoonCache.ids;
         }
 
-        const names = new Set(COMING_SOON_CATEGORY_NAMES.map((n) => n.toLowerCase()));
+        const names = new Set(COMING_SOON_CATEGORY_NAMES.map(normalizeCategoryName));
         const ids = new Set<string>();
         const page = await client.catalog.list({ types: "CATEGORY" });
         for await (const obj of page) {
             if (obj.type !== 'CATEGORY' || !obj.id) continue;
-            const name = obj.categoryData?.name?.trim().toLowerCase();
-            if (name && names.has(name)) ids.add(obj.id);
+            const name = obj.categoryData?.name;
+            if (name && names.has(normalizeCategoryName(name))) ids.add(obj.id);
         }
 
         comingSoonCache = { ids, fetchedAt: Date.now() };
@@ -142,9 +146,10 @@ export class ProductService {
             // step 3: build products with options
             const products: Square.CatalogObject[] = itemsResult.items
                 .filter((item) => item.type === 'ITEM')
-                // Hide any product belonging to a blocked category
+                // Hide any product belonging to a blocked category, unless it's Coming Soon
                 .filter((item) =>
                     hiddenCategoryIds.size === 0 ||
+                    this.isComingSoon(item, comingSoonIds) ||
                     !item.itemData?.categories?.some((cat) => cat.id && hiddenCategoryIds.has(cat.id))
                 )
                 .map((item) => {
