@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
 import { SquareBookingService } from "@/lib/services/squareBookingService";
-import { adminVerifier } from '@/lib/auth/requireAdmin';
-
-// Only users in the admin table pass (customers share the Cognito pool)
-const verifier = adminVerifier;
 
 export async function GET(request: Request) {
   try {
@@ -51,101 +47,5 @@ export async function GET(request: Request) {
         'Content-Type': 'application/json'
       }
     });
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    // Verify admin token
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Authorization header missing' }, { status: 401 });
-    }
-
-    try {
-      const token = authHeader.split(' ')[1];
-      await verifier.verify(token);
-    } catch (err) {
-      console.error('Token verification failed:', err);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Return message about using Square Dashboard
-    return NextResponse.json(
-      {
-        message: 'Staff members should be created through the Square Dashboard. They will automatically be available in the API.'
-      },
-      { status: 400 }
-    );
-  } catch (error: any) {
-    console.error('Error creating staff:', error);
-    return NextResponse.json({
-      error: error.message || 'Failed to create staff member',
-      details: error
-    }, { status: 500 });
-  }
-}
-
-export async function PUT(request: Request) {
-  try {
-    // Verify admin token
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Authorization header missing' }, { status: 401 });
-    }
-
-    try {
-      const token = authHeader.split(' ')[1];
-      await verifier.verify(token);
-    } catch (err) {
-      console.error('Token verification failed:', err);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Return message about using Square Dashboard
-    return NextResponse.json(
-      {
-        message: 'Staff member updates should be done through the Square Dashboard. The changes will automatically be reflected in the API.'
-      },
-      { status: 400 }
-    );
-  } catch (error: any) {
-    console.error('Error updating staff:', error);
-    return NextResponse.json({
-      error: error.message || 'Failed to update staff member',
-      details: error
-    }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    // Verify admin token
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Authorization header missing' }, { status: 401 });
-    }
-
-    try {
-      const token = authHeader.split(' ')[1];
-      await verifier.verify(token);
-    } catch (err) {
-      console.error('Token verification failed:', err);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Return message about using Square Dashboard
-    return NextResponse.json(
-      {
-        message: 'Staff members should be managed through the Square Dashboard. The changes will automatically be reflected in the API.'
-      },
-      { status: 400 }
-    );
-  } catch (error: any) {
-    console.error('Error deleting staff:', error);
-    return NextResponse.json({
-      error: error.message || 'Failed to delete staff member',
-      details: error
-    }, { status: 500 });
   }
 }

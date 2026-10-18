@@ -1,351 +1,246 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import ServiceCategoryForm from '@/components/admin/ServiceCategoryForm';
-import ServiceForm from '@/components/admin/ServiceForm';
-import ConfirmDialog from '@/components/admin/ConfirmDialog';
-import { useAuth } from '@/hooks/useAuth';
-import { TrashIcon, PlusIcon, PencilIcon } from '@heroicons/react/24/solid';
+import { useState, useEffect, useMemo } from 'react';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import SquareManagedHeader from '@/components/admin/SquareManagedHeader';
+import { useAdminCatalog } from '@/components/admin/useAdminCatalog';
+import { formatMoney, formatDuration } from '@/lib/utils/format';
+import type { AdminService, AdminServiceVariation, CatalogSnapshot } from '@/lib/services/adminCatalogService';
 
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  order: number;
-  services: Service[];
-  isActive: boolean;
-}
+const NOT_ONLINE_ID = '__not-online';
 
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  image?: string;
-  categoryId: string;
-  isActive: boolean;
+interface ConsentFormSummary {
+    id: string;
+    title: string;
+    serviceIds: string[];
+    isActive: boolean;
 }
 
 export default function ServicesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [showServiceForm, setShowServiceForm] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [editingService, setEditingService] = useState<Service | null>(null);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deletingService, setDeletingService] = useState<Service | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+    const { catalog, isLoading, error, reload } = useAdminCatalog();
+    const [consentForms, setConsentForms] = useState<ConsentFormSummary[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [search, setSearch] = useState('');
 
-  const { getIdToken } = useAuth();
+    useEffect(() => {
+        fetch('/api/booking/consent-forms')
+            .then(r => (r.ok ? r.json() : []))
+            .then(setConsentForms)
+            .catch(() => setConsentForms([]));
+    }, []);
 
+    const bookableCategories = useMemo(() => catalog?.categories.filter(c => c.bookable) ?? [], [catalog]);
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        // Include inactive services in admin view
-        const response = await fetch('/api/booking/services?includeInactive=true');
-        if (!response.ok) throw new Error('Failed to fetch services');
-        const data = await response.json();
-        setCategories(data);
-        if (data.length > 0 && !selectedCategory) {
-          setSelectedCategory(data[0].id);
-        }
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Services the booking flow never shows, because none of their categories is bookable
+    const notOnline = useMemo(() => {
+        if (!catalog) return [];
+        const bookableIds = new Set(bookableCategories.map(c => c.id));
+        return catalog.services.filter(s => !s.categoryIds.some(id => bookableIds.has(id)));
+    }, [catalog, bookableCategories]);
 
-    fetchServices();
-  }, [selectedCategory]);
+    useEffect(() => {
+        if (!selectedCategory && bookableCategories.length > 0) setSelectedCategory(bookableCategories[0].id);
+    }, [bookableCategories, selectedCategory]);
 
-  const handleCreateCategory = () => {
-    setEditingCategory(null);
-    setShowCategoryForm(true);
-  };
+    const visibleServices = useMemo(() => {
+        if (!catalog) return [];
+        const term = search.trim().toLowerCase();
+        if (term) return catalog.services.filter(s => s.name.toLowerCase().includes(term));
+        if (selectedCategory === NOT_ONLINE_ID) return notOnline;
+        return catalog.services.filter(s => selectedCategory && s.categoryIds.includes(selectedCategory));
+    }, [catalog, search, selectedCategory, notOnline]);
 
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category);
-    setShowCategoryForm(true);
-  };
+    const heading = search.trim()
+        ? `Results for "${search.trim()}"`
+        : selectedCategory === NOT_ONLINE_ID
+            ? 'Not in online booking'
+            : bookableCategories.find(c => c.id === selectedCategory)?.name ?? 'Services';
 
-  const handleCreateService = () => {
-    setEditingService(null);
-    setShowServiceForm(true);
-  };
-
-  const handleEditService = (service: Service) => {
-    setEditingService(service);
-    setShowServiceForm(true);
-  };
-
-  const handleDeleteService = async (service: Service) => {
-    setDeletingService(service);
-    setShowDeleteDialog(true);
-  };
-
-  const handleDeleteCategory = async (category: Category) => {
-    setDeletingCategory(category);
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDelete = async () => {
-    try {
-      const token = await getIdToken();
-      if (deletingService) {
-        const response = await fetch(`/api/booking/services?id=${deletingService.id}`, {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) throw new Error('Failed to delete service');
-
-        // Refresh the services list
-        const servicesResponse = await fetch('/api/booking/services?includeInactive=true');
-        const data = await servicesResponse.json();
-        setCategories(data);
-      } else if (deletingCategory) {
-        // First check if category has any services
-        const category = categories.find(c => c.id === deletingCategory.id);
-        if (category && category.services.length > 0) {
-          throw new Error('Cannot delete category that contains services');
-        }
-
-        const response = await fetch(`/api/booking/services/categories?id=${deletingCategory.id}`, {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) throw new Error('Failed to delete category');
-
-        // Refresh the categories list
-        const categoriesResponse = await fetch('/api/booking/services?includeInactive=true');
-        const data = await categoriesResponse.json();
-        setCategories(data);
-        if (selectedCategory === deletingCategory.id) {
-          setSelectedCategory(data.length > 0 ? data[0].id : null);
-        }
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setShowDeleteDialog(false);
-      setDeletingService(null);
-      setDeletingCategory(null);
-    }
-  };
-
-  if (loading) {
     return (
-      <>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Loading...</div>
-        </div>
-      </>
-    );
-  }
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <SquareManagedHeader
+                title="Services"
+                description="Bookable services as they are set up in Square. To add a service or change its price, duration or staff, edit it in the Square Dashboard, then refresh this page."
+                squarePath="/items/library"
+                squareLabel="Edit in Square"
+                onRefresh={reload}
+                isLoading={isLoading}
+            />
 
-  if (error) {
-    return (
-      <>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-red-600">Error: {error}</div>
-        </div>
-      </>
-    );
-  }
+            {error && <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">{error}</div>}
 
-  return (
-    <>
-      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8">
-          {/* Categories List */}
-          <div className="lg:col-span-4 bg-white rounded-xl p-4 sm:p-6 shadow-sm">
-            <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
-              <h2 className="text-xl font-medium">Categories</h2>
-              <button
-                onClick={handleCreateCategory}
-                className="text-sm px-3 py-1.5 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors whitespace-nowrap"
-              >
-                Add Category
-              </button>
-            </div>
-            <div className="space-y-2 max-h-[calc(100vh-20rem)] overflow-y-auto">
-              {categories.map((category) => (
-                <div
-                  key={category.id}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedCategory === category.id
-                      ? 'bg-accent text-white'
-                      : 'hover:bg-gray-100'
-                  }`}
-                  onClick={() => setSelectedCategory(category.id)}
-                >
-                  <div className="flex justify-between items-center">
-                    <span>{category.name}</span>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditCategory(category);
-                        }}
-                        className={`p-1 rounded-full hover:bg-gray-500/20 ${
-                          selectedCategory === category.id
-                            ? 'text-white hover:text-gray-200'
-                            : 'text-gray-500'
-                        }`}
-                      >
-                        <PencilIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteCategory(category);
-                        }}
-                        className={`p-1 rounded-full hover:bg-red-500/20 ${
-                          selectedCategory === category.id
-                            ? 'text-white hover:text-red-200'
-                            : 'text-red-500'
-                        }`}
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+            {!catalog && isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                    <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
-              ))}
-            </div>
-          </div>
+            ) : catalog && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <aside className="lg:col-span-3 bg-white rounded-lg shadow-sm border p-4 h-fit">
+                        <input
+                            type="search"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search all services"
+                            aria-label="Search all services"
+                            className="w-full mb-4 px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-accent focus:ring-accent"
+                        />
+                        <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Booking categories</h2>
+                        <nav className="space-y-1">
+                            {bookableCategories.map(category => (
+                                <CategoryButton
+                                    key={category.id}
+                                    label={category.name}
+                                    count={catalog.services.filter(s => s.categoryIds.includes(category.id)).length}
+                                    active={!search && selectedCategory === category.id}
+                                    onClick={() => {
+                                        setSearch('');
+                                        setSelectedCategory(category.id);
+                                    }}
+                                />
+                            ))}
+                            {notOnline.length > 0 && (
+                                <CategoryButton
+                                    label="Not in online booking"
+                                    count={notOnline.length}
+                                    active={!search && selectedCategory === NOT_ONLINE_ID}
+                                    onClick={() => {
+                                        setSearch('');
+                                        setSelectedCategory(NOT_ONLINE_ID);
+                                    }}
+                                    muted
+                                />
+                            )}
+                        </nav>
+                    </aside>
 
-          {/* Services List */}
-          <div className="lg:col-span-8">
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h2 className="text-xl font-medium break-words max-w-full">
-                  {selectedCategory ? `${categories.find(c => c.id === selectedCategory)?.name} Services` : 'All Services'}
-                </h2>
-                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={handleCreateService}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors whitespace-nowrap"
-                    disabled={!selectedCategory}
-                  >
-                    <PlusIcon className="w-5 h-5 mr-1.5" />
-                    Add Service
-                  </button>
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className="flex-1 sm:flex-none px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap text-center"
-                  >
-                    Show All
-                  </button>
-                </div>
-              </div>
+                    <section className="lg:col-span-9">
+                        <h2 className="text-xl font-medium mb-1">{heading}</h2>
+                        {selectedCategory === NOT_ONLINE_ID && !search && (
+                            <p className="text-sm text-gray-500 mb-4">
+                                These services are only in categories the booking page hides (like Retail or Gift Cards), so clients can&apos;t book them online.
+                            </p>
+                        )}
+                        {selectedCategory && selectedCategory !== NOT_ONLINE_ID && !search &&
+                            catalog.categories.find(c => c.id === selectedCategory)?.addonsExcluded && (
+                                <p className="text-sm text-gray-500 mb-4">Clients booking in this category skip the add-on step.</p>
+                            )}
 
-              <div className="grid grid-cols-1 gap-4">
-                {selectedCategory &&
-                  categories
-                    .find(c => c.id === selectedCategory)
-                    ?.services.map((service) => (
-                      <div
-                        key={service.id}
-                        className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
-                      >
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                          <div className="w-full">
-                            <h3 className="text-lg font-medium break-words">{service.name}</h3>
-                            <p className="text-gray-600 mt-1 break-words">{service.description}</p>
-                            <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-                              <span>{service.duration} mins</span>
-                              <span>${service.price}</span>
-                              <span
-                                className={`${
-                                  service.isActive ? 'text-green-600' : 'text-red-600'
-                                }`}
-                              >
-                                {service.isActive ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-4 w-full sm:w-auto">
-                            <button
-                              onClick={() => handleEditService(service)}
-                              className="flex-1 sm:flex-none text-accent hover:text-accent/80 transition-colors text-center"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteService(service)}
-                              className="flex-1 sm:flex-none text-red-600 hover:text-red-500 transition-colors text-center"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                        <div className="space-y-4 mt-4">
+                            {visibleServices.length === 0 ? (
+                                <div className="text-center py-10 text-gray-500 bg-white rounded-lg border">No services here</div>
+                            ) : (
+                                visibleServices.map(service => (
+                                    <ServiceCard
+                                        key={service.id}
+                                        service={service}
+                                        catalog={catalog}
+                                        consentForms={consentForms.filter(f => f.isActive !== false && f.serviceIds?.includes(service.id))}
+                                    />
+                                ))
+                            )}
                         </div>
-                      </div>
-                    ))}
-              </div>
-            </div>
-          </div>
+                    </section>
+                </div>
+            )}
         </div>
-      </div>
+    );
+}
 
-      {/* Category Form Modal */}
-      {showCategoryForm && (
-        <ServiceCategoryForm
-          category={editingCategory}
-          onClose={() => setShowCategoryForm(false)}
-          onSubmit={async () => {
-            setShowCategoryForm(false);
-            // Refresh the categories list
-            const response = await fetch('/api/booking/services?includeInactive=true');
-            const data = await response.json();
-            setCategories(data);
-          }}
-        />
-      )}
+function CategoryButton({ label, count, active, onClick, muted }: {
+    label: string;
+    count: number;
+    active: boolean;
+    onClick: () => void;
+    muted?: boolean;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            className={`w-full flex justify-between items-center px-3 py-2 rounded-md text-sm text-left ${active
+                ? 'bg-accent text-white'
+                : muted ? 'text-gray-500 hover:bg-gray-100' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+        >
+            <span>{label}</span>
+            <span className={active ? 'text-white/80' : 'text-gray-400'}>{count}</span>
+        </button>
+    );
+}
 
-      {/* Service Form Modal */}
-      {showServiceForm && (
-        <ServiceForm
-          service={editingService}
-          categories={categories}
-          onClose={() => setShowServiceForm(false)}
-          onSubmit={async () => {
-            setShowServiceForm(false);
-            // Refresh the services list
-            const response = await fetch('/api/booking/services?includeInactive=true');
-            const data = await response.json();
-            setCategories(data);
-          }}
-        />
-      )}
+function priceLabel(variation: AdminServiceVariation) {
+    return variation.variablePrice ? 'Variable' : formatMoney(variation.price);
+}
 
-      {/* Delete Confirmation Dialog */}
-      {showDeleteDialog && (
-        <ConfirmDialog
-          isOpen={showDeleteDialog}
-          onClose={() => {
-            setShowDeleteDialog(false);
-            setDeletingService(null);
-            setDeletingCategory(null);
-          }}
-          onConfirm={confirmDelete}
-          title={`Delete ${deletingService ? 'Service' : 'Category'}`}
-          message={`Are you sure you want to delete ${
-            deletingService ? `the service "${deletingService.name}"` : `the category "${deletingCategory?.name}"`
-          }? This action cannot be undone.`}
-        />
-      )}
-    </>
-  );
+function ServiceCard({ service, catalog, consentForms }: {
+    service: AdminService;
+    catalog: CatalogSnapshot;
+    consentForms: ConsentFormSummary[];
+}) {
+    const staffName = (id: string) => catalog.staff.find(s => s.id === id)?.name ?? 'Unknown';
+    const warnings: string[] = [];
+    if (service.variations.every(v => v.staffIds.length === 0)) {
+        warnings.push('No staff are assigned in Square, so this service has no times to book.');
+    }
+    if (service.variations.length > 0 && service.variations.every(v => !v.availableForBooking)) {
+        warnings.push('Turned off for online booking in Square.');
+    }
+
+    const addonNames = service.addonIds
+        .map(id => catalog.addons.find(a => a.id === id)?.name)
+        .filter(Boolean);
+    const offersAllAddons = catalog.addons.length > 0 && service.addonIds.length === catalog.addons.length;
+
+    return (
+        <article className="bg-white rounded-lg shadow-sm border p-5">
+            <h3 className="text-lg font-medium">{service.name}</h3>
+            {service.description && <p className="text-sm text-gray-600 mt-1 line-clamp-3">{service.description}</p>}
+
+            {warnings.map(w => (
+                <p key={w} className="mt-3 flex items-start gap-2 text-sm text-amber-800 bg-amber-50 rounded-md px-3 py-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    {w}
+                </p>
+            ))}
+
+            <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                    <thead>
+                        <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">
+                            {service.variations.length > 1 && <th className="py-2 pr-4 font-medium">Option</th>}
+                            <th className="py-2 pr-4 font-medium">Duration</th>
+                            <th className="py-2 pr-4 font-medium">Price</th>
+                            <th className="py-2 font-medium">Staff</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {service.variations.map(variation => (
+                            <tr key={variation.id}>
+                                {service.variations.length > 1 && <td className="py-2 pr-4">{variation.name}</td>}
+                                <td className="py-2 pr-4 whitespace-nowrap">{formatDuration(variation.durationMs)}</td>
+                                <td className="py-2 pr-4 whitespace-nowrap">{priceLabel(variation)}</td>
+                                <td className="py-2 text-gray-600">
+                                    {variation.staffIds.length > 0 ? variation.staffIds.map(staffName).join(', ') : '-'}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <dl className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wider mb-1">Add-ons offered</dt>
+                    <dd className="text-gray-700">
+                        {addonNames.length === 0 ? 'None' : offersAllAddons ? `All add-ons (${addonNames.length})` : addonNames.join(', ')}
+                    </dd>
+                </div>
+                <div>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wider mb-1">Consent forms</dt>
+                    <dd className="text-gray-700">
+                        {consentForms.length === 0 ? 'None' : consentForms.map(f => f.title).join(', ')}
+                    </dd>
+                </div>
+            </dl>
+        </article>
+    );
 }

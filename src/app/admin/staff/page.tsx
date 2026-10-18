@@ -1,268 +1,98 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import StaffForm from '@/components/admin/StaffForm';
-import BlockTimeForm from '@/components/admin/BlockTimeForm';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import SquareManagedHeader from '@/components/admin/SquareManagedHeader';
+import { useAdminCatalog } from '@/components/admin/useAdminCatalog';
+import type { CatalogSnapshot } from '@/lib/services/adminCatalogService';
+import type { AdminStaffMember } from '@/lib/services/adminBookingService';
 
-interface Staff {
-  id: string;
-  name: string;
-  email: string;
-  bio?: string;
-  image?: string;
-  services: string[];
-  defaultAvailability: {
-    dayOfWeek: number;
-    startTime: string;
-    endTime: string;
-  }[];
-  isActive: boolean;
-}
-
-interface BlockedTime {
-  id: string;
-  startTime: string;
-  endTime: string;
-  reason?: string;
-  recurring?: {
-    frequency: 'daily' | 'weekly';
-    until: string;
-  };
+/** Services (and the specific options, when only some are assigned) this person can be booked for */
+function assignedServices(member: AdminStaffMember, catalog: CatalogSnapshot): string[] {
+    return catalog.services.flatMap(service => {
+        const assigned = service.variations.filter(v => v.staffIds.includes(member.id));
+        if (assigned.length === 0) return [];
+        if (assigned.length === service.variations.length) return [service.name];
+        return assigned.map(v => `${service.name} – ${v.name}`);
+    });
 }
 
 export default function StaffPage() {
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showStaffForm, setShowStaffForm] = useState(false);
-  const [showBlockTimeForm, setShowBlockTimeForm] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
-  const [blockedTimes, setBlockedTimes] = useState<BlockedTime[]>([]);
+    const { catalog, isLoading, error, reload } = useAdminCatalog();
 
-
-  useEffect(() => {
-    const fetchStaff = async () => {
-      try {
-        const response = await fetch('/api/booking/staff');
-        if (!response.ok) throw new Error('Failed to fetch staff');
-        const data = await response.json();
-        setStaff(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStaff();
-  }, []);
-
-  useEffect(() => {
-    const fetchBlockedTimes = async () => {
-      if (!selectedStaff) return;
-
-      try {
-        const startDate = new Date().toISOString();
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 2);
-        
-        const response = await fetch(
-          `/api/booking/staff/blocked-time?staffId=${selectedStaff.id}&startDate=${startDate}&endDate=${endDate.toISOString()}`
-        );
-        if (!response.ok) throw new Error('Failed to fetch blocked times');
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setBlockedTimes(data);
-        } else {
-          setBlockedTimes([]);
-        }
-      } catch (err: any) {
-        console.error('Error fetching blocked times:', err);
-        setBlockedTimes([]);
-      }
-    };
-
-    fetchBlockedTimes();
-  }, [selectedStaff]);
-
-  const handleCreateStaff = () => {
-    setSelectedStaff(null);
-    setShowStaffForm(true);
-  };
-
-  const handleEditStaff = (staffMember: Staff) => {
-    setSelectedStaff(staffMember);
-    setShowStaffForm(true);
-  };
-
-  const handleBlockTime = () => {
-    if (!selectedStaff) return;
-    setShowBlockTimeForm(true);
-  };
-
-  const handleDeleteBlockedTime = async (startTime: string) => {
-    if (!selectedStaff) return;
-
-    try {
-      const response = await fetch('/api/booking/staff/blocked-time', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          staffId: selectedStaff.id,
-          startTime,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to delete blocked time');
-
-      // Refresh blocked times
-      const updatedTimes = blockedTimes.filter(time => time.startTime !== startTime);
-      setBlockedTimes(updatedTimes);
-    } catch (err: any) {
-      console.error('Error deleting blocked time:', err);
-    }
-  };
-
-  if (loading) {
     return (
-      <>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-lg">Loading...</div>
-        </div>
-      </>
-    );
-  }
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <SquareManagedHeader
+                title="Staff"
+                description="Team members with a booking profile in Square. Working hours, time off and which services each person offers are all managed in Square."
+                squarePath=""
+                squareLabel="Open Square Dashboard"
+                onRefresh={reload}
+                isLoading={isLoading}
+            />
 
-  if (error) {
-    return (
-      <>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-red-600">Error: {error}</div>
-        </div>
-      </>
-    );
-  }
+            {error && <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">{error}</div>}
 
-  return (
-    <>
-      <div className="p-4 sm:p-6">
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-2xl font-semibold">Staff</h1>
-            <button
-              onClick={handleCreateStaff}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full sm:w-auto"
-            >
-              Add Staff Member
-            </button>
-          </div>
-
-          {error && (
-            <div className="bg-red-100 text-red-700 p-4 rounded-md mb-4">
-              {error}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="text-center py-4">Loading...</div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {staff.map(member => (
-                <div key={member.id} className="bg-white p-4 rounded-lg shadow">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-                      {member.image && (
-                        <div className="relative w-20 h-20 rounded-full overflow-hidden">
-                          <Image
-                            src={member.image}
-                            alt={member.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-medium">{member.name}</h3>
-                          {!member.isActive && (
-                            <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                              Inactive
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-gray-600 text-sm break-words">{member.email}</p>
-                        {member.bio && (
-                          <p className="text-gray-600 text-sm break-words">{member.bio}</p>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                          {member.services.map(serviceId => (
-                            <span key={serviceId} className="text-sm bg-gray-100 px-2 py-1 rounded">
-                              {/* getServiceNameById(serviceId) */}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
-                      <button
-                        onClick={() => setSelectedStaff(member)}
-                        className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
-                      >
-                        Block Time
-                      </button>
-                      <button
-                        onClick={() => handleEditStaff(member)}
-                        className="flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </div>
+            {!catalog && isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                    <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
-              ))}
-            </div>
-          )}
+            ) : catalog && (
+                catalog.staff.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500 bg-white rounded-lg border">No staff have a booking profile in Square</div>
+                ) : (
+                    <div className="space-y-4">
+                        {catalog.staff.map(member => {
+                            const services = assignedServices(member, catalog);
+                            return (
+                                <article key={member.id} className="bg-white rounded-lg shadow-sm border p-5 flex flex-col sm:flex-row gap-5">
+                                    {member.imageUrl ? (
+                                        // Square-hosted photo; next/image would need the Square CDN whitelisted
+                                        <img
+                                            src={member.imageUrl}
+                                            alt=""
+                                            className="h-20 w-20 rounded-full object-cover shrink-0"
+                                        />
+                                    ) : (
+                                        <div className="h-20 w-20 rounded-full bg-accent/10 text-accent flex items-center justify-center text-2xl font-semibold shrink-0" aria-hidden>
+                                            {member.name.charAt(0)}
+                                        </div>
+                                    )}
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h2 className="text-lg font-medium">{member.name}</h2>
+                                            {!member.isBookable && (
+                                                <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">Not bookable online</span>
+                                            )}
+                                        </div>
+                                        {member.bio && <p className="text-sm text-gray-600 mt-1">{member.bio}</p>}
+
+                                        {member.isBookable && services.length === 0 && (
+                                            <p className="mt-3 flex items-start gap-2 text-sm text-amber-800 bg-amber-50 rounded-md px-3 py-2">
+                                                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                                                Not assigned to any services in Square, so clients can&apos;t book them.
+                                            </p>
+                                        )}
+
+                                        {services.length > 0 && (
+                                            <div className="mt-3">
+                                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+                                                    Services ({services.length})
+                                                </p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {services.map(name => (
+                                                        <span key={name} className="text-sm bg-gray-100 px-2 py-1 rounded">{name}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+                )
+            )}
         </div>
-      </div>
-
-      {/* Staff Form Modal */}
-      {showStaffForm && (
-        <StaffForm
-          staff={selectedStaff}
-          onClose={() => setShowStaffForm(false)}
-          onSubmit={async () => {
-            setShowStaffForm(false);
-            // Refresh the staff list
-            const response = await fetch('/api/booking/staff');
-            const data = await response.json();
-            setStaff(data);
-          }}
-        />
-      )}
-
-      {/* Block Time Form Modal */}
-      {showBlockTimeForm && selectedStaff && (
-        <BlockTimeForm
-          staffId={selectedStaff.id}
-          onClose={() => setShowBlockTimeForm(false)}
-          onSubmit={async () => {
-            setShowBlockTimeForm(false);
-            // Refresh blocked times
-            const startDate = new Date().toISOString();
-            const endDate = new Date();
-            endDate.setMonth(endDate.getMonth() + 2);
-            
-            const response = await fetch(
-              `/api/booking/staff/blocked-time?staffId=${selectedStaff.id}&startDate=${startDate}&endDate=${endDate.toISOString()}`
-            );
-            const data = await response.json();
-            setBlockedTimes(data);
-          }}
-        />
-      )}
-    </>
-  );
+    );
 }

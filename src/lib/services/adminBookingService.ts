@@ -18,6 +18,8 @@ export interface AdminStaffMember {
     id: string;
     name: string;
     isBookable: boolean;
+    bio?: string;
+    imageUrl?: string;
 }
 
 export interface AdminAppointment {
@@ -110,6 +112,8 @@ export class AdminBookingService {
                 id: p.teamMemberId!,
                 name: p.displayName || 'Unnamed',
                 isBookable: !!p.isBookable,
+                bio: p.description || undefined,
+                imageUrl: p.profileImageUrl || undefined,
             }))
             .sort((a, b) => a.name.localeCompare(b.name));
     }

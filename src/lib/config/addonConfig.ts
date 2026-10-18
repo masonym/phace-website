@@ -34,4 +34,29 @@ export const CATEGORY_ADDON_MAP: Record<string, string[]> = {
   // Example: "CATEGORY_ID": ["ADDON_ID1", "ADDON_ID2"]
 };
 
+/**
+ * Which add-ons are offered with a service, applying the rules above in order:
+ * excluded category -> none, service mapping, category mapping, otherwise all.
+ * Shared by the booking flow and the admin pages so they always agree.
+ */
+export function getAllowedAddonIds(
+  service: { id: string; categoryIds?: string[] },
+  allAddonIds: string[]
+): string[] {
+  const categoryIds = service.categoryIds ?? [];
+
+  if (categoryIds.some(id => CATEGORIES_WITHOUT_ADDONS.includes(id))) return [];
+
+  const serviceMapping = SERVICE_ADDON_MAP[service.id];
+  if (serviceMapping) return allAddonIds.filter(id => serviceMapping.includes(id));
+
+  const categoryWithMapping = categoryIds.find(id => CATEGORY_ADDON_MAP[id]);
+  if (categoryWithMapping) {
+    const categoryMapping = CATEGORY_ADDON_MAP[categoryWithMapping];
+    return allAddonIds.filter(id => categoryMapping.includes(id));
+  }
+
+  return allAddonIds;
+}
+
 // CATEGORIES FOR MY SAKE:
