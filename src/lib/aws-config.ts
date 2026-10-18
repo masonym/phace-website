@@ -25,7 +25,6 @@ export const COGNITO_CONFIG = {
 // DynamoDB table names
 export const TABLES = {
     PRODUCTS: 'phace-products',
-    ORDERS: 'phace-orders',
     USERS: 'phace-users',
     COUPONS: 'phace-coupons',
 };

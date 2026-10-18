@@ -1,4 +1,6 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { escapeHtml } from '@/lib/utils/escapeHtml';
+import { CLINIC, CLINIC_ADDRESS_ONE_LINE } from '@/lib/config/clinicInfo';
 
 const sesClient = new SESClient({ region: process.env.AWS_REGION || 'us-west-2' });
 
@@ -28,7 +30,57 @@ export interface OrderConfirmationData {
     receiptUrl?: string;
 }
 
+export interface OrderStatusEmailData {
+    orderId: string;
+    customerName: string;
+    customerEmail: string;
+    status: 'ready' | 'shipped';
+    items: { name: string; variationName?: string; quantity: string }[];
+    trackingNumber?: string;
+    carrier?: string;
+}
+
 export class EmailService {
+    /** Wraps table rows in the PHACE header, card and footer used by every customer email */
+    private static wrapInBrandedShell(rows: string): string {
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#FFFBF0;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFBF0;">
+    <tr>
+        <td align="center" style="padding:40px 20px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+                <!-- Header -->
+                <tr>
+                    <td align="center" style="background-color:#B09182;padding:36px 40px;">
+                        <h1 style="margin:0;color:#ffffff;font-size:32px;font-weight:700;letter-spacing:6px;text-transform:uppercase;">PHACE</h1>
+                        <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:2px;text-transform:uppercase;">Medical Aesthetics &amp; Wellness</p>
+                    </td>
+                </tr>
+
+${rows}
+
+                <!-- Footer -->
+                <tr>
+                    <td style="background-color:#EBE5D5;padding:24px 40px;text-align:center;">
+                        <p style="margin:0 0 6px;color:#59637E;font-size:13px;">Questions? Contact us at <a href="mailto:hello@phace.ca" style="color:#B09182;text-decoration:none;">hello@phace.ca</a></p>
+                        <p style="margin:0;color:#999;font-size:12px;">Phace Medical Aesthetics &amp; Wellness &mdash; Chilliwack, BC</p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>`;
+    }
+
     private static buildOrderConfirmationHtml(data: OrderConfirmationData): string {
         const itemRows = data.items.map(item => `
             <tr>
@@ -99,26 +151,7 @@ export class EmailService {
             </tr>
         ` : '';
 
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;background-color:#FFFBF0;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFFBF0;">
-    <tr>
-        <td align="center" style="padding:40px 20px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-
-                <!-- Header -->
-                <tr>
-                    <td align="center" style="background-color:#B09182;padding:36px 40px;">
-                        <h1 style="margin:0;color:#ffffff;font-size:32px;font-weight:700;letter-spacing:6px;text-transform:uppercase;">PHACE</h1>
-                        <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:2px;text-transform:uppercase;">Medical Aesthetics &amp; Wellness</p>
-                    </td>
-                </tr>
-
+        return EmailService.wrapInBrandedShell(`
                 <!-- Thank you -->
                 <tr>
                     <td style="padding:36px 40px 20px;text-align:center;">
@@ -178,21 +211,7 @@ export class EmailService {
 
                 <!-- Receipt button -->
                 ${receiptButton}
-
-                <!-- Footer -->
-                <tr>
-                    <td style="background-color:#EBE5D5;padding:24px 40px;text-align:center;">
-                        <p style="margin:0 0 6px;color:#59637E;font-size:13px;">Questions? Contact us at <a href="mailto:hello@phace.ca" style="color:#B09182;text-decoration:none;">hello@phace.ca</a></p>
-                        <p style="margin:0;color:#999;font-size:12px;">Phace Medical Aesthetics &amp; Wellness &mdash; Chilliwack, BC</p>
-                    </td>
-                </tr>
-
-            </table>
-        </td>
-    </tr>
-</table>
-</body>
-</html>`;
+`);
     }
 
     static async sendOrderConfirmation(data: OrderConfirmationData) {
@@ -216,70 +235,65 @@ export class EmailService {
         return await sesClient.send(command);
     }
 
-    static async sendOrderStatusUpdate(order: any, customerEmail: string, status: string) {
+    static async sendOrderStatusUpdate(data: OrderStatusEmailData) {
+        const firstName = escapeHtml(data.customerName.split(' ')[0] || 'there');
+        const itemList = data.items.map(item => `
+            <li style="margin:0 0 6px;">${escapeHtml(item.name)}${item.variationName ? ` (${escapeHtml(item.variationName)})` : ''} &times; ${escapeHtml(item.quantity)}</li>
+        `).join('');
+
+        const isShipped = data.status === 'shipped';
+        const heading = isShipped ? 'Your order is on its way' : 'Your order is ready for pickup';
+        const intro = isShipped
+            ? `Good news, ${firstName}! Your order has shipped.`
+            : `Good news, ${firstName}! Your order is ready to pick up at the clinic.`;
+
+        const detailBox = isShipped
+            ? (data.trackingNumber ? `
+                <p style="margin:0 0 4px;font-size:12px;color:#999;text-transform:uppercase;letter-spacing:1px;">Tracking</p>
+                <p style="margin:0;color:#59637E;font-size:15px;font-weight:700;font-family:monospace;">${escapeHtml(data.trackingNumber)}</p>
+                ${data.carrier ? `<p style="margin:4px 0 0;color:#59637E;font-size:14px;">${escapeHtml(data.carrier)}</p>` : ''}
+            ` : '')
+            : `
+                <p style="margin:0 0 4px;font-size:12px;color:#999;text-transform:uppercase;letter-spacing:1px;">Pickup Location</p>
+                <p style="margin:0;color:#59637E;font-size:14px;line-height:1.6;">
+                    ${escapeHtml(CLINIC.name)}<br>
+                    ${escapeHtml(CLINIC_ADDRESS_ONE_LINE)}
+                </p>
+            `;
+
+        const html = EmailService.wrapInBrandedShell(`
+                <tr>
+                    <td style="padding:36px 40px 20px;text-align:center;">
+                        <h2 style="margin:0 0 10px;color:#59637E;font-size:22px;font-weight:600;">${heading}</h2>
+                        <p style="margin:0;color:#999;font-size:15px;line-height:1.6;">${intro}</p>
+                        <p style="margin:12px 0 0;font-size:13px;color:#999;">Order <span style="font-family:monospace;color:#59637E;">${escapeHtml(data.orderId)}</span></p>
+                    </td>
+                </tr>
+                ${detailBox ? `
+                <tr>
+                    <td style="padding:0 40px 24px;">
+                        <div style="background-color:#EBE5D5;border-radius:8px;padding:20px;">${detailBox}</div>
+                    </td>
+                </tr>` : ''}
+                <tr>
+                    <td style="padding:0 40px 32px;">
+                        <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#B09182;text-transform:uppercase;letter-spacing:1.5px;border-bottom:2px solid #DEC3C5;padding-bottom:8px;">Your Items</p>
+                        <ul style="margin:0;padding-left:20px;color:#59637E;font-size:15px;">${itemList}</ul>
+                    </td>
+                </tr>`);
+
         const command = new SendEmailCommand({
             Source: process.env.SES_SENDER_EMAIL,
             Destination: {
-                ToAddresses: [customerEmail],
+                ToAddresses: [data.customerEmail],
             },
             Message: {
                 Subject: {
-                    Data: `Order ${status.charAt(0).toUpperCase() + status.slice(1)} - #${order.id}`,
+                    Data: isShipped ? 'Your Phace order has shipped' : 'Your Phace order is ready for pickup',
                 },
                 Body: {
                     Html: {
-                        Data: `
-                            <h1>Order Status Update</h1>
-                            <p>Your order #${order.id} has been ${status}.</p>
-                            ${status === 'shipped' ? `
-                                <p>Tracking number: ${order.trackingNumber}</p>
-                                <p>Carrier: ${order.carrier}</p>
-                            ` : ''}
-                            <h2>Order Details:</h2>
-                            <ul>
-                                ${order.items.map((item: any) => `
-                                    <li>${item.name} x ${item.quantity}</li>
-                                `).join('')}
-                            </ul>
-                        `,
-                    },
-                },
-            },
-        });
-
-        return await sesClient.send(command);
-    }
-
-    static async sendAdminNotification(order: any) {
-        const command = new SendEmailCommand({
-            Source: process.env.SES_SENDER_EMAIL,
-            Destination: {
-                ToAddresses: [process.env.ADMIN_EMAIL!],
-            },
-            Message: {
-                Subject: {
-                    Data: `New Order Received - #${order.id}`,
-                },
-                Body: {
-                    Html: {
-                        Data: `
-                            <h1>New Order Received</h1>
-                            <p>Order #${order.id} has been placed.</p>
-                            <h2>Order Details:</h2>
-                            <ul>
-                                ${order.items.map((item: any) => `
-                                    <li>${item.name} x ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>
-                                `).join('')}
-                            </ul>
-                            <p><strong>Total: $${order.total.toFixed(2)}</strong></p>
-                            <h2>Shipping Address:</h2>
-                            <p>
-                                ${order.shippingAddress.name}<br>
-                                ${order.shippingAddress.street}<br>
-                                ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zipCode}<br>
-                                ${order.shippingAddress.country}
-                            </p>
-                        `,
+                        Data: html,
                     },
                 },
             },
