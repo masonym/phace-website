@@ -20,8 +20,6 @@ import {
   addDays,
   startOfTomorrow,
 } from 'date-fns';
-import WaitlistForm from './WaitlistForm';
-import { showToast } from "@/components/ui/Toast";
 import { BookingCache } from '@/lib/cache/bookingCache';
 import { formatClinicTime, isOutsideClinicTimeZone } from '@/lib/utils/clinicTime';
 import { ANY_STAFF_ID } from '@/lib/config/booking';
@@ -71,7 +69,6 @@ export default function DateTimeSelection({
   const [selectedDate, setSelectedDate] = useState<Date | null>(() =>
     initialDateTime ? startOfDay(parseISO(initialDateTime)) : null
   );
-  const [showWaitlist, setShowWaitlist] = useState(false);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([]);
   const [fullyBookedDates, setFullyBookedDates] = useState<Set<string>>(new Set());
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
@@ -288,248 +285,217 @@ export default function DateTimeSelection({
 
   return (
     <div className="space-y-6">
-      {!showWaitlist ? (
-        <>
-          <div>
-            <h1 className="text-4xl font-light text-center mb-2">Select Date & Time</h1>
-            <p className="text-center text-gray-600 mb-8">
-              Choose your preferred appointment date and time.
-            </p>
+      <div>
+        <h1 className="text-4xl font-light text-center mb-2">Select Date & Time</h1>
+        <p className="text-center text-gray-600 mb-8">
+          Choose your preferred appointment date and time.
+        </p>
+      </div>
+
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
+      >
+        <svg
+          className="w-5 h-5 mr-2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back
+      </button>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Calendar */}
+        <div className="bg-white rounded-xl p-6 shadow-sm h-fit relative">
+          <AnimatePresence>
+            {checkingDates && (
+              <motion.div
+                variants={loadingVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 bg-gray-100/70 rounded-xl flex items-center justify-center z-10"
+              >
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent-soft mb-2"></div>
+                  <p className="text-gray-600">Loading availability...</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="mb-4 flex justify-between items-center">
+            <h2 className="text-lg font-medium">
+              {format(currentMonth, 'MMMM yyyy')}
+            </h2>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => changeMonth(-1)}
+                disabled={!canGoToPrevMonth}
+                aria-label="Previous month"
+                className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                ←
+              </button>
+              <button
+                onClick={() => changeMonth(1)}
+                disabled={!canGoToNextMonth}
+                aria-label="Next month"
+                className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                →
+              </button>
+            </div>
           </div>
 
-          {/* Back Button */}
-          <button
-            onClick={onBack}
-            className="mb-8 text-accent hover:text-accent/80 transition-colors flex items-center"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Back
-          </button>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Calendar */}
-            <div className="bg-white rounded-xl p-6 shadow-sm h-fit relative">
-              <AnimatePresence>
-                {checkingDates && (
-                  <motion.div
-                    variants={loadingVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    transition={{ duration: 0.2 }}
-                    className="absolute inset-0 bg-gray-100/70 rounded-xl flex items-center justify-center z-10"
-                  >
-                    <div className="text-center">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent-soft mb-2"></div>
-                      <p className="text-gray-600">Loading availability...</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <div className="mb-4 flex justify-between items-center">
-                <h2 className="text-lg font-medium">
-                  {format(currentMonth, 'MMMM yyyy')}
-                </h2>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => changeMonth(-1)}
-                    disabled={!canGoToPrevMonth}
-                    aria-label="Previous month"
-                    className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                  >
-                    ←
-                  </button>
-                  <button
-                    onClick={() => changeMonth(1)}
-                    disabled={!canGoToNextMonth}
-                    aria-label="Next month"
-                    className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                  >
-                    →
-                  </button>
-                </div>
+          <div className="grid grid-cols-7 gap-1">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                {day}
               </div>
+            ))}
+            {dates.map((date, i) => {
+              const isSelectable = !checkingDates && isDateSelectable(date);
+              const isSelected = selectedDate && isSameDay(date, selectedDate);
+              const isBooked = isDateFullyBooked(date);
 
-              <div className="grid grid-cols-7 gap-1">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-                    {day}
-                  </div>
-                ))}
-                {dates.map((date, i) => {
-                  const isSelectable = !checkingDates && isDateSelectable(date);
-                  const isSelected = selectedDate && isSameDay(date, selectedDate);
-                  const isBooked = isDateFullyBooked(date);
+              // Check if date is in the past
+              const today = startOfDay(new Date());
+              const isPast = isBefore(date, today) && !isSameDay(date, today);
 
-                  // Check if date is in the past
-                  const today = startOfDay(new Date());
-                  const isPast = isBefore(date, today) && !isSameDay(date, today);
+              // Check if date is in current month view
+              const isInCurrentView = isSameMonth(date, currentMonth);
 
-                  // Check if date is in current month view
-                  const isInCurrentView = isSameMonth(date, currentMonth);
+              return (
+                <button
+                  key={i}
+                  onClick={() => isSelectable && setSelectedDate(date)}
+                  disabled={!isSelectable}
+                  className={`
+                    py-2 rounded-full text-sm
+                    ${isSelected ? 'bg-accent text-white' : ''}
+                    ${isBooked ? 'bg-orange-100 text-orange-900 hover:bg-orange-200' : ''}
+                    ${!isInCurrentView
+                      ? 'text-gray-300 opacity-0 cursor-default'
+                      : isPast
+                        ? 'text-gray-300 line-through cursor-not-allowed'
+                        : isSelectable && !isBooked
+                          ? 'hover:bg-accent/10'
+                          : !isSelectable && 'text-gray-300 cursor-not-allowed'
+                    }
+                    ${checkingDates ? 'animate-pulse' : ''}
+                  `}
+                >
+                  {format(date, 'd')}
+                </button>
+              );
+            })}
+          </div>
 
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => isSelectable && setSelectedDate(date)}
-                      disabled={!isSelectable}
-                      className={`
-                        py-2 rounded-full text-sm
-                        ${isSelected ? 'bg-accent text-white' : ''}
-                        ${isBooked ? 'bg-orange-100 text-orange-900 hover:bg-orange-200' : ''}
-                        ${!isInCurrentView
-                          ? 'text-gray-300 opacity-0 cursor-default'
-                          : isPast
-                            ? 'text-gray-300 line-through cursor-not-allowed'
-                            : isSelectable && !isBooked
-                              ? 'hover:bg-accent/10'
-                              : !isSelectable && 'text-gray-300 cursor-not-allowed'
-                        }
-                        ${checkingDates ? 'animate-pulse' : ''}
-                      `}
-                    >
-                      {format(date, 'd')}
-                    </button>
-                  );
-                })}
+          <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600" aria-hidden="true">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-full border border-gray-300 bg-white" /> Available
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-full bg-orange-100 border border-orange-200" /> Fully booked (join the waitlist)
+            </span>
+          </div>
+
+          <div className="mt-4 text-sm text-gray-600">
+            {error && (
+              <div className="mt-2 p-2 bg-red-50 text-red-600 rounded">
+                {error}
               </div>
+            )}
+          </div>
+        </div>
 
-              <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600" aria-hidden="true">
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-3 h-3 rounded-full border border-gray-300 bg-white" /> Available
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-3 h-3 rounded-full bg-orange-100 border border-orange-200" /> Fully booked (join the waitlist)
-                </span>
-              </div>
+        {/* Time Slots */}
+        <div className="bg-white rounded-xl p-6 shadow-sm h-fit">
+          <h2 className="text-lg font-medium mb-4">
+            {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Select a Date'}
+          </h2>
 
-              <div className="mt-4 text-sm text-gray-600">
-                {error && (
-                  <div className="mt-2 p-2 bg-red-50 text-red-600 rounded">
-                    {error}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Time Slots */}
-            <div className="bg-white rounded-xl p-6 shadow-sm h-fit">
-              <h2 className="text-lg font-medium mb-4">
-                {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Select a Date'}
-              </h2>
-
-              {!selectedDate ? (
-                <div className="text-center py-8 text-gray-500">
-                  {noAvailabilityFound ? (
-                    <p>We don&apos;t have any openings in the next few months for this service.</p>
-                  ) : checkingDates ? (
-                    <p>Finding the next available date...</p>
-                  ) : (
-                    <p>Please select a date to view available time slots</p>
-                  )}
-                </div>
-              ) : loading ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Loading time slots...</p>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8">
-                  <p className="text-red-600 mb-3">{error}</p>
-                  <button
-                    onClick={() => fetchTimeSlots(selectedDate)}
-                    className="text-accent underline"
-                  >
-                    Try again
-                  </button>
-                </div>
-              ) : isDateFullyBooked(selectedDate) || availableTimeSlots.length === 0 ? (
-                <div className="text-center py-8 text-gray-600">
-                  <p>{isDateFullyBooked(selectedDate) ? 'This date is fully booked.' : 'No available time slots for this date.'}</p>
-                </div>
+          {!selectedDate ? (
+            <div className="text-center py-8 text-gray-500">
+              {noAvailabilityFound ? (
+                <p>We don&apos;t have any openings in the next few months for this service.</p>
+              ) : checkingDates ? (
+                <p>Finding the next available date...</p>
               ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-2">
-                    {availableTimeSlots.map((slot, index) => (
-                      <button
-                        key={index}
-                        onClick={() => onSelect(slot.startTime, { staffId: slot.staffId, staffName: slot.staffName })}
-                        className={`py-3 px-4 rounded-lg text-center transition-colors ${
-                          initialDateTime === slot.startTime
-                            ? 'bg-accent text-white'
-                            : 'bg-[#F8E7E1] text-gray-900 hover:bg-accent hover:text-white'
-                        }`}
-                      >
-                        {formatClinicTime(slot.startTime, 'h:mm a')}
-                        {staffId === ANY_STAFF_ID && slot.staffName && (
-                          <span className="block text-xs opacity-80">with {slot.staffName.split(' ')[0]}</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  {isOutsideClinicTimeZone() && (
-                    <p className="mt-3 text-xs text-gray-500 text-center">Times are shown in Pacific Time.</p>
-                  )}
-                </>
-              )}
-
-              {/* One waitlist prompt for every state, once there's something to react to */}
-              {(selectedDate || noAvailabilityFound) && !loading && (
-                <div className="mt-6 text-center text-sm text-gray-700 border-t border-gray-100 pt-4">
-                  <span>Don&apos;t see a date &amp; time that works for you? </span>
-                  {WAITLIST_URL ? (
-                    <a
-                      href={WAITLIST_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-accent font-medium underline"
-                    >
-                      Join the waitlist
-                    </a>
-                  ) : (
-                    <button
-                      onClick={() => setShowWaitlist(true)}
-                      className="text-accent font-medium underline"
-                    >
-                      Join the waitlist
-                    </button>
-                  )}
-                </div>
+                <p>Please select a date to view available time slots</p>
               )}
             </div>
-          </div>
-        </>
-      ) : (
-        <WaitlistForm
-          serviceId={serviceId}
-          variationId={variationId!}
-          staffId={staffId}
-          onBack={() => setShowWaitlist(false)}
-          onSuccess={() => {
-            showToast({
-              title: "Success!",
-              description: "You have been added to the waitlist! We will contact you when a slot becomes available.",
-              status: "success",
-              duration: 5000,
-            });
-            // Add a 2-second delay before redirecting to allow time to read the toast
-            setTimeout(() => {
-              window.location.href = '/';
-            }, 5000);
-          }}
-        />
-      )}
+          ) : loading ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>Loading time slots...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-600 mb-3">{error}</p>
+              <button
+                onClick={() => fetchTimeSlots(selectedDate)}
+                className="text-accent underline"
+              >
+                Try again
+              </button>
+            </div>
+          ) : isDateFullyBooked(selectedDate) || availableTimeSlots.length === 0 ? (
+            <div className="text-center py-8 text-gray-600">
+              <p>{isDateFullyBooked(selectedDate) ? 'This date is fully booked.' : 'No available time slots for this date.'}</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {availableTimeSlots.map((slot, index) => (
+                  <button
+                    key={index}
+                    onClick={() => onSelect(slot.startTime, { staffId: slot.staffId, staffName: slot.staffName })}
+                    className={`py-3 px-4 rounded-lg text-center transition-colors ${
+                      initialDateTime === slot.startTime
+                        ? 'bg-accent text-white'
+                        : 'bg-[#F8E7E1] text-gray-900 hover:bg-accent hover:text-white'
+                    }`}
+                  >
+                    {formatClinicTime(slot.startTime, 'h:mm a')}
+                    {staffId === ANY_STAFF_ID && slot.staffName && (
+                      <span className="block text-xs opacity-80">with {slot.staffName.split(' ')[0]}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {isOutsideClinicTimeZone() && (
+                <p className="mt-3 text-xs text-gray-500 text-center">Times are shown in Pacific Time.</p>
+              )}
+            </>
+          )}
+
+          {/* One waitlist prompt for every state, once there's something to react to.
+              The waitlist itself is Square's, on the Square booking site */}
+          {WAITLIST_URL && (selectedDate || noAvailabilityFound) && !loading && (
+            <div className="mt-6 text-center text-sm text-gray-700 border-t border-gray-100 pt-4">
+              <span>Don&apos;t see a date &amp; time that works for you? </span>
+              <a
+                href={WAITLIST_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent font-medium underline"
+              >
+                Join the waitlist
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

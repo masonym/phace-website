@@ -65,7 +65,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     {
         href: '/admin/waitlist',
         title: 'Waitlist',
-        description: 'View and manage customer waitlist entries by service and staff member.',
+        description: 'Where appointment waitlist requests go, and the link clients use to join.',
         icon: ClipboardList,
     },
     {
