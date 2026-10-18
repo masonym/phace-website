@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SimpleCouponService } from '@/lib/services/simpleCouponService';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { parseCouponFields } from '@/lib/utils/couponInput';
 
 interface CreateCouponRequest {
   code: string;
@@ -19,48 +20,20 @@ export async function POST(request: NextRequest) {
   try {
     const body: CreateCouponRequest = await request.json();
 
-    // Validate required fields
-    if (!body.code || !body.name || !body.type || typeof body.value !== 'number') {
-      return NextResponse.json(
-        { error: 'Code, name, type, and value are required' },
-        { status: 400 }
-      );
+    if (!body.code || typeof body.code !== 'string') {
+      return NextResponse.json({ error: 'Code is required' }, { status: 400 });
     }
 
-    // Validate value is positive
-    if (body.value <= 0) {
-      return NextResponse.json(
-        { error: 'Value must be greater than 0' },
-        { status: 400 }
-      );
-    }
-
-    // Validate percentage is not over 100
-    if (body.type === 'PERCENTAGE' && body.value > 100) {
-      return NextResponse.json(
-        { error: 'Percentage cannot exceed 100%' },
-        { status: 400 }
-      );
-    }
-
-    if (body.categoryIds !== undefined &&
-        (!Array.isArray(body.categoryIds) || body.categoryIds.some((id) => typeof id !== 'string' || !id))) {
-      return NextResponse.json(
-        { error: 'categoryIds must be a list of category IDs' },
-        { status: 400 }
-      );
+    const parsed = parseCouponFields(body);
+    if ('error' in parsed) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
     // Create the coupon
     const couponData = {
-      code: body.code.toUpperCase(),
-      name: body.name,
-      type: body.type,
-      value: body.value,
+      ...parsed.fields,
+      code: body.code.trim().toUpperCase(),
       isActive: true,
-      expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
-      usageLimit: body.usageLimit,
-      categoryIds: body.categoryIds?.length ? Array.from(new Set(body.categoryIds)) : undefined,
     };
 
     const success = await SimpleCouponService.createCoupon(couponData);
