@@ -61,6 +61,7 @@ export default function AdminDiscountsPage() {
   const [loadingCoupons, setLoadingCoupons] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesError, setCategoriesError] = useState('');
+  const [b2g1, setB2g1] = useState<{ categoryId: string | null; previewMismatch: boolean } | null>(null);
 
   const fetchExistingCoupons = async () => {
     try {
@@ -87,9 +88,19 @@ export default function AdminDiscountsPage() {
     }
   };
 
+  const fetchPromotions = async () => {
+    try {
+      const response = await adminFetch('/api/admin/promotions');
+      if (response.ok) setB2g1((await response.json()).b2g1);
+    } catch (error) {
+      console.error('Failed to fetch promotions:', error);
+    }
+  };
+
   useEffect(() => {
     fetchExistingCoupons();
     fetchCategories();
+    fetchPromotions();
   }, []);
 
   const toggleCategory = (id: string) => {
@@ -103,6 +114,14 @@ export default function AdminDiscountsPage() {
 
   const categoryLabel = (id: string) =>
     categories.find((c) => c.id === id)?.name ?? (categories.length ? 'Unknown category' : '...');
+
+  /** Active codes can still stop working by expiring or hitting their usage limit */
+  const couponStatus = (coupon: ExistingCoupon): { text: string; className: string } => {
+    if (!coupon.isActive) return { text: 'Paused', className: 'bg-gray-100 text-gray-700' };
+    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) return { text: 'Expired', className: 'bg-red-100 text-red-800' };
+    if (coupon.usageLimit && coupon.currentUsage >= coupon.usageLimit) return { text: 'Used up', className: 'bg-red-100 text-red-800' };
+    return { text: 'Active', className: 'bg-green-100 text-green-800' };
+  };
 
   const startEditing = (coupon: ExistingCoupon) => {
     setEditingCode(coupon.code);
@@ -322,7 +341,7 @@ export default function AdminDiscountsPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 bg-accent text-white py-3 px-6 rounded-lg hover:bg-accent/90 disabled:opacity-50"
             >
               {editingCode
                 ? (loading ? 'Saving...' : 'Save Changes')
@@ -346,13 +365,34 @@ export default function AdminDiscountsPage() {
           </div>
         )}
 
-        <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h3 className="font-semibold text-yellow-800 mb-2">Note:</h3>
-          <p className="text-yellow-700 text-sm">
-            This admin interface creates coupon codes using a simple coupon service. 
-            Customers can use these codes during checkout on your website.
-          </p>
-        </div>
+        <p className="mt-4 text-sm text-gray-500">
+          Codes work in the website store&apos;s checkout. They aren&apos;t Square discounts, so they won&apos;t apply at the clinic&apos;s register.
+        </p>
+
+        <section className="mt-8 p-5 bg-white border rounded-lg">
+          <h2 className="text-lg font-semibold">Automatic promotion: Buy 2 Get 1 Free</h2>
+          {!b2g1 ? (
+            <p className="text-sm text-gray-500 mt-1">Loading...</p>
+          ) : b2g1.categoryId ? (
+            <p className="text-sm text-gray-700 mt-1">
+              <span className="px-2 py-0.5 mr-2 rounded text-xs bg-green-100 text-green-800">On</span>
+              For every three items from <strong>{categoryLabel(b2g1.categoryId)}</strong> in an order, the cheapest is free.
+              No code is needed.
+            </p>
+          ) : (
+            <p className="text-sm text-gray-700 mt-1">
+              <span className="px-2 py-0.5 mr-2 rounded text-xs bg-gray-100 text-gray-700">Off</span>
+              No promotion category is set.
+            </p>
+          )}
+          {b2g1?.previewMismatch && (
+            <p className="text-sm text-amber-800 bg-amber-50 rounded-md px-3 py-2 mt-3">
+              The cart preview and checkout are set to different promotion categories, so shoppers may see a different total
+              than they&apos;re charged. B2G1_PROMO_CATEGORY_ID and NEXT_PUBLIC_B2G1_PROMO_CATEGORY_ID need to match.
+            </p>
+          )}
+          <p className="text-xs text-gray-500 mt-3">This promotion is turned on and off in the site&apos;s environment settings.</p>
+        </section>
       </div>
 
       {/* Existing Coupons Section */}
@@ -394,7 +434,7 @@ export default function AdminDiscountsPage() {
                       {coupon.type === 'PERCENTAGE' ? 'Percentage' : 'Fixed Amount'}
                     </td>
                     <td className="border border-gray-300 px-4 py-2">
-                      {coupon.type === 'PERCENTAGE' ? `${coupon.value}%` : `$${coupon.value}`}
+                      {coupon.type === 'PERCENTAGE' ? `${coupon.value}%` : `$${coupon.value.toFixed(2)}`}
                     </td>
                     <td className="border border-gray-300 px-4 py-2">
                       {coupon.categoryIds.length > 0
@@ -412,18 +452,14 @@ export default function AdminDiscountsPage() {
                         : 'Never'}
                     </td>
                     <td className="border border-gray-300 px-4 py-2">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        coupon.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {coupon.isActive ? 'Active' : 'Inactive'}
+                      <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${couponStatus(coupon).className}`}>
+                        {couponStatus(coupon).text}
                       </span>
                     </td>
                     <td className="border border-gray-300 px-4 py-2 whitespace-nowrap">
                       <button
                         onClick={() => startEditing(coupon)}
-                        className="text-blue-600 hover:text-blue-800 mr-4"
+                        className="text-accent hover:underline mr-4"
                       >
                         Edit
                       </button>

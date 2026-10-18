@@ -24,6 +24,11 @@ export interface ResolvedDiscount {
     discountAmount: number;
 }
 
+/** Square category whose items get Buy 2 Get 1 Free at checkout; empty when the promotion is off */
+export function getB2G1CategoryId(): string {
+    return process.env.B2G1_PROMO_CATEGORY_ID || process.env.NEXT_PUBLIC_B2G1_PROMO_CATEGORY_ID || '';
+}
+
 export interface CouponPreview {
     coupon: SimpleCoupon;
     /** Coupon discount in dollars */
@@ -104,7 +109,7 @@ export async function resolveOrderDiscount(
     items: OrderItemInput[],
     requestedCouponCode?: string | null
 ): Promise<ResolvedDiscount | null> {
-    const b2g1CategoryId = process.env.B2G1_PROMO_CATEGORY_ID || process.env.NEXT_PUBLIC_B2G1_PROMO_CATEGORY_ID || '';
+    const b2g1CategoryId = getB2G1CategoryId();
     const hasCoupon = !!requestedCouponCode && requestedCouponCode.toUpperCase() !== 'B2G1';
     if (!hasCoupon && !b2g1CategoryId) return null;
 
