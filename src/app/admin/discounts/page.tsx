@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { adminFetch } from '@/lib/auth/clientSession';
 
 interface DiscountFormData {
   code: string;
@@ -37,7 +38,7 @@ export default function AdminDiscountsPage() {
 
   const fetchExistingCoupons = async () => {
     try {
-      const response = await fetch('/api/coupon/list');
+      const response = await adminFetch('/api/coupon/list');
       if (response.ok) {
         const result = await response.json();
         setExistingCoupons(result.coupons || []);
@@ -59,11 +60,8 @@ export default function AdminDiscountsPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/coupon/create', {
+      const response = await adminFetch('/api/coupon/create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(formData),
       });
 

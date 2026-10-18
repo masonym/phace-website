@@ -1,12 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import AdminLayout from '@/components/admin/AdminLayout';
 import StaffForm from '@/components/admin/StaffForm';
 import BlockTimeForm from '@/components/admin/BlockTimeForm';
-import { useAuth } from '@/hooks/useAuth';
 
 interface Staff {
   id: string;
@@ -42,15 +39,7 @@ export default function StaffPage() {
   const [showBlockTimeForm, setShowBlockTimeForm] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [blockedTimes, setBlockedTimes] = useState<BlockedTime[]>([]);
-  
-  const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/admin/login');
-    }
-  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -137,28 +126,28 @@ export default function StaffPage() {
     }
   };
 
-  if (isLoading || loading) {
+  if (loading) {
     return (
-      <AdminLayout>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-lg">Loading...</div>
         </div>
-      </AdminLayout>
+      </>
     );
   }
 
   if (error) {
     return (
-      <AdminLayout>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-red-600">Error: {error}</div>
         </div>
-      </AdminLayout>
+      </>
     );
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="p-4 sm:p-6">
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -274,6 +263,6 @@ export default function StaffPage() {
           }}
         />
       )}
-    </AdminLayout>
+    </>
   );
 }

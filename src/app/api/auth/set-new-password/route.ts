@@ -20,7 +20,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             idToken: result.AuthenticationResult.IdToken,
-            accessToken: result.AuthenticationResult.AccessToken
+            accessToken: result.AuthenticationResult.AccessToken,
+            refreshToken: result.AuthenticationResult.RefreshToken
         });
     } catch (error: any) {
         console.error('Set new password error:', error);

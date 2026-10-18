@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import Cookies from 'js-cookie';
+import { useAuth } from '@/hooks/useAuth';
+import { getFreshIdToken } from '@/lib/auth/clientSession';
+import { ADMIN_SECTIONS } from '@/lib/config/adminSections';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
 import './admin.css';
@@ -15,49 +17,56 @@ export default function AdminLayout({
 }) {
     const router = useRouter();
     const pathname = usePathname();
+    const { signOut } = useAuth();
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const isLoginPage = pathname === '/admin/login';
 
     useEffect(() => {
-        // Skip auth check for login page
-        if (pathname === '/admin/login') {
+        setMobileMenuOpen(false);
+
+        if (isLoginPage) {
             setIsAuthorized(true);
             setIsLoading(false);
             return;
         }
 
-        // Check if user is admin
+        // Re-checked on every admin navigation, which also keeps the token fresh
         const checkAuth = async () => {
             try {
-                const token = Cookies.get('adminToken');
+                const token = await getFreshIdToken();
                 if (!token) {
-                    throw new Error('No token found');
+                    throw new Error('No session');
                 }
 
                 const response = await fetch('/api/admin/auth', {
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
                     },
                     cache: 'no-store'
                 });
 
                 if (!response.ok) {
-                    throw new Error('Invalid token');
+                    throw new Error('Not an admin');
                 }
 
                 setIsAuthorized(true);
-            } catch (error) {
-                Cookies.remove('adminToken', { path: '/' });
-                router.push('/admin/login');
+            } catch {
+                setIsAuthorized(false);
+                router.replace('/admin/login');
             } finally {
                 setIsLoading(false);
             }
         };
 
         checkAuth();
-    }, [pathname, router]);
+    }, [pathname, isLoginPage, router]);
+
+    const handleSignOut = () => {
+        signOut();
+        router.push('/admin/login');
+    };
 
     if (isLoading) {
         return (
@@ -67,83 +76,56 @@ export default function AdminLayout({
         );
     }
 
-    if (!isAuthorized && pathname !== '/admin/login') {
+    if (!isAuthorized) {
         return null;
     }
 
+    const linkClass = (href: string) => {
+        const isActive = pathname === href || pathname.startsWith(`${href}/`);
+        return `block px-3 py-2 rounded-md whitespace-nowrap ${isActive
+            ? 'bg-accent/10 text-accent font-medium'
+            : 'text-gray-700 hover:bg-gray-100'
+            }`;
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 overflow-x-hidden">
-            {pathname !== '/admin/login' && (
+            {!isLoginPage && (
                 <nav className="bg-white shadow relative w-full">
                     <div className="w-full px-4 sm:px-6 lg:px-8">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between min-h-[64px]">
                             <div className="flex items-center justify-between w-full lg:w-auto py-4 lg:py-0">
-                                <div className="flex items-center min-w-0">
-                                    <Link
-                                        href="/admin"
-                                        className="text-lg font-semibold text-accent truncate"
-                                    >
-                                        Admin
-                                    </Link>
-                                </div>
+                                <Link
+                                    href="/admin"
+                                    className="text-lg font-semibold text-accent truncate"
+                                >
+                                    Admin
+                                </Link>
                                 <button
                                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                    aria-expanded={mobileMenuOpen}
+                                    aria-controls="admin-nav-links"
                                     className="lg:hidden p-2 rounded-md hover:bg-gray-100 ml-2"
                                 >
+                                    <span className="sr-only">{mobileMenuOpen ? 'Close menu' : 'Open menu'}</span>
                                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                        {mobileMenuOpen ? (
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        ) : (
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                        )}
                                     </svg>
                                 </button>
                             </div>
-                            <div className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:flex flex-wrap items-center gap-2 pb-4 lg:pb-0`}>
-                                <Link
-                                    href="/admin/services"
-                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
-                                >
-                                    Services
-                                </Link>
-                                <Link
-                                    href="/admin/addons"
-                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
-                                >
-                                    Add-ons
-                                </Link>
-                                <Link
-                                    href="/admin/consent-forms"
-                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
-                                >
-                                    Consent Forms
-                                </Link>
-                                <Link
-                                    href="/admin/staff"
-                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
-                                >
-                                    Staff
-                                </Link>
-                                <Link
-                                    href="/admin/calendar"
-                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
-                                >
-                                    Calendar
-                                </Link>
-                                <Link
-                                    href="/admin/discounts"
-                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
-                                >
-                                    Discounts
-                                </Link>
-                                <Link
-                                    href="/admin/orders"
-                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
-                                >
-                                    Orders
-                                </Link>
-                                <Link
-                                    href="/admin/waitlist"
-                                    className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
-                                >
-                                    Waitlist
-                                </Link>
+                            <div
+                                id="admin-nav-links"
+                                className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:flex flex-wrap items-center gap-1 pb-4 lg:pb-0`}
+                            >
+                                {ADMIN_SECTIONS.map(({ href, title }) => (
+                                    <Link key={href} href={href} className={linkClass(href)}>
+                                        {title}
+                                    </Link>
+                                ))}
                                 <Link
                                     href="/"
                                     className="block px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
@@ -151,13 +133,10 @@ export default function AdminLayout({
                                     Back to Site
                                 </Link>
                                 <button
-                                    onClick={() => {
-                                        Cookies.remove('adminToken', { path: '/' });
-                                        router.push('/admin/login');
-                                    }}
+                                    onClick={handleSignOut}
                                     className="block w-full lg:w-auto text-left px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 whitespace-nowrap"
                                 >
-                                    Logout
+                                    Sign Out
                                 </button>
                             </div>
                         </div>

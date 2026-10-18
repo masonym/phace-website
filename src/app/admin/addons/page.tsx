@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import AdminLayout from '@/components/admin/AdminLayout';
 import AddonForm from '@/components/admin/AddonForm';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,14 +36,8 @@ export default function AddonsPage() {
     const [deletingAddon, setDeletingAddon] = useState<Addon | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-    const router = useRouter();
-    const { isAuthenticated, isLoading, getIdToken } = useAuth();
+    const { getIdToken } = useAuth();
 
-    useEffect(() => {
-        if (!isLoading && !isAuthenticated) {
-            router.push('/admin/login');
-        }
-    }, [isAuthenticated, isLoading, router]);
 
     // Fetch services and addons
     useEffect(() => {
@@ -182,18 +174,18 @@ export default function AddonsPage() {
         return category?.services.find(service => service.id === serviceId)?.name || 'Unknown Service';
     };
 
-    if (isLoading) {
+    if (loading) {
         return (
-            <AdminLayout>
+            <>
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-lg">Loading...</div>
                 </div>
-            </AdminLayout>
+            </>
         );
     }
 
     return (
-        <AdminLayout>
+        <>
             <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="mb-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -305,6 +297,6 @@ export default function AddonsPage() {
                     />
                 )}
             </div>
-        </AdminLayout>
+        </>
     );
 }

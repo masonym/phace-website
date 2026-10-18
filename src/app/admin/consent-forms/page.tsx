@@ -1,14 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import AdminLayout from '@/components/admin/AdminLayout';
 import ConsentFormForm from '@/components/admin/ConsentFormForm';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
-import { useAuth } from '@/hooks/useAuth';
+import { adminFetch } from '@/lib/auth/clientSession';
 import ConsentFormRenderer from '@/components/booking/ConsentFormRenderer';
 import { ConsentForm } from '@/types/consentForm';
-import { SquareBookingService } from '@/lib/services/squareBookingService';
 
 interface Service {
     id: string;
@@ -34,14 +31,7 @@ export default function ConsentFormsPage() {
     const [previewForm, setPreviewForm] = useState<ConsentForm | null>(null);
     const [copiedFormId, setCopiedFormId] = useState<string | null>(null);
 
-    const router = useRouter();
-    const { isAuthenticated, isLoading, getIdToken } = useAuth();
 
-    useEffect(() => {
-        if (!isLoading && !isAuthenticated) {
-            router.push('/admin/login');
-        }
-    }, [isAuthenticated, isLoading, router]);
 
     // Fetch services and consent forms
     useEffect(() => {
@@ -149,12 +139,6 @@ export default function ConsentFormsPage() {
 
     const handleCreateForm = async (formData: Omit<ConsentForm, 'id'>) => {
         try {
-            const token = await getIdToken();
-            if (!token) {
-                setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
-                return;
-            }
-
             // Ensure the form data has the required structure
             const newFormData = {
                 ...formData,
@@ -163,12 +147,8 @@ export default function ConsentFormsPage() {
                 isActive: formData.isActive ?? true,
             };
 
-            const response = await fetch('/api/booking/consent-forms', {
+            const response = await adminFetch('/api/booking/consent-forms', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
                 body: JSON.stringify(newFormData),
             });
 
@@ -237,21 +217,11 @@ export default function ConsentFormsPage() {
                 setMessage({ type: 'error', text: 'Error: Form ID is required' });
                 return;
             }
-            
-            const token = await getIdToken();
-            if (!token) {
-                setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
-                return;
-            }
-            
+
             console.log('Updating form with ID:', formData.id);
             
-            const response = await fetch('/api/booking/consent-forms', {
+            const response = await adminFetch('/api/booking/consent-forms', {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
                 body: JSON.stringify(formData),
             });
 
@@ -282,20 +252,11 @@ export default function ConsentFormsPage() {
         }
 
         try {
-            const token = await getIdToken();
-            if (!token) {
-                setMessage({ type: 'error', text: 'Not authenticated. Please log in again.' });
-                return;
-            }
-
             const formId = deletingForm.id;
             console.log('Deleting form with ID:', formId);
             
-            const response = await fetch(`/api/booking/consent-forms?id=${formId}`, {
+            const response = await adminFetch(`/api/booking/consent-forms?id=${formId}`, {
                 method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
             });
 
             if (!response.ok) {
@@ -320,18 +281,18 @@ export default function ConsentFormsPage() {
         return category?.services.find(service => service.id === serviceId)?.name || 'Unknown Service';
     };
 
-    if (isLoading) {
+    if (loading) {
         return (
-            <AdminLayout>
+            <>
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-lg">Loading...</div>
                 </div>
-            </AdminLayout>
+            </>
         );
     }
 
     return (
-        <AdminLayout>
+        <>
             <div className="p-4 sm:p-6">
                 <div className="mb-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -493,6 +454,6 @@ export default function ConsentFormsPage() {
                     cancelLabel="Cancel"
                 />
             )}
-        </AdminLayout>
+        </>
     );
 }

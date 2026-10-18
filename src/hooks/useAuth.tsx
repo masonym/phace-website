@@ -3,6 +3,12 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import Cookies from 'js-cookie';
+import {
+  storeSessionTokens,
+  setAdminToken,
+  clearSessionTokens,
+  getFreshIdToken,
+} from '@/lib/auth/clientSession';
 
 interface AuthError extends Error {
   needsConfirmation?: boolean;
@@ -51,48 +57,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuthState();
   }, []);
 
+  /** Checks whether the signed-in user is an admin and keeps the adminToken cookie in step */
+  const verifyAdmin = async (idToken: string) => {
+    try {
+      const adminResponse = await fetch('/api/admin/auth', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (adminResponse.ok) {
+        setIsAdmin(true);
+        setAdminToken(idToken);
+      } else {
+        setIsAdmin(false);
+        Cookies.remove('adminToken');
+      }
+    } catch (error) {
+      console.error('Admin check error:', error);
+      setIsAdmin(false);
+      Cookies.remove('adminToken');
+    }
+  };
+
+  /** Stores the tokens from a sign-in response and loads the user's admin status */
+  const startSession = async (data: { idToken: string; accessToken: string; refreshToken?: string }) => {
+    storeSessionTokens(data);
+    setUser(jwtDecode(data.idToken));
+    setIsAuthenticated(true);
+    await verifyAdmin(data.idToken);
+  };
+
   const checkAuthState = async () => {
     try {
-      const idToken = Cookies.get('idToken');
-      const adminToken = Cookies.get('adminToken');
-      
+      const hadSession = !!Cookies.get('idToken');
+      // Refreshes the ID token if it has expired; null means the session is over
+      const idToken = await getFreshIdToken();
+
       if (idToken) {
         // Set initial state from token to avoid flicker
-        const decoded = jwtDecode(idToken);
-        setUser(decoded);
+        setUser(jwtDecode(idToken));
         setIsAuthenticated(true);
-        
+
         // If we have an admin token, set admin status immediately
-        if (adminToken) {
+        if (Cookies.get('adminToken')) {
           setIsAdmin(true);
         }
-        
-        // Verify admin status in the background
-        try {
-          const adminResponse = await fetch('/api/admin/auth', {
-            headers: {
-              'Authorization': `Bearer ${idToken}`
-            }
-          });
 
-          if (adminResponse.ok) {
-            setIsAdmin(true);
-            // Refresh admin token
-            Cookies.set('adminToken', idToken, {
-              expires: 7,
-              secure: true,
-              sameSite: 'strict'
-            });
-          } else {
-            setIsAdmin(false);
-            Cookies.remove('adminToken');
-          }
-        } catch (error) {
-          console.error('Admin check error:', error);
-          setIsAdmin(false);
-          Cookies.remove('adminToken');
-        }
-        
+        // Verify admin status in the background
+        await verifyAdmin(idToken);
+
         // Fetch fresh user data from Cognito
         const response = await fetch('/api/auth/user', {
           method: 'GET',
@@ -105,6 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const data = await response.json();
           setUser(data.user);
         }
+      } else if (hadSession) {
+        clearSessionTokens();
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
@@ -148,50 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      // Store tokens in cookies
-      Cookies.set('idToken', data.idToken, {
-        expires: 7, // 7 days
-        secure: true,
-        sameSite: 'strict'
-      });
-      
-      Cookies.set('accessToken', data.accessToken, {
-        expires: 7, // 7 days
-        secure: true,
-        sameSite: 'strict'
-      });
-
-      // Decode token to get user info
-      const decoded = jwtDecode(data.idToken);
-      setUser(decoded);
-      setIsAuthenticated(true);
-
-      // Check admin status
-      try {
-        const adminResponse = await fetch('/api/admin/auth', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${data.idToken}`
-          }
-        });
-
-        if (adminResponse.ok) {
-          setIsAdmin(true);
-          // Set admin token cookie
-          Cookies.set('adminToken', data.idToken, {
-            expires: 7,
-            secure: true,
-            sameSite: 'strict'
-          });
-        } else {
-          setIsAdmin(false);
-          Cookies.remove('adminToken');
-        }
-      } catch (error) {
-        console.error('Admin check error:', error);
-        setIsAdmin(false);
-        Cookies.remove('adminToken');
-      }
+      await startSession(data);
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
@@ -238,49 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'Failed to set new password');
       }
 
-      // Store tokens in cookies after successful password change
-      Cookies.set('idToken', data.idToken, {
-        expires: 7,
-        secure: true,
-        sameSite: 'strict'
-      });
-      
-      Cookies.set('accessToken', data.accessToken, {
-        expires: 7,
-        secure: true,
-        sameSite: 'strict'
-      });
-
-      // Decode token to get user info
-      const decoded = jwtDecode(data.idToken);
-      setUser(decoded);
-      setIsAuthenticated(true);
-
-      // Check admin status
-      try {
-        const adminResponse = await fetch('/api/admin/auth', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${data.idToken}`
-          }
-        });
-
-        if (adminResponse.ok) {
-          setIsAdmin(true);
-          Cookies.set('adminToken', data.idToken, {
-            expires: 7,
-            secure: true,
-            sameSite: 'strict'
-          });
-        } else {
-          setIsAdmin(false);
-          Cookies.remove('adminToken');
-        }
-      } catch (error) {
-        console.error('Admin check error:', error);
-        setIsAdmin(false);
-        Cookies.remove('adminToken');
-      }
+      await startSession(data);
     } catch (error) {
       console.error('Set new password error:', error);
       throw error;
@@ -288,9 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = () => {
-    Cookies.remove('idToken');
-    Cookies.remove('accessToken');
-    Cookies.remove('adminToken');
+    clearSessionTokens();
     setUser(null);
     setIsAuthenticated(false);
     setIsAdmin(false);
@@ -302,11 +231,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return jwtDecode(idToken);
   };
 
-  const getIdToken = async () => {
-    return Cookies.get('idToken') || null;
-  };
+  const getIdToken = () => getFreshIdToken();
 
   const getAccessToken = async () => {
+    // Refreshing the ID token renews the access token alongside it
+    await getFreshIdToken();
     return Cookies.get('accessToken') || null;
   };
 

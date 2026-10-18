@@ -54,6 +54,18 @@ export class AuthService {
         return result;
     }
 
+    static async refreshSession(refreshToken: string) {
+        const command = new InitiateAuthCommand({
+            AuthFlow: "REFRESH_TOKEN_AUTH",
+            ClientId: COGNITO_CONFIG.ClientId,
+            AuthParameters: {
+                REFRESH_TOKEN: refreshToken,
+            },
+        });
+
+        return await cognitoClient.send(command);
+    }
+
     static async setNewPassword(email: string, newPassword: string, session: string) {
         const command = new RespondToAuthChallengeCommand({
             ClientId: COGNITO_CONFIG.ClientId,

@@ -5,7 +5,7 @@ import {
     PutCommand,
     QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { adminVerifier } from '@/lib/auth/requireAdmin';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { v4 as uuidv4 } from 'uuid';
 
 const dynamoClient = new DynamoDBClient({
@@ -16,9 +16,6 @@ const dynamoClient = new DynamoDBClient({
     },
 });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
-
-// Only users in the admin table pass (customers share the Cognito pool)
-const verifier = adminVerifier;
 
 // POST /api/booking/consent-forms/responses — public, no auth required
 export async function POST(request: NextRequest) {
@@ -65,16 +62,8 @@ export async function POST(request: NextRequest) {
 // Query params: ?formId={formId} (optional filter)
 export async function GET(request: NextRequest) {
     try {
-        const token = request.headers.get('authorization')?.split(' ')[1];
-        if (!token) {
-            return NextResponse.json({ error: 'No token provided' }, { status: 401 });
-        }
-
-        try {
-            await verifier.verify(token);
-        } catch {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-        }
+        const authError = await requireAdmin(request);
+        if (authError) return authError;
 
         const { searchParams } = new URL(request.url);
         const formId = searchParams.get('formId');

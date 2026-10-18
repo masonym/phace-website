@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import AdminLayout from '@/components/admin/AdminLayout';
 import ServiceCategoryForm from '@/components/admin/ServiceCategoryForm';
 import ServiceForm from '@/components/admin/ServiceForm';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
@@ -42,14 +40,8 @@ export default function ServicesPage() {
   const [deletingService, setDeletingService] = useState<Service | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
-  const router = useRouter();
-  const { isAuthenticated, isLoading, getIdToken } = useAuth();
+  const { getIdToken } = useAuth();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/admin/login');
-    }
-  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -152,28 +144,28 @@ export default function ServicesPage() {
     }
   };
 
-  if (isLoading || loading) {
+  if (loading) {
     return (
-      <AdminLayout>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-lg">Loading...</div>
         </div>
-      </AdminLayout>
+      </>
     );
   }
 
   if (error) {
     return (
-      <AdminLayout>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-red-600">Error: {error}</div>
         </div>
-      </AdminLayout>
+      </>
     );
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8">
           {/* Categories List */}
@@ -354,6 +346,6 @@ export default function ServicesPage() {
           }? This action cannot be undone.`}
         />
       )}
-    </AdminLayout>
+    </>
   );
 }

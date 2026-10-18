@@ -6,7 +6,6 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { format, parseISO } from 'date-fns';
-import AdminLayout from '@/components/admin/AdminLayout';
 import StaffSelector from '@/components/admin/StaffSelector';
 
 interface Appointment {
@@ -107,7 +106,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="p-4 sm:p-6">
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -259,6 +258,6 @@ export default function CalendarPage() {
           }
         `}</style>
       </div>
-    </AdminLayout>
+    </>
   );
 }
