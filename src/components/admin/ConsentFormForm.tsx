@@ -41,8 +41,9 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (formData.serviceIds.length === 0) {
-            alert('Please select at least one service');
+        // A form with no services is still useful as a shareable link
+        if (formData.serviceIds.length === 0 &&
+            !confirm('This form isn\'t assigned to any services, so clients will only see it through its link. Save anyway?')) {
             return;
         }
         onSubmit(formData);
@@ -105,12 +106,7 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
                 <div className="relative">
                     <FormBuilder
                         initialData={formData}
-                        onSave={(updatedForm) => {
-                            setFormData(prev => ({
-                                ...prev,
-                                sections: updatedForm.sections,
-                            }));
-                        }}
+                        onChange={(sections) => setFormData(prev => ({ ...prev, sections }))}
                     />
                 </div>
             </div>
@@ -171,7 +167,7 @@ export default function ConsentFormForm({ categories, onSubmit, onCancel, initia
                                         return (
                                             <label
                                                 key={service.id}
-                                                className={`flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50 border-blue-200' : ''}`}
+                                                className={`flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-accent/10 border-accent/30' : ''}`}
                                             >
                                                 <input
                                                     type="checkbox"

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
   ConsentForm,
@@ -14,13 +14,20 @@ import {
 
 interface FormBuilderProps {
   initialData?: ConsentForm;
-  onSave: (form: ConsentForm) => void;
+  /** Called with the latest sections after every edit, so the parent form always saves what's on screen */
+  onChange: (sections: ConsentFormSection[]) => void;
 }
 
-export default function FormBuilder({ initialData, onSave }: FormBuilderProps) {
+export default function FormBuilder({ initialData, onChange }: FormBuilderProps) {
   const [sections, setSections] = useState<ConsentFormSection[]>(
     initialData?.sections || []
   );
+
+  useEffect(() => {
+    onChange(sections);
+    // onChange is a new function on every parent render; only report actual edits
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections]);
 
   const addSection = () => {
     setSections([
@@ -547,27 +554,6 @@ export default function FormBuilder({ initialData, onSave }: FormBuilderProps) {
       >
         + Add Section
       </button>
-      
-      <div className="flex justify-end sticky bottom-0 pt-4 pb-2 bg-white border-t">
-        <button
-          type="button"
-          onClick={() => {
-            const form: ConsentForm = {
-              id: initialData?.id ?? uuidv4(),
-              title: initialData?.title ?? 'New Consent Form',
-              serviceIds: initialData?.serviceIds ?? [],
-              isActive: initialData?.isActive ?? false,
-              version: initialData?.version ?? 1,
-              sections,
-              content: initialData?.content,
-            };
-            onSave(form);
-          }}
-          className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-dark"
-        >
-          Save Form
-        </button>
-      </div>
     </div>
   );
 }

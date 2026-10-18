@@ -4,54 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import ConsentFormRenderer from '@/components/booking/ConsentFormRenderer';
 import { ConsentForm } from '@/types/consentForm';
-
-function transformForm(raw: any): ConsentForm {
-    return {
-        id: raw.id,
-        title: raw.title,
-        serviceIds: raw.serviceIds || [],
-        isActive: raw.isActive ?? true,
-        version: raw.version || 1,
-        content: raw.content,
-        sections: (raw.sections || []).map((section: any) => ({
-            id: section.id,
-            title: section.title,
-            questions: (section.questions || []).map((q: any) => {
-                const base = { id: q.id, type: q.type, required: q.required, label: q.label };
-                switch (q.type) {
-                    case 'text':
-                        return { ...base, type: 'text' as const, placeholder: q.placeholder || q.content };
-                    case 'checkbox':
-                    case 'radio':
-                        return { ...base, type: q.type as 'checkbox' | 'radio', options: q.options || [] };
-                    case 'markdown':
-                        return { ...base, type: 'markdown' as const, content: q.content || '' };
-                    case 'dropdown':
-                        return { ...base, type: 'dropdown' as const, options: q.options || [] };
-                    case 'yes-no':
-                        return { ...base, type: 'yes-no' as const };
-                    default:
-                        return base;
-                }
-            }),
-        })),
-    };
-}
-
-function validateResponses(form: ConsentForm, responses: Record<string, any>): boolean {
-    if (form.content) {
-        return responses.agreed?.value === true;
-    }
-    return (form.sections || []).every(section =>
-        section.questions.every(q => {
-            if (!q.required) return true;
-            if (q.type === 'markdown') return true;
-            const val = responses[q.id]?.value;
-            if (Array.isArray(val)) return val.length > 0;
-            return val !== undefined && val !== '' && val !== null;
-        })
-    );
-}
+import { normalizeConsentForm, isConsentFormComplete, formatConsentAnswers } from '@/lib/utils/consentForms';
 
 export default function AdHocConsentFormPage() {
     const params = useParams();
@@ -76,7 +29,7 @@ export default function AdHocConsentFormPage() {
                     throw new Error(body.error || 'Failed to load form');
                 }
                 const data = await res.json();
-                setForm(transformForm(data));
+                setForm(normalizeConsentForm(data));
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load form');
             } finally {
@@ -92,36 +45,14 @@ export default function AdHocConsentFormPage() {
 
         if (!form) return;
 
-        if (!validateResponses(form, responses)) {
+        if (!isConsentFormComplete(form, responses)) {
             setValidationError('Please complete all required fields before submitting.');
             return;
         }
 
         setSubmitting(true);
         try {
-            const formattedResponses = (form.sections || []).flatMap(section =>
-                section.questions
-                    .filter(q => q.type !== 'markdown')
-                    .map(q => {
-                        const val = responses[q.id]?.value;
-                        let answer = '';
-                        if (q.type === 'checkbox' && Array.isArray(val)) {
-                            const opts = (q as any).options || [];
-                            answer = val.map((id: string) => opts.find((o: any) => o.id === id)?.label || id).join(', ');
-                        } else if (q.type === 'radio' || q.type === 'dropdown') {
-                            const opts = (q as any).options || [];
-                            answer = opts.find((o: any) => o.id === val)?.label || String(val ?? '');
-                        } else {
-                            answer = String(val ?? '');
-                        }
-                        return {
-                            questionId: q.id,
-                            question: q.label,
-                            answer,
-                            timestamp: responses[q.id]?.timestamp || new Date().toISOString(),
-                        };
-                    })
-            );
+            const formattedResponses = formatConsentAnswers(form, responses);
 
             const res = await fetch('/api/booking/consent-forms/responses', {
                 method: 'POST',

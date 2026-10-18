@@ -5,6 +5,7 @@ import {
     GetCommand,
     QueryCommand,
     PutCommand,
+    UpdateCommand,
     DeleteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
@@ -17,7 +18,10 @@ const dynamoClient = new DynamoDBClient({
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
     },
 });
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
+// Forms built in the admin have no legacy `content`; without this, the undefined field makes every write throw
+const docClient = DynamoDBDocumentClient.from(dynamoClient, {
+    marshallOptions: { removeUndefinedValues: true },
+});
 
 // GET /api/booking/consent-forms?id={formId} — fetch single form by ID (public, no auth)
 // GET /api/booking/consent-forms?serviceId={serviceId} — fetch forms for a service
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
             ExpressionAttributeValues: {
                 ':pk': 'CONSENT_FORM',
             },
-            ProjectionExpression: 'sk, title, content, serviceIds, isActive, sections',
+            ProjectionExpression: 'sk, title, content, serviceIds, isActive, sections, version, createdAt, updatedAt',
         };
 
         // Add service-specific filtering only if serviceId is provided
@@ -74,6 +78,9 @@ export async function GET(request: NextRequest) {
             serviceIds: item.serviceIds,
             isActive: item.isActive,
             sections: item.sections,
+            version: item.version ?? 1,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
         })) || [];
 
         return NextResponse.json(forms);
@@ -93,29 +100,26 @@ export async function POST(request: NextRequest) {
         if (authError) return authError;
 
         const data = await request.json();
-        const formId = uuidv4();
+        const now = new Date().toISOString();
+        const item = {
+            id: uuidv4(),
+            title: data.title,
+            content: data.content,
+            serviceIds: data.serviceIds || [],
+            sections: data.sections || [],
+            isActive: data.isActive ?? true,
+            version: 1,
+            createdAt: now,
+            updatedAt: now,
+        };
 
-        const command = new PutCommand({
+        const { id, ...fields } = item;
+        await docClient.send(new PutCommand({
             TableName: 'phace-forms',
-            Item: {
-                pk: 'CONSENT_FORM',
-                sk: formId,
-                title: data.title,
-                content: data.content,
-                serviceIds: data.serviceIds,
-                sections: data.sections,
-                isActive: data.isActive ?? true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            },
-        });
+            Item: { pk: 'CONSENT_FORM', sk: id, ...fields },
+        }));
 
-        await docClient.send(command);
-
-        return NextResponse.json({
-            id: formId,
-            ...data,
-        });
+        return NextResponse.json(item);
     } catch (error) {
         console.error('Error creating consent form:', error);
         return NextResponse.json(
@@ -139,24 +143,40 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        const command = new PutCommand({
+        // Update in place so createdAt survives; each save bumps the version
+        const result = await docClient.send(new UpdateCommand({
             TableName: 'phace-forms',
-            Item: {
-                pk: 'CONSENT_FORM',
-                sk: data.id,
-                title: data.title,
-                content: data.content,
-                serviceIds: data.serviceIds,
-                sections: data.sections,
-                isActive: data.isActive,
-                updatedAt: new Date().toISOString(),
+            Key: { pk: 'CONSENT_FORM', sk: data.id },
+            ConditionExpression: 'attribute_exists(pk)',
+            UpdateExpression: 'SET title = :title, serviceIds = :serviceIds, sections = :sections, isActive = :isActive, updatedAt = :now, version = if_not_exists(version, :zero) + :one',
+            ExpressionAttributeValues: {
+                ':title': data.title,
+                ':serviceIds': data.serviceIds || [],
+                ':sections': data.sections || [],
+                ':isActive': data.isActive ?? true,
+                ':now': new Date().toISOString(),
+                ':zero': 0,
+                ':one': 1,
             },
+            ReturnValues: 'ALL_NEW',
+        }));
+
+        const item = result.Attributes!;
+        return NextResponse.json({
+            id: item.sk,
+            title: item.title,
+            content: item.content,
+            serviceIds: item.serviceIds,
+            sections: item.sections,
+            isActive: item.isActive,
+            version: item.version,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
         });
-
-        await docClient.send(command);
-
-        return NextResponse.json(data);
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.name === 'ConditionalCheckFailedException') {
+            return NextResponse.json({ error: 'This form no longer exists' }, { status: 404 });
+        }
         console.error('Error updating consent form:', error);
         return NextResponse.json(
             { error: 'Failed to update consent form' },
