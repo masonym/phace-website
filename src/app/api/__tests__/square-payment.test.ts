@@ -146,6 +146,44 @@ describe('/api/square-payment', () => {
     expect(SimpleCouponService.applyCoupon).toHaveBeenCalledWith('SAVE10')
   })
 
+  it('limits a category coupon to items in that category', async () => {
+    ;(SimpleCouponService.validateCoupon as jest.Mock).mockResolvedValue({
+      code: 'PALM', name: 'Palm Springs', type: 'PERCENTAGE', value: 20, categoryIds: ['PHAE'],
+    })
+    mockClient.catalog.batchGet.mockResolvedValue(catalogWith([
+      { id: 'A', cents: 5000, itemId: 'IA', categories: ['PHAE'] },
+      { id: 'B', cents: 3000, itemId: 'IB', categories: ['OTHER'] },
+    ]))
+
+    await POST(makeRequest({
+      items: ['A', 'B'].map((id) => ({ variationId: id, quantity: 1, price: 1 })),
+      discount: { code: 'PALM' },
+    }))
+
+    const { order } = mockClient.orders.create.mock.calls[0][0]
+    // 20% of the $50 Phae item only
+    expect(order.discounts[0].amountMoney.amount).toBe(BigInt(1000))
+    expect(SimpleCouponService.applyCoupon).toHaveBeenCalledWith('PALM')
+  })
+
+  it('does not use up a category coupon when nothing in the cart qualifies', async () => {
+    ;(SimpleCouponService.validateCoupon as jest.Mock).mockResolvedValue({
+      code: 'PALM', name: 'Palm Springs', type: 'FIXED_AMOUNT', value: 10, categoryIds: ['PHAE'],
+    })
+    mockClient.catalog.batchGet.mockResolvedValue(catalogWith([
+      { id: 'B', cents: 3000, itemId: 'IB', categories: ['OTHER'] },
+    ]))
+
+    await POST(makeRequest({
+      items: [{ variationId: 'B', quantity: 1, price: 1 }],
+      discount: { code: 'PALM' },
+    }))
+
+    const { order } = mockClient.orders.create.mock.calls[0][0]
+    expect(order.discounts).toBeUndefined()
+    expect(SimpleCouponService.applyCoupon).not.toHaveBeenCalled()
+  })
+
   it('applies buy 2 get 1 free to qualifying items only', async () => {
     process.env.B2G1_PROMO_CATEGORY_ID = 'PROMO'
     mockClient.catalog.batchGet.mockResolvedValue(catalogWith([

@@ -1,44 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SimpleCouponService } from '@/lib/services/simpleCouponService';
+import { previewCouponDiscount } from '@/lib/services/orderDiscountService';
+import { CartItem } from '@/types/product';
 
 interface ValidateDiscountRequest {
   code: string;
-  orderAmount: number;
-  cartItems?: any[];
+  cartItems: CartItem[];
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { code, orderAmount } = await request.json();
+    const { code, cartItems }: ValidateDiscountRequest = await request.json();
 
-    if (!code || typeof orderAmount !== 'number') {
+    if (!code || !Array.isArray(cartItems) || cartItems.length === 0) {
       return NextResponse.json(
-        { valid: false, error: 'Code and subtotal amount are required' },
+        { valid: false, error: 'Code and cart items are required' },
         { status: 400 }
       );
     }
 
-    // Validate order amount is positive
-    if (orderAmount <= 0) {
-      return NextResponse.json(
-        { valid: false, error: 'Order amount must be greater than 0' },
-        { status: 400 }
-      );
-    }
+    // Price the cart from the Square catalog rather than trusting browser totals
+    const items = cartItems.map((item) => ({
+      variationId: item.selectedVariation?.id,
+      quantity: item.quantity,
+    }));
+    const preview = await previewCouponDiscount(items, code);
 
-    // Validate the coupon code (now async)
-    const coupon = await SimpleCouponService.validateCoupon(code);
-    
-    if (!coupon) {
+    if (!preview) {
       return NextResponse.json({
         valid: false,
         error: 'Invalid or expired discount code'
       });
     }
 
-    // Calculate discount amount (applies to subtotal only, not shipping)
-    const discountAmount = SimpleCouponService.calculateDiscount(coupon, orderAmount);
-    const finalAmount = Math.max(0, orderAmount - discountAmount);
+    const { coupon, discountAmount } = preview;
+    if (discountAmount <= 0) {
+      return NextResponse.json({
+        valid: false,
+        error: coupon.categoryIds?.length
+          ? "This code doesn't apply to any items in your cart"
+          : 'Invalid or expired discount code'
+      });
+    }
 
     return NextResponse.json({
       valid: true,
@@ -47,8 +49,7 @@ export async function POST(request: NextRequest) {
         name: coupon.name,
         type: coupon.type,
         value: coupon.value,
-        discountAmount,
-        finalAmount
+        discountAmount
       }
     });
   } catch (error) {

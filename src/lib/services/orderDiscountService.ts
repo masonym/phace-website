@@ -1,5 +1,5 @@
 import { SquareClient, SquareEnvironment } from 'square';
-import { SimpleCouponService } from '@/lib/services/simpleCouponService';
+import { SimpleCouponService, SimpleCoupon } from '@/lib/services/simpleCouponService';
 import { calculateB2G1DiscountFromPrices } from '@/lib/utils/promotions';
 
 const client = new SquareClient({
@@ -24,22 +24,28 @@ export interface ResolvedDiscount {
     discountAmount: number;
 }
 
+export interface CouponPreview {
+    coupon: SimpleCoupon;
+    /** Coupon discount in dollars */
+    discountAmount: number;
+    /** Subtotal of the items the coupon applies to */
+    eligibleSubtotal: number;
+}
+
+interface PricedLine {
+    unitPrice: number;
+    quantity: number;
+    categoryIds: string[];
+}
+
 /**
- * Works out the order discount on the server from Square catalog prices.
- * Never trust a discount amount sent by the browser -- only the coupon code.
+ * Prices the cart from the Square catalog and attaches each line's category IDs.
  */
-export async function resolveOrderDiscount(
-    items: OrderItemInput[],
-    requestedCouponCode?: string | null
-): Promise<ResolvedDiscount | null> {
+async function loadPricedLines(items: OrderItemInput[]): Promise<PricedLine[]> {
     const variationIds = Array.from(new Set(
         items.map((item) => item.catalogObjectId || item.variationId).filter(Boolean) as string[]
     ));
-    if (variationIds.length === 0) return null;
-
-    const b2g1CategoryId = process.env.B2G1_PROMO_CATEGORY_ID || process.env.NEXT_PUBLIC_B2G1_PROMO_CATEGORY_ID || '';
-    const hasCoupon = !!requestedCouponCode && requestedCouponCode.toUpperCase() !== 'B2G1';
-    if (!hasCoupon && !b2g1CategoryId) return null;
+    if (variationIds.length === 0) return [];
 
     const result = await client.catalog.batchGet({
         objectIds: variationIds,
@@ -66,19 +72,51 @@ export async function resolveOrderDiscount(
         categoryIdsByItem.set(obj.id, ids);
     }
 
-    let subtotal = 0;
-    const qualifyingPrices: number[] = [];
+    const lines: PricedLine[] = [];
     for (const item of items) {
         const id = item.catalogObjectId || item.variationId;
         if (!id) continue;
-        const unitPrice = unitPriceByVariation.get(id) ?? 0;
-        const quantity = Math.max(0, Math.floor(Number(item.quantity) || 0));
-        subtotal += unitPrice * quantity;
-
         const itemId = itemIdByVariation.get(id);
-        const categories = itemId ? categoryIdsByItem.get(itemId) ?? [] : [];
-        if (b2g1CategoryId && categories.includes(b2g1CategoryId)) {
-            for (let i = 0; i < quantity; i++) qualifyingPrices.push(unitPrice);
+        lines.push({
+            unitPrice: unitPriceByVariation.get(id) ?? 0,
+            quantity: Math.max(0, Math.floor(Number(item.quantity) || 0)),
+            categoryIds: itemId ? categoryIdsByItem.get(itemId) ?? [] : [],
+        });
+    }
+    return lines;
+}
+
+/**
+ * Subtotal of the lines a coupon covers. A coupon with no categories covers the whole order.
+ */
+function couponEligibleSubtotal(lines: PricedLine[], coupon: SimpleCoupon): number {
+    const scope = coupon.categoryIds ?? [];
+    return lines
+        .filter((line) => scope.length === 0 || line.categoryIds.some((id) => scope.includes(id)))
+        .reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+}
+
+/**
+ * Works out the order discount on the server from Square catalog prices.
+ * Never trust a discount amount sent by the browser -- only the coupon code.
+ */
+export async function resolveOrderDiscount(
+    items: OrderItemInput[],
+    requestedCouponCode?: string | null
+): Promise<ResolvedDiscount | null> {
+    const b2g1CategoryId = process.env.B2G1_PROMO_CATEGORY_ID || process.env.NEXT_PUBLIC_B2G1_PROMO_CATEGORY_ID || '';
+    const hasCoupon = !!requestedCouponCode && requestedCouponCode.toUpperCase() !== 'B2G1';
+    if (!hasCoupon && !b2g1CategoryId) return null;
+
+    const lines = await loadPricedLines(items);
+    if (lines.length === 0) return null;
+
+    let subtotal = 0;
+    const qualifyingPrices: number[] = [];
+    for (const line of lines) {
+        subtotal += line.unitPrice * line.quantity;
+        if (b2g1CategoryId && line.categoryIds.includes(b2g1CategoryId)) {
+            for (let i = 0; i < line.quantity; i++) qualifyingPrices.push(line.unitPrice);
         }
     }
 
@@ -91,9 +129,11 @@ export async function resolveOrderDiscount(
         const coupon = await SimpleCouponService.validateCoupon(requestedCouponCode!);
         if (coupon) {
             // Matches the checkout preview: coupons apply to the product subtotal, not shipping
-            couponAmount = SimpleCouponService.calculateDiscount(coupon, subtotal);
-            couponName = coupon.name;
-            couponCode = coupon.code;
+            couponAmount = SimpleCouponService.calculateDiscount(coupon, couponEligibleSubtotal(lines, coupon));
+            if (couponAmount > 0) {
+                couponName = coupon.name;
+                couponCode = coupon.code;
+            }
         }
     }
 
@@ -113,4 +153,21 @@ export async function resolveOrderDiscount(
         couponCode,
         discountAmount,
     };
+}
+
+/**
+ * Coupon-only discount for the checkout preview (B2G1 is shown separately there).
+ * Returns null if the code is invalid; discountAmount is 0 if nothing in the cart qualifies.
+ */
+export async function previewCouponDiscount(
+    items: OrderItemInput[],
+    couponCode: string
+): Promise<CouponPreview | null> {
+    const coupon = await SimpleCouponService.validateCoupon(couponCode);
+    if (!coupon) return null;
+
+    const lines = await loadPricedLines(items);
+    const eligibleSubtotal = couponEligibleSubtotal(lines, coupon);
+    const discountAmount = Math.round(SimpleCouponService.calculateDiscount(coupon, eligibleSubtotal) * 100) / 100;
+    return { coupon, discountAmount, eligibleSubtotal };
 }

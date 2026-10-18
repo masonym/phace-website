@@ -25,7 +25,6 @@ interface AppliedDiscount {
     type: 'PERCENTAGE' | 'FIXED_AMOUNT';
     value: number;
     discountAmount: number;
-    finalAmount: number;
 }
 
 export default function CheckoutPage() {
@@ -203,14 +202,12 @@ export default function CheckoutPage() {
         setDiscountError('');
 
         try {
-            // Only apply discount to product subtotal, not shipping
-            const subtotal = getCartTotal();
+            // The server prices the cart and only discounts the products the code covers, not shipping
             const response = await fetch('/api/discount/validate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     code: discountCode.trim(),
-                    orderAmount: subtotal,
                     cartItems: cart
                 })
             });

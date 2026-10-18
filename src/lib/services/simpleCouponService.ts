@@ -2,12 +2,14 @@ import { dynamoDb, TABLES } from '@/lib/aws-config';
 import { PutCommand, GetCommand, ScanCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 
 // Simple coupon system that works alongside Square
-interface SimpleCoupon {
+export interface SimpleCoupon {
   code: string;
   name: string;
   type: 'PERCENTAGE' | 'FIXED_AMOUNT';
   value: number;
   isActive: boolean;
+  /** Square category IDs the coupon is limited to; empty or missing means the whole order */
+  categoryIds?: string[];
   expiresAt?: Date;
   usageLimit?: number;
   currentUsage: number;
@@ -71,15 +73,20 @@ export class SimpleCouponService {
 
   static async createCoupon(couponData: Omit<SimpleCoupon, 'currentUsage' | 'createdAt'>): Promise<boolean> {
     try {
+      const item: Record<string, unknown> = {
+        ...couponData,
+        code: couponData.code.toUpperCase(),
+        currentUsage: 0,
+        createdAt: new Date().toISOString(),
+        expiresAt: couponData.expiresAt?.toISOString(),
+      };
+      if (!couponData.categoryIds?.length) delete item.categoryIds;
+      // The document client rejects undefined attributes, so drop unset optional fields
+      Object.keys(item).forEach((key) => item[key] === undefined && delete item[key]);
+
       await dynamoDb.send(new PutCommand({
         TableName: TABLES.COUPONS,
-        Item: {
-          ...couponData,
-          code: couponData.code.toUpperCase(),
-          currentUsage: 0,
-          createdAt: new Date().toISOString(),
-          expiresAt: couponData.expiresAt?.toISOString(),
-        },
+        Item: item,
         ConditionExpression: 'attribute_not_exists(code)' // Prevent overwriting existing coupons
       }));
       return true;

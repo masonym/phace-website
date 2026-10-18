@@ -9,6 +9,7 @@ interface CreateCouponRequest {
   value: number;
   expiresAt?: string;
   usageLimit?: number;
+  categoryIds?: string[];
 }
 
 export async function POST(request: NextRequest) {
@@ -42,6 +43,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (body.categoryIds !== undefined &&
+        (!Array.isArray(body.categoryIds) || body.categoryIds.some((id) => typeof id !== 'string' || !id))) {
+      return NextResponse.json(
+        { error: 'categoryIds must be a list of category IDs' },
+        { status: 400 }
+      );
+    }
+
     // Create the coupon
     const couponData = {
       code: body.code.toUpperCase(),
@@ -51,6 +60,7 @@ export async function POST(request: NextRequest) {
       isActive: true,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
       usageLimit: body.usageLimit,
+      categoryIds: body.categoryIds?.length ? Array.from(new Set(body.categoryIds)) : undefined,
     };
 
     const success = await SimpleCouponService.createCoupon(couponData);
@@ -72,6 +82,7 @@ export async function POST(request: NextRequest) {
         isActive: couponData.isActive,
         expiresAt: couponData.expiresAt?.toISOString(),
         usageLimit: couponData.usageLimit,
+        categoryIds: couponData.categoryIds ?? [],
       }
     });
 

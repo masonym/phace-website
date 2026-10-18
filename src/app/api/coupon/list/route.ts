@@ -20,6 +20,7 @@ export async function GET(request: Request) {
         expiresAt: coupon.expiresAt?.toISOString(),
         usageLimit: coupon.usageLimit,
         currentUsage: coupon.currentUsage,
+        categoryIds: coupon.categoryIds ?? [],
         createdAt: coupon.createdAt.toISOString(),
       }))
     });

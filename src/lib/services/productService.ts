@@ -108,6 +108,27 @@ export class ProductService {
         return ids;
     }
 
+    /**
+     * Every Square category as { id, name, parentName }, sorted by name, for admin pickers
+     */
+    static async listAllCategories(): Promise<{ id: string; name: string; parentName?: string }[]> {
+        const categories: Square.CatalogObject[] = [];
+        const page = await client.catalog.list({ types: "CATEGORY" });
+        for await (const obj of page) {
+            if (obj.type === 'CATEGORY' && obj.id) categories.push(obj);
+        }
+
+        const nameById = new Map(
+            categories.map((c) => [c.id!, (c.type === 'CATEGORY' && c.categoryData?.name) || 'Untitled'])
+        );
+        return categories
+            .map((c) => {
+                const parentId = c.type === 'CATEGORY' ? c.categoryData?.parentCategory?.id : undefined;
+                return { id: c.id!, name: nameById.get(c.id!)!, parentName: parentId ? nameById.get(parentId) : undefined };
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
     static isComingSoon(item: Square.CatalogObject, comingSoonIds: Set<string>): boolean {
         if (item.type !== 'ITEM' || comingSoonIds.size === 0) return false;
         return item.itemData?.categories?.some((cat) => !!cat.id && comingSoonIds.has(cat.id)) ?? false;

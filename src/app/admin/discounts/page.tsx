@@ -10,6 +10,13 @@ interface DiscountFormData {
   value: number;
   expiresAt?: string;
   usageLimit?: number;
+  categoryIds: string[];
+}
+
+interface Category {
+  id: string;
+  name: string;
+  parentName?: string;
 }
 
 interface ExistingCoupon {
@@ -21,6 +28,7 @@ interface ExistingCoupon {
   expiresAt?: string;
   usageLimit?: number;
   currentUsage: number;
+  categoryIds: string[];
   createdAt: string;
 }
 
@@ -30,11 +38,14 @@ export default function AdminDiscountsPage() {
     name: '',
     type: 'PERCENTAGE',
     value: 0,
+    categoryIds: [],
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [existingCoupons, setExistingCoupons] = useState<ExistingCoupon[]>([]);
   const [loadingCoupons, setLoadingCoupons] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesError, setCategoriesError] = useState('');
 
   const fetchExistingCoupons = async () => {
     try {
@@ -50,9 +61,33 @@ export default function AdminDiscountsPage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await adminFetch('/api/admin/categories');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setCategories(await response.json());
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      setCategoriesError('Could not load categories from Square');
+    }
+  };
+
   useEffect(() => {
     fetchExistingCoupons();
+    fetchCategories();
   }, []);
+
+  const toggleCategory = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      categoryIds: prev.categoryIds.includes(id)
+        ? prev.categoryIds.filter((c) => c !== id)
+        : [...prev.categoryIds, id],
+    }));
+  };
+
+  const categoryLabel = (id: string) =>
+    categories.find((c) => c.id === id)?.name ?? (categories.length ? 'Unknown category' : '...');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +107,7 @@ export default function AdminDiscountsPage() {
           name: '',
           type: 'PERCENTAGE',
           value: 0,
+          categoryIds: [],
         });
         // Refresh the coupon list
         fetchExistingCoupons();
@@ -151,6 +187,36 @@ export default function AdminDiscountsPage() {
 
         <div>
           <label className="block text-sm font-medium mb-2">
+            Applies To (Optional)
+          </label>
+          <p className="text-sm text-gray-500 mb-2">
+            Pick categories to limit this code to those products. Leave everything unchecked to apply it to the whole order.
+          </p>
+          {categoriesError ? (
+            <p className="text-sm text-red-600">{categoriesError}</p>
+          ) : categories.length === 0 ? (
+            <p className="text-sm text-gray-500">Loading categories...</p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto border rounded-lg divide-y">
+              {categories.map((category) => (
+                <label key={category.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={formData.categoryIds.includes(category.id)}
+                    onChange={() => toggleCategory(category.id)}
+                  />
+                  <span>{category.name}</span>
+                  {category.parentName && (
+                    <span className="text-xs text-gray-400">in {category.parentName}</span>
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">
             Expiry Date (Optional)
           </label>
           <input
@@ -219,6 +285,7 @@ export default function AdminDiscountsPage() {
                   <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Type</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Value</th>
+                  <th className="border border-gray-300 px-4 py-2 text-left">Applies To</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Usage</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
                 </tr>
@@ -235,6 +302,11 @@ export default function AdminDiscountsPage() {
                     </td>
                     <td className="border border-gray-300 px-4 py-2">
                       {coupon.type === 'PERCENTAGE' ? `${coupon.value}%` : `$${coupon.value}`}
+                    </td>
+                    <td className="border border-gray-300 px-4 py-2">
+                      {coupon.categoryIds.length > 0
+                        ? coupon.categoryIds.map(categoryLabel).join(', ')
+                        : 'Whole order'}
                     </td>
                     <td className="border border-gray-300 px-4 py-2">
                       {coupon.usageLimit 
