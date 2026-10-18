@@ -16,6 +16,12 @@ export interface SimpleCoupon {
   createdAt: Date;
 }
 
+export type CouponUpdates = Partial<Pick<SimpleCoupon, 'name' | 'type' | 'value' | 'isActive'>> & {
+  expiresAt?: Date | null;
+  usageLimit?: number | null;
+  categoryIds?: string[] | null;
+};
+
 export class SimpleCouponService {
   static async validateCoupon(code: string): Promise<SimpleCoupon | null> {
     try {
@@ -128,32 +134,40 @@ export class SimpleCouponService {
     }
   }
 
-  static async updateCoupon(code: string, updates: Partial<Omit<SimpleCoupon, 'code' | 'createdAt'>>): Promise<boolean> {
+  /**
+   * Updates the editable fields of a coupon. Passing null (or an empty category list)
+   * clears an optional field. Returns false if the coupon doesn't exist.
+   */
+  static async updateCoupon(code: string, updates: CouponUpdates): Promise<boolean> {
     try {
-      const updateExpressions: string[] = [];
+      const setExpressions: string[] = [];
+      const removeExpressions: string[] = [];
       const expressionAttributeValues: Record<string, any> = {};
       const expressionAttributeNames: Record<string, string> = {};
 
-      Object.entries(updates).forEach(([key, value], index) => {
-        if (key === 'expiresAt' && value instanceof Date) {
-          updateExpressions.push(`#${key} = :val${index}`);
-          expressionAttributeNames[`#${key}`] = key;
-          expressionAttributeValues[`:val${index}`] = value.toISOString();
-        } else if (value !== undefined) {
-          updateExpressions.push(`#${key} = :val${index}`);
-          expressionAttributeNames[`#${key}`] = key;
-          expressionAttributeValues[`:val${index}`] = value;
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === undefined) return;
+        expressionAttributeNames[`#${key}`] = key;
+        if (value === null || (Array.isArray(value) && value.length === 0)) {
+          removeExpressions.push(`#${key}`);
+        } else {
+          setExpressions.push(`#${key} = :${key}`);
+          expressionAttributeValues[`:${key}`] = value instanceof Date ? value.toISOString() : value;
         }
       });
 
-      if (updateExpressions.length === 0) return false;
+      if (setExpressions.length === 0 && removeExpressions.length === 0) return false;
+
+      const clauses: string[] = [];
+      if (setExpressions.length) clauses.push(`SET ${setExpressions.join(', ')}`);
+      if (removeExpressions.length) clauses.push(`REMOVE ${removeExpressions.join(', ')}`);
 
       await dynamoDb.send(new UpdateCommand({
         TableName: TABLES.COUPONS,
         Key: { code: code.toUpperCase() },
-        UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+        UpdateExpression: clauses.join(' '),
         ExpressionAttributeNames: expressionAttributeNames,
-        ExpressionAttributeValues: expressionAttributeValues,
+        ...(setExpressions.length && { ExpressionAttributeValues: expressionAttributeValues }),
         ConditionExpression: 'attribute_exists(code)'
       }));
       return true;
