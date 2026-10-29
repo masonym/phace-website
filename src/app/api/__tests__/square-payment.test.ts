@@ -4,6 +4,7 @@
 import { NextRequest } from 'next/server'
 import { POST } from '../square-payment/route'
 import { SimpleCouponService } from '@/lib/services/simpleCouponService'
+import { EmailService } from '@/lib/services/emailService'
 
 // One shared client so the route and the tests see the same mocks
 jest.mock('square', () => {
@@ -21,7 +22,10 @@ jest.mock('square', () => {
 })
 
 jest.mock('@/lib/services/emailService', () => ({
-  EmailService: { sendOrderConfirmation: jest.fn().mockResolvedValue(undefined) },
+  EmailService: {
+    sendOrderConfirmation: jest.fn().mockResolvedValue(undefined),
+    sendNewOrderAlert: jest.fn().mockResolvedValue(undefined),
+  },
 }))
 
 jest.mock('@/lib/services/simpleCouponService', () => ({
@@ -211,5 +215,28 @@ describe('/api/square-payment', () => {
     expect(response.status).toBe(200)
     expect(mockClient.customers.create.mock.calls[0][0].address).toBeUndefined()
     expect(mockClient.payments.create.mock.calls[0][0].shippingAddress).toBeUndefined()
+  })
+
+  it('alerts the shop about a new shipping order', async () => {
+    const response = await POST(makeRequest({ fulfillmentMethod: 'shipping' }))
+    expect(response.status).toBe(200)
+
+    expect(EmailService.sendNewOrderAlert).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: 'test-order-id',
+      customerName: 'John Doe',
+      customerEmail: 'john@example.com',
+      customerPhone: '6045551234',
+      fulfillmentMethod: 'shipping',
+      shippingAddress: expect.objectContaining({ street: '123 Test St' }),
+    }))
+  })
+
+  it('completes the order when an email fails to send', async () => {
+    jest.mocked(EmailService.sendNewOrderAlert).mockRejectedValueOnce(new Error('SES down'))
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    const response = await POST(makeRequest({}))
+    expect(response.status).toBe(200)
+    expect(EmailService.sendOrderConfirmation).toHaveBeenCalled()
   })
 })

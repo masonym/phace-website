@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ProductService } from '@/lib/services/productService';
 import { resolveOrderDiscount } from '@/lib/services/orderDiscountService';
 import { SimpleCouponService } from '@/lib/services/simpleCouponService';
-import { EmailService } from '@/lib/services/emailService';
+import { EmailService, OrderConfirmationData } from '@/lib/services/emailService';
 import { SquareClient, SquareEnvironment } from "square";
 
 const client = new SquareClient({
@@ -161,47 +161,55 @@ export async function POST(req: NextRequest) {
             await SimpleCouponService.applyCoupon(resolvedDiscount.couponCode);
         }
 
-        // Send branded confirmation email via AWS SES
-        try {
-            const squareOrder = orderResponse.order!;
-            const formatMoney = (amount: bigint | null | undefined) =>
-                `$${((Number(amount ?? BigInt(0))) / 100).toFixed(2)} CAD`;
+        // Send the customer's branded confirmation and the shop's new order alert via AWS SES
+        const squareOrder = orderResponse.order!;
+        const formatMoney = (amount: bigint | null | undefined) =>
+            `$${((Number(amount ?? BigInt(0))) / 100).toFixed(2)} CAD`;
 
-            const lineItems = squareOrder.lineItems ?? [];
-            const subtotalCents = lineItems.reduce(
-                (sum, li) => sum + Number(li.totalMoney?.amount ?? BigInt(0)),
-                0
-            );
+        const lineItems = squareOrder.lineItems ?? [];
+        const subtotalCents = lineItems.reduce(
+            (sum, li) => sum + Number(li.totalMoney?.amount ?? BigInt(0)),
+            0
+        );
 
-            const discountAmount = squareOrder.totalDiscountMoney?.amount;
+        const discountAmount = squareOrder.totalDiscountMoney?.amount;
 
-            await EmailService.sendOrderConfirmation({
-                orderId: orderId,
-                customerName: shippingAddress.name,
-                customerEmail: shippingAddress.email,
-                items: lineItems.map((li) => ({
-                    name: li.name ?? 'Item',
-                    variationName: li.variationName ?? undefined,
-                    quantity: li.quantity ?? '1',
-                    totalFormatted: formatMoney(li.totalMoney?.amount),
-                })),
-                subtotalFormatted: `$${(subtotalCents / 100).toFixed(2)} CAD`,
-                taxFormatted: formatMoney(squareOrder.totalTaxMoney?.amount),
-                discountFormatted: discountAmount && discountAmount > BigInt(0)
-                    ? formatMoney(discountAmount)
-                    : undefined,
-                totalFormatted: formatMoney(squareOrder.totalMoney?.amount),
-                fulfillmentMethod: fulfillmentMethod === 'shipping' ? 'shipping' : 'pickup',
-                shippingAddress: fulfillmentMethod === 'shipping' ? {
-                    street: shippingAddress.street,
-                    city: shippingAddress.city,
-                    state: shippingAddress.state,
-                    zipCode: shippingAddress.zipCode,
-                } : undefined,
-                receiptUrl: paymentResponse.payment?.receiptUrl ?? undefined,
-            });
-        } catch (emailError) {
-            console.error('[Email Error] Failed to send order confirmation:', emailError);
+        const emailData: OrderConfirmationData = {
+            orderId: orderId,
+            customerName: shippingAddress.name,
+            customerEmail: shippingAddress.email,
+            items: lineItems.map((li) => ({
+                name: li.name ?? 'Item',
+                variationName: li.variationName ?? undefined,
+                quantity: li.quantity ?? '1',
+                totalFormatted: formatMoney(li.totalMoney?.amount),
+            })),
+            subtotalFormatted: `$${(subtotalCents / 100).toFixed(2)} CAD`,
+            taxFormatted: formatMoney(squareOrder.totalTaxMoney?.amount),
+            discountFormatted: discountAmount && discountAmount > BigInt(0)
+                ? formatMoney(discountAmount)
+                : undefined,
+            totalFormatted: formatMoney(squareOrder.totalMoney?.amount),
+            fulfillmentMethod: fulfillmentMethod === 'shipping' ? 'shipping' : 'pickup',
+            shippingAddress: fulfillmentMethod === 'shipping' ? {
+                street: shippingAddress.street,
+                city: shippingAddress.city,
+                state: shippingAddress.state,
+                zipCode: shippingAddress.zipCode,
+            } : undefined,
+            receiptUrl: paymentResponse.payment?.receiptUrl ?? undefined,
+        };
+
+        // Either email failing is logged but never fails the paid order
+        const [confirmation, alert] = await Promise.allSettled([
+            EmailService.sendOrderConfirmation(emailData),
+            EmailService.sendNewOrderAlert({ ...emailData, customerPhone: shippingAddress.phone || undefined }),
+        ]);
+        if (confirmation.status === 'rejected') {
+            console.error('[Email Error] Failed to send order confirmation:', confirmation.reason);
+        }
+        if (alert.status === 'rejected') {
+            console.error('[Email Error] Failed to send new order alert:', alert.reason);
         }
 
         return NextResponse.json(JSON.parse(ProductService.safeStringify({ payment: paymentResponse.payment })));
