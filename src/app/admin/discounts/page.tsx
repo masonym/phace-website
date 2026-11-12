@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { adminFetch } from '@/lib/auth/clientSession';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import { toLocalInput, fromLocalInput } from '@/lib/utils/datetimeLocal';
 
 interface DiscountFormData {
   code: string;
@@ -24,13 +25,6 @@ const EMPTY_FORM: DiscountFormData = {
   categoryIds: [],
   isActive: true,
 };
-
-// datetime-local inputs have no timezone, so convert to and from the browser's local time
-const toLocalInput = (iso: string) => {
-  const date = new Date(iso);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-};
-const fromLocalInput = (local?: string) => (local ? new Date(local).toISOString() : undefined);
 
 interface Category {
   id: string;

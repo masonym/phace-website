@@ -11,7 +11,8 @@ export async function POST(request: Request) {
 
         const uploadUrl = await S3Service.getUploadUrl(fileName, contentType);
 
-        return NextResponse.json({ uploadUrl });
+        // The bucket is public-read, so this is where the file can be viewed once the upload finishes
+        return NextResponse.json({ uploadUrl, imageUrl: S3Service.getImageUrl(fileName) });
     } catch (error: any) {
         console.error('Get upload URL error:', error);
         return NextResponse.json(

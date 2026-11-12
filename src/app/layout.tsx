@@ -8,7 +8,7 @@ import { CartProvider } from '@/components/providers/CartProvider';
 import { AuthProvider } from '@/hooks/useAuth'
 import { Toaster } from 'react-hot-toast';
 import FirstVisitGiftCard from '@/components/promotions/FirstVisitGiftCard';
-import FirstFivePresale from '@/components/promotions/FirstFivePresale';
+import SitePopup from '@/components/promotions/SitePopup';
 import { SITE_URL } from '@/lib/config/site';
 import { CLINIC, OPENING_HOURS } from '@/lib/config/clinicInfo';
 
@@ -118,7 +118,7 @@ export default function RootLayout({
         </AuthProvider>
         <Toaster position="bottom-right" />
         {/* <FirstVisitGiftCard /> */}
-        <FirstFivePresale />
+        <SitePopup />
       </body>
     </html>
   )

@@ -8,6 +8,7 @@ import {
     ShoppingBag,
     ClipboardList,
     BellRing,
+    Megaphone,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -55,6 +56,12 @@ export const ADMIN_SECTIONS: AdminSection[] = [
         title: 'Discounts',
         description: 'Create and manage promotional codes and automatic discounts.',
         icon: Tag,
+    },
+    {
+        href: '/admin/popups',
+        title: 'Popups',
+        description: 'Create and schedule the announcement popups shown on the website.',
+        icon: Megaphone,
     },
     {
         href: '/admin/orders',
