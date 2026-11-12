@@ -13,8 +13,14 @@ const EXCLUDED_BOOKING_CATEGORY_NAMES = [
     'paz retail',
 ];
 
+/** Square category IDs hidden from booking only (unlike HIDDEN_CATEGORY_IDS, these stay in the store) */
+const EXCLUDED_BOOKING_CATEGORY_IDS = [
+    'MFYGXN6MIRAE3DTK64I2Y7MR', // Coming Soon (store waitlist products)
+];
+
 export function isBookableCategory(category: { id: string; name?: string; isActive?: boolean }): boolean {
     if (category.isActive === false) return false;
     if (HIDDEN_CATEGORY_IDS.includes(category.id)) return false;
+    if (EXCLUDED_BOOKING_CATEGORY_IDS.includes(category.id)) return false;
     return !EXCLUDED_BOOKING_CATEGORY_NAMES.includes((category.name ?? '').toLowerCase().trim());
 }
