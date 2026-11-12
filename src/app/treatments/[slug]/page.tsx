@@ -34,11 +34,14 @@ export default function TreatmentPage({ params }: Props) {
     notFound()
   }
 
-  const treatmentNameUpper = treatment.name.toUpperCase()
-  // Opens booking on the matching category when one exists in Square, otherwise the category list
-  const bookHref = treatment.bookingCategory
-    ? `/book?category=${encodeURIComponent(treatment.bookingCategory)}`
-    : "/book"
+  const displayName = treatment.shortName ?? treatment.name
+  const treatmentNameUpper = displayName.toUpperCase()
+  // Opens booking on the treatment's Square category (by ID, else by name keyword), otherwise the category list
+  const bookHref = treatment.bookingCategoryId
+    ? `/book?step=service&categoryId=${encodeURIComponent(treatment.bookingCategoryId)}`
+    : treatment.bookingCategory
+      ? `/book?category=${encodeURIComponent(treatment.bookingCategory)}`
+      : "/book"
 
   return (
     <div className="min-h-screen bg-[#F8E7E1]">
@@ -59,6 +62,16 @@ export default function TreatmentPage({ params }: Props) {
             <h1 className="text-center text-4xl md:text-8xl font-light text-white mb-8">
               {treatmentNameUpper}
             </h1>
+            {treatment.subtitle && (
+              <p className="text-center text-xl md:text-3xl font-light text-white mb-4">
+                {treatment.subtitle}
+              </p>
+            )}
+            {treatment.tagline && (
+              <p className="text-center text-lg md:text-xl text-white/90">
+                {treatment.tagline}
+              </p>
+            )}
             <div className="absolute bottom-12 right-12">
               <Link
                 href={bookHref}
@@ -137,7 +150,7 @@ export default function TreatmentPage({ params }: Props) {
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl md:text-6xl font-light text-heading mb-12">
-              BENEFITS
+              {treatment.benefitsTitle ?? "BENEFITS"}
             </h2>
             {treatment.benefits && treatment.benefits.length > 0 && (
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-lg text-[#4A5568]">
@@ -158,9 +171,35 @@ export default function TreatmentPage({ params }: Props) {
         </section>
       )}
 
+      {/* FAQ Section */}
+      {treatment.faqs && treatment.faqs.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl md:text-6xl font-light text-heading mb-12">
+              FREQUENTLY ASKED QUESTIONS
+            </h2>
+            <div className="divide-y divide-[#4A5568]/20 border-y border-[#4A5568]/20">
+              {treatment.faqs.map((faq) => (
+                <details key={faq.question} className="group py-6">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-xl text-[#4A5568] [&::-webkit-details-marker]:hidden">
+                    <span>{faq.question}</span>
+                    <span className="text-2xl font-light transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                  </summary>
+                  <div className="mt-4 space-y-4 text-[#4A5568]">
+                    {faq.answer.map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Book Appointment Section */}
-      <section className="py-20 bg-white text-center">
-        <h2 className="text-3xl font-light text-[#4A5568] mb-6">Ready to book {treatment.name}?</h2>
+      <section className={`py-20 text-center ${treatment.faqs?.length ? "" : "bg-white"}`}>
+        <h2 className="text-3xl font-light text-[#4A5568] mb-6">Ready to book {displayName}?</h2>
         <Link
           href={bookHref}
           className="inline-block bg-accent text-white px-8 py-4 rounded-full text-lg hover:bg-accent/90 transition-colors"

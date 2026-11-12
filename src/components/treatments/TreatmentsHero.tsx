@@ -15,7 +15,7 @@ export function TreatmentsHero() {
           <p className="text-xl text-gray-600 mb-6">
             Our innovative services include the cutting-edge Sharplight Laser for targeted skin improvements and hair removal, 
             Tixel skin resurfacing treatments, Bela MD+ Advanced Skin Health for comprehensive skincare, Dermapen Dp4 for 
-            advanced microneedling, and AlumierMD Chemical Peels to address various skin concerns.
+            advanced microneedling, Mesotherapy with Teosyal Redensity 1 for skin hydration and quality, and AlumierMD Chemical Peels to address various skin concerns.
           </p>
           <p className="text-xl text-gray-600">
             Whether you're seeking to diminish wrinkles, reduce acne scars, improve skin tone, or achieve a radiant 

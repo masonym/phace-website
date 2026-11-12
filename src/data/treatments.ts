@@ -1,11 +1,20 @@
 export interface Treatment {
   id: number;
   name: string;
+  /** Shorter name for the large page headings when the full name is long */
+  shortName?: string;
+  /** Line shown under the hero heading, e.g. the product and device used */
+  subtitle?: string;
+  tagline?: string;
   slug: string;
   /** Keyword matched against booking category names in Square for "Book" links */
   bookingCategory?: string;
+  /** Square category ID for "Book" links; takes priority over bookingCategory */
+  bookingCategoryId?: string;
   description: string;
   longDescription?: string;
+  /** Heading for the benefits list; defaults to "BENEFITS" */
+  benefitsTitle?: string;
   benefits?: string[];
   duration?: string;
   price?: number;
@@ -15,6 +24,11 @@ export interface Treatment {
   cards?: {
     title: string;
     description: string;
+  }[];
+  /** Questions shown in an FAQ section; each answer is a list of paragraphs */
+  faqs?: {
+    question: string;
+    answer: string[];
   }[];
 }
 
@@ -187,6 +201,104 @@ Compared to some of the sophisticated sorts of technology on the market, which w
       {
         title: "Immediate Results",
         description: "This advanced medical-grade facial is fast, comfortable, and effective. The treatment is non-invasive and incurs no downtime at all, making it a perfect introduction to medical aesthetics."
+      }
+    ]
+  },
+  {
+    id: 5,
+    name: "Mesotherapy with Teosyal Redensity 1 + Vital Injector",
+    shortName: "Mesotherapy",
+    subtitle: "with Teosyal Redensity 1 + Vital Injector II",
+    tagline: "Hydration, skin quality and rejuvenation from within.",
+    slug: "mesotherapy",
+    bookingCategoryId: "JD45JLMLL6XRE6TNMZECAYW5",
+    description: "Mesotherapy with Teosyal Redensity 1 and the Vital Injector is an injectable skin booster treatment designed to improve skin hydration, texture, elasticity and overall skin quality. It helps create smoother, firmer, more radiant-looking skin without adding volume or changing your natural features.",
+    longDescription: `
+    Healthy-looking skin is about more than what we see on the surface. As we age, changes in hydration, collagen and elasticity can contribute to fine lines, uneven texture and skin that looks less firm and radiant.
+
+    Mesotherapy with Teosyal Redensity 1 is an injectable skin booster treatment designed to improve hydration, texture, elasticity and overall skin quality. Rather than adding volume or changing facial contours, the focus is on supporting smoother, more supple and refreshed-looking skin.
+
+    At Phace, we use the Vital Injector II, a precision-controlled injection device, to deliver small, measured amounts of Redensity 1 into the skin. It is an automated, vacuum-assisted device that delivers controlled micro-injections at a consistent, adjustable depth.
+
+    Using gentle suction, the device temporarily lifts and stabilizes the skin while delivering measured amounts of Redensity 1 beneath the surface. This allows for precise, consistent product placement across the treatment area. The device is designed to make the injection process more efficient and comfortable, although temporary redness, swelling, bruising and tenderness are still possible.`,
+    benefitsTitle: "WHAT IT CAN HELP WITH",
+    benefits: [
+      "Dehydrated or dull-looking skin",
+      "Fine lines and early signs of aging",
+      "Uneven or rough skin texture",
+      "Reduced elasticity and firmness",
+      "Crepey-looking skin"
+    ],
+    imageMain: "/images/treatments/mesotherapy.webp",
+    imageSub: "/images/treatments/mesotherapy-sub.webp",
+    imageCard: "/images/treatments/mesotherapy-card.webp",
+    cards: [
+      {
+        title: "A Skin Booster",
+        description: "An injectable treatment focused on improving hydration, texture, elasticity and overall skin quality for smoother, firmer, more radiant-looking skin."
+      },
+      {
+        title: "Not a Filler",
+        description: "Unlike traditional dermal fillers, Redensity 1 is not used to add volume or change facial contours. It works on the appearance and quality of the skin itself."
+      },
+      {
+        title: "Precise Delivery",
+        description: "The Vital Injector II delivers small, measured micro-injections at a consistent, adjustable depth for even product placement across the treatment area."
+      },
+      {
+        title: "Face, Neck, Décolletage & Hands",
+        description: "Treat skin quality concerns in several areas. Suitability and the amount of product depend on the area, your skin concerns and your treatment plan."
+      }
+    ],
+    faqs: [
+      {
+        question: "What is Teosyal Redensity 1?",
+        answer: [
+          "Teosyal Redensity 1 is a skin booster formulated with non-cross-linked hyaluronic acid and a combination of amino acids, antioxidants, vitamins and minerals.",
+          "Hyaluronic acid is naturally present in our skin and plays an important role in retaining moisture. Its ability to attract and bind water makes it particularly useful in treatments focused on hydration and skin quality.",
+          "Unlike traditional dermal fillers, which are commonly used to restore volume or enhance facial contours, Redensity 1 is intended to improve the appearance and quality of the skin itself."
+        ]
+      },
+      {
+        question: "What areas can be treated?",
+        answer: [
+          "Mesotherapy can be used to address skin quality concerns in several areas, including the face, neck, décolletage and hands.",
+          "Treatment suitability and the amount of product required will depend on the area being treated, your skin concerns and your individual treatment plan."
+        ]
+      },
+      {
+        question: "What can I expect during treatment?",
+        answer: [
+          "We begin by assessing your skin, discussing your concerns and determining whether mesotherapy is an appropriate option for you.",
+          "A topical numbing cream may be applied before treatment to help minimize discomfort.",
+          "Using the Vital Injector II, small amounts of Teosyal Redensity 1 are delivered through a series of micro-injections across the selected treatment area.",
+          "You may experience temporary redness, small raised bumps, swelling or bruising following your appointment. These effects generally improve as the skin settles, although recovery varies from person to person."
+        ]
+      },
+      {
+        question: "How many treatments will I need?",
+        answer: [
+          "For most clients, we recommend an initial series of three treatments, spaced approximately three to four weeks apart.",
+          "Some individuals may benefit from a different treatment schedule depending on their skin concerns, goals and response.",
+          "Because skin quality improvements are gradual and cumulative, a series of treatments is generally recommended rather than expecting a dramatic change after one appointment.",
+          "Maintenance treatments may be recommended every four to six months, depending on your individual results and how your skin responds."
+        ]
+      },
+      {
+        question: "How long do results last?",
+        answer: [
+          "Results vary depending on factors such as age, skin condition, lifestyle and the number of treatments completed.",
+          "Improvements in hydration and skin appearance may develop progressively throughout your treatment series. Maintenance appointments can help support those results over time.",
+          "As with any skin treatment, results are individual, and no specific outcome or duration can be guaranteed."
+        ]
+      },
+      {
+        question: "Is mesotherapy right for me?",
+        answer: [
+          "If your skin is feeling dehydrated, looking dull or beginning to show changes in texture and elasticity, mesotherapy may be worth exploring.",
+          "At Phace, we're not interested in changing what makes your face yours. Our goal is to help you feel confident in your skin through thoughtful treatment recommendations, realistic expectations and an approach grounded in skin health.",
+          "Curious whether Mesotherapy with Teosyal Redensity 1 is right for you? Get in touch with Phace to learn more or arrange a consultation."
+        ]
       }
     ]
   },
