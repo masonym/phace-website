@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SquareBookingService } from "@/lib/services/squareBookingService";
-import { parseISO } from 'date-fns';
-
-import { DateTime } from 'luxon';
+import { clinicDate } from '@/lib/utils/clinicTime';
 
 export async function GET(req: NextRequest) {
     try {
@@ -33,9 +31,7 @@ export async function GET(req: NextRequest) {
 
         const grouped: Record<string, any[]> = {};
         for (const slot of slots) {
-            const localDate = DateTime.fromISO(slot.startTime)
-                .setZone('America/Los_Angeles')
-                .toISODate();
+            const localDate = clinicDate(slot.startTime);
 
             if (!localDate) continue; // skip invalid
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
+import { formatClinicTime } from '@/lib/utils/clinicTime';
 
 interface Appointment {
   id: string;
@@ -216,23 +217,12 @@ export default function Profile() {
                           <p className="font-medium text-gray-900">{apt.serviceName}</p>
                           <p className="text-sm text-gray-500">with {apt.staffName}</p>
                           <p className="text-sm text-gray-500 mt-1">
-                            {new Date(apt.startTime).toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
+                            {formatClinicTime(apt.startTime, 'cccc, LLLL d, yyyy')}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {new Date(apt.startTime).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
+                            {formatClinicTime(apt.startTime, 'h:mm a')}
                             {' - '}
-                            {new Date(apt.endTime).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
+                            {formatClinicTime(apt.endTime, 'h:mm a')}
                           </p>
                         </div>
                         <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
@@ -262,23 +252,12 @@ export default function Profile() {
                           <p className="font-medium text-gray-900">{apt.serviceName}</p>
                           <p className="text-sm text-gray-500">with {apt.staffName}</p>
                           <p className="text-sm text-gray-500 mt-1">
-                            {new Date(apt.startTime).toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
+                            {formatClinicTime(apt.startTime, 'cccc, LLLL d, yyyy')}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {new Date(apt.startTime).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
+                            {formatClinicTime(apt.startTime, 'h:mm a')}
                             {' - '}
-                            {new Date(apt.endTime).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
+                            {formatClinicTime(apt.endTime, 'h:mm a')}
                           </p>
                         </div>
                         <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
