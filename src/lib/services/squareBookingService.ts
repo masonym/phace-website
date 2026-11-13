@@ -1,5 +1,6 @@
 import { SquareClient, SquareEnvironment } from "square";
 import { ANY_STAFF_ID } from '@/lib/config/booking';
+import { clinicDayRange } from '@/lib/utils/clinicTime';
 import { Square } from "square";
 import { randomUUID } from 'crypto';
 import { startOfDay, addMonths } from "date-fns";
@@ -1493,22 +1494,12 @@ export class SquareBookingService {
             if (staffIds.length === 0) return [];
         }
 
-        // NOTE: We assume no bookable appointments occur between 11pm–1am PT.
-        // This lets us safely hardcode the UTC day boundaries without handling DST.
-        // 07:00Z = 00:00 PT during daylight time, 23:00 PT during standard time
-
-        // Always ensure we include the full day in search window to avoid missing availability
-        // Using 23:59:59Z ensures we catch all availability for that day
-        // This fixes both the single-day search issue and the batching gap issue
-        const endAtTime = "23:59:59Z";
+        const range = clinicDayRange(startDate, endDate);
 
         const searchRequest = {
             query: {
                 filter: {
-                    startAtRange: {
-                        startAt: `${startDate}T07:00:00Z`,
-                        endAt: `${endDate}T${endAtTime}`
-                    },
+                    startAtRange: range,
                     locationId,
                     segmentFilters: [
                         {
@@ -1520,7 +1511,7 @@ export class SquareBookingService {
             }
         };
         
-        console.log(`Search request for availability from ${startDate} to ${endDate} with time range: ${startDate}T07:00:00Z to ${endDate}T${endAtTime}`);
+        console.log(`Search request for availability from ${startDate} to ${endDate} with time range: ${range.startAt} to ${range.endAt}`);
 
         try {
             const result = await client.bookings.searchAvailability(searchRequest);
